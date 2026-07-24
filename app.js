@@ -81,14 +81,9 @@ function el(html) {
   return t.content.firstElementChild;
 }
 
-function statusBar() {
-  return `<div style="display:flex; justify-content:space-between; align-items:center; padding:16px 26px 4px; font-size:13px; font-weight:700; color:#17171A;"><span>9:41</span><span style="letter-spacing:2px;">● ● ▮</span></div>`;
-}
-
 function renderHome() {
   app.appendChild(el(`
     <div>
-      ${statusBar()}
       <div class="header">
         <div class="logo">
           <div class="logo-badge">과</div>
@@ -129,7 +124,6 @@ function renderHome() {
 function renderPsychList() {
   app.appendChild(el(`
     <div>
-      ${statusBar()}
       <div class="back-row">
         <button class="back-btn" data-nav="home">‹</button>
         <div class="back-title">심리테스트</div>
@@ -155,7 +149,6 @@ function renderPsychList() {
 function renderComingSoon() {
   app.appendChild(el(`
     <div>
-      ${statusBar()}
       <div class="back-row">
         <button class="back-btn" data-nav="home">‹</button>
         <div class="back-title">미니게임</div>
@@ -174,7 +167,6 @@ function renderComingSoon() {
 function renderTestIntro() {
   app.appendChild(el(`
     <div>
-      ${statusBar()}
       <div class="back-row">
         <button class="back-btn" data-nav="psych-list">‹</button>
         <div class="back-title">심리테스트</div>
@@ -211,7 +203,6 @@ function renderQuestion() {
 
   app.appendChild(el(`
     <div>
-      ${statusBar()}
       <div class="progress-row">
         <button class="back-btn" id="q-back">‹</button>
         <div class="progress-track"><div class="progress-fill" style="width:${pct}%;"></div></div>
@@ -273,7 +264,6 @@ function renderResult() {
   const r = computeResult();
   app.appendChild(el(`
     <div>
-      ${statusBar()}
       <div class="result-card">
         <div class="eyebrow">나의 집중 유형은</div>
         <div class="emoji">${r.type.emoji}</div>
