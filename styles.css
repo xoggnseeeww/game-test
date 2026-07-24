@@ -483,6 +483,39 @@ body {
 
 .result-stats .sep { color: #9F8FF5; }
 
+.result-tip {
+  margin: 14px 20px 0;
+  background: #EFEBFF;
+  border-radius: 16px;
+  padding: 14px 16px;
+  font-size: 13px;
+  color: #4B3FA0;
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+.game-panel {
+  margin: 24px 20px;
+  height: 340px;
+  border-radius: 26px;
+  background: #E3E0D8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 20px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.game-msg {
+  font-size: 18px;
+  font-weight: 800;
+  color: #75727B;
+  white-space: pre-line;
+  line-height: 1.5;
+}
+
 .share-block {
   padding: 18px 20px 4px;
 }
@@ -553,9 +586,17 @@ body {
   border-radius: 16px;
   padding: 14px;
   opacity: .6;
+  border: none;
+  text-align: left;
+  font-family: inherit;
 }
 
 .next-card.quiz { background: #FDF0D8; }
+
+.next-card:not(.quiz) {
+  opacity: 1;
+  cursor: pointer;
+}
 
 .next-card .icon { font-size: 22px; }
 
