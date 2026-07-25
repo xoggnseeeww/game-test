@@ -100,6 +100,31 @@ function bindNav(root) {
   });
 }
 
+function showModal({ title, body, confirmLabel = "확인", cancelLabel = "취소", onConfirm }) {
+  const overlay = el(`
+    <div class="modal-overlay">
+      <div class="modal-box">
+        <div class="modal-title">${title}</div>
+        <p class="modal-body">${body}</p>
+        <div class="modal-actions">
+          <button class="modal-btn-primary" id="modal-confirm">${confirmLabel}</button>
+          <button class="modal-btn-secondary" id="modal-cancel">${cancelLabel}</button>
+        </div>
+      </div>
+    </div>
+  `);
+  document.body.appendChild(overlay);
+  const close = () => overlay.remove();
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) close();
+  });
+  overlay.querySelector("#modal-cancel").addEventListener("click", close);
+  overlay.querySelector("#modal-confirm").addEventListener("click", () => {
+    close();
+    onConfirm();
+  });
+}
+
 function renderHome() {
   app.appendChild(el(`
     <div>
@@ -188,8 +213,16 @@ function renderTestIntro() {
   `));
   bindNav(app);
   app.querySelector("#start-btn").addEventListener("click", () => {
-    state.answers = [];
-    go("test-question");
+    showModal({
+      title: "⚠️ 시작 전 안내",
+      body: "이 테스트는 재미를 위한 자가 참고용 콘텐츠이며,\n의학적 진단 도구가 아닙니다.\n\n결과만으로 ADHD 여부를 판단할 수 없으니,\n정확한 진단은 반드시 정신건강의학과 등\n전문 의료기관에서 전문가와 상담을 통해\n받으시길 권해드립니다.",
+      confirmLabel: "확인했어요, 시작할게요",
+      cancelLabel: "취소",
+      onConfirm: () => {
+        state.answers = [];
+        go("test-question");
+      },
+    });
   });
 }
 
