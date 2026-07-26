@@ -51,56 +51,56 @@ const RESULT_TYPES = {
   "100": {
     emoji: "🌫️",
     name: "깜빡깜빡 안개형",
-    subtitle: "깜빡형",
+    subtitle: "부주의 우세형",
     desc: "충동적으로 저지르거나 몸이 들썩이진 않지만,\n집중력이 자꾸 흐려지는 게 눈에 띄어요. 물건을 어디 뒀는지\n까먹거나, 대화 중 딴생각에 빠지거나, 하던 일을 끝까지\n마무리하지 못하는 경우가 잦은 편이에요.",
     tip: "체크리스트를 눈에 보이는 곳에 적어두고, 할 일을 잘게 쪼개서 하나씩 지워나가 보세요.",
   },
   "010": {
     emoji: "🔥",
     name: "화끈한 불꽃형",
-    subtitle: "성급형",
+    subtitle: "충동 우세형",
     desc: "집중력이나 활동량은 평범한 편인데, 순간적인 충동을\n참는 게 유독 어려운 편이에요. 생각나면 바로 행동하거나,\n남의 말이 끝나기 전에 끼어들거나, 기다리는 상황을\n잘 못 견디는 모습이 자주 보여요.",
     tip: "결정하기 전 '10초만 멈추기'를 습관처럼 연습해보세요.",
   },
   "001": {
     emoji: "🐝",
     name: "들썩들썩 에너자이저형",
-    subtitle: "활동형",
+    subtitle: "과잉행동 우세형",
     desc: "생각이나 판단은 신중한 편인데, 몸이 가만히 있질 못해요.\n회의나 수업 중에도 계속 움직이고 싶고, 새로운 자극이\n없으면 금방 지루해져서 딴짓을 찾는 편이에요.",
     tip: "짧은 스트레칭이나 산책처럼, 에너지를 건강하게 발산할 시간을 일부러 만들어보세요.",
   },
   "110": {
     emoji: "🌀",
     name: "생각 폭주 소용돌이형",
-    subtitle: "즉흥 몰입형",
+    subtitle: "인지-충동 복합형",
     desc: "몸을 움직이는 건 평범한데, 머릿속은 늘 분주해요.\n집중이 잘 안 되는 동시에 떠오른 생각을 바로 행동에\n옮기는 편이라, 계획했던 것과 다르게 흘러가는 일이 잦아요.",
     tip: "행동하기 전에 딱 한 번, 종이에 적어보는 습관을 들여보세요. 생각을 붙잡아두는 데 도움이 돼요.",
   },
   "101": {
     emoji: "🍃",
     name: "정처 없는 나뭇잎형",
-    subtitle: "산만 활동형",
+    subtitle: "인지-활동 복합형",
     desc: "충동적으로 저지르진 않지만, 집중력이 흐트러지는 동시에\n몸도 가만히 있질 못해요. 딴생각과 딴짓 사이를 오가느라\n하나에 오래 머무르기가 어려운 편이에요.",
     tip: "한 번에 한 가지 활동만 눈에 보이게 두고, 타이머로 짧게 끊어서 진행해보세요.",
   },
   "011": {
     emoji: "⚡",
     name: "번개 충동 폭풍형",
-    subtitle: "성급 활동형",
+    subtitle: "충동-활동 복합형",
     desc: "생각이 떠오르면 재고 따지기 전에 먼저 움직이는\n추진력이 강해요. 가만히 있지 못하고 기다리는 상황을\n유독 못 참는 모습도 자주 보여요. 집중력 자체는 평범한\n편이라, 마음만 먹으면 몰입도 잘하는 타입이에요.",
     tip: "중요한 결정 앞에서는 '10초만 멈추기'를 연습하고, 몸을 움직이는 활동으로 에너지를 발산해보세요.",
   },
   "111": {
     emoji: "🌪️",
     name: "종합 태풍형",
-    subtitle: "종합형",
+    subtitle: "전영역 복합형",
     desc: "집중·충동·에너지 세 영역 모두에서 뚜렷한 특징이\n나타났어요. 생각이 자꾸 흩어지고, 충동적으로 움직이고,\n몸도 가만히 있질 못하는 모습이 함께 나타나는 편이에요.\n세 가지가 겹치면 일상에서 꽤 힘들게 느껴질 수 있어요.",
     tip: "혼자 다 해결하려 하기보다, 전문가와 함께 우선순위부터 정리해보는 것도 좋은 방법이에요.",
   },
 };
 
 // 결과를 공유했을 때 받는 사람도 실제로 "그 결과"를 볼 수 있도록, 프로필 키를
-// URL에 실을 수 있는 슬러그로 바꾼다 (/test/focus/result/owl 같은 형태).
+// URL에 실을 수 있는 슬러그로 바꾼다 (/test/adhd/result/owl 같은 형태).
 const SLUG_TO_PROFILE = {
   owl: "000",
   fog: "100",
@@ -114,7 +114,7 @@ const SLUG_TO_PROFILE = {
 const PROFILE_TO_SLUG = Object.fromEntries(Object.entries(SLUG_TO_PROFILE).map(([slug, key]) => [key, slug]));
 
 function sharedProfileFromPath(pathname) {
-  const m = normalizePath(pathname).match(/^\/test\/focus\/result\/([a-z]+)$/);
+  const m = normalizePath(pathname).match(/^\/test\/adhd\/result\/([a-z]+)$/);
   return m ? SLUG_TO_PROFILE[m[1]] || null : null;
 }
 
@@ -165,16 +165,16 @@ const state = {
 };
 
 // 심리테스트는 /test/이름, 미니게임은 /game/이름 경로를 갖는다.
-// 반응속도 게임은 별도 미니게임이 아니라 집중력 테스트에 딸린 보너스라 /test/focus 하위 경로를 쓴다.
+// 반응속도 게임은 별도 미니게임이 아니라 ADHD 테스트에 딸린 보너스라 /test/adhd 하위 경로를 쓴다.
 const ROUTES = {
   "/": "home",
   "/test": "psych-list",
-  "/test/focus": "test-intro",
-  "/test/focus/play": "test-question",
-  "/test/focus/result": "test-result",
-  "/test/focus/reaction": "reaction-intro",
-  "/test/focus/reaction/play": "reaction-play",
-  "/test/focus/reaction/result": "reaction-result",
+  "/test/adhd": "test-intro",
+  "/test/adhd/play": "test-question",
+  "/test/adhd/result": "test-result",
+  "/test/adhd/reaction": "reaction-intro",
+  "/test/adhd/reaction/play": "reaction-play",
+  "/test/adhd/reaction/result": "reaction-result",
   "/game": "game-list",
 };
 const SCREEN_TO_PATH = Object.fromEntries(Object.entries(ROUTES).map(([path, screen]) => [screen, path]));
@@ -228,9 +228,9 @@ function resolveScreen(screen) {
 const SCREEN_TITLES = {
   "home": "과몰입구역 - 심리테스트 · 미니게임",
   "psych-list": "심리테스트 | 과몰입구역",
-  "test-intro": "집중력 및 산만함 지수 테스트 | 과몰입구역",
-  "test-question": "집중력 및 산만함 지수 테스트 - 진행 중 | 과몰입구역",
-  "test-result": "집중력 및 산만함 지수 테스트 결과 | 과몰입구역",
+  "test-intro": "성인 ADHD 성향 체크 | 과몰입구역",
+  "test-question": "성인 ADHD 성향 체크 - 진행 중 | 과몰입구역",
+  "test-result": "성인 ADHD 성향 체크 결과 | 과몰입구역",
   "game-list": "미니게임 | 과몰입구역",
   "reaction-intro": "반응속도 게임 | 과몰입구역",
   "reaction-play": "반응속도 게임 - 플레이 중 | 과몰입구역",
@@ -249,7 +249,7 @@ function setScreen(screen, { push = false, replace = false } = {}) {
   window.scrollTo(0, 0);
   document.title = SCREEN_TITLES[resolved] || SCREEN_TITLES.home;
 
-  // test-shared는 슬러그마다 다른 주소(/test/focus/result/owl 등)라 SCREEN_TO_PATH의
+  // test-shared는 슬러그마다 다른 주소(/test/adhd/result/owl 등)라 SCREEN_TO_PATH의
   // "화면 하나 = 주소 하나" 가정이 깨진다. 이미 맞는 주소로 들어온 것이므로 건드리지
   // 않고, popstate가 화면 정보를 들고 있도록 history.state만 채워둔다.
   if (resolved === "test-shared") {
@@ -363,7 +363,7 @@ function renderPsychList() {
         <button class="test-card" data-nav="test-intro">
           <div class="icon">🎯</div>
           <div class="body">
-            <div class="name">집중력 및 산만함 지수 테스트</div>
+            <div class="name">성인 ADHD 성향 체크</div>
             <div class="desc">집중 안 되는 나, 혹시…? · 12문항</div>
           </div>
           <div class="chevron">›</div>
@@ -383,15 +383,15 @@ function renderTestIntro() {
       </div>
       <div class="cover">
         <div class="emoji">🎯</div>
-        <div class="tag">집중력 · 산만함 체크</div>
-        <h2>집중력 및 산만함<br/>지수 테스트</h2>
+        <div class="tag">집중력 성향 체크</div>
+        <h2>성인 ADHD<br/>성향 체크</h2>
         <p>요즘 유독 집중이 안 되고<br/>깜빡깜빡한다면?</p>
       </div>
       <div class="meta-chips">
         <div class="meta-chip"><div class="value">${QUESTIONS.length}문항</div><div class="label">약 1분</div></div>
         <div class="meta-chip"><div class="value">${Object.keys(RESULT_TYPES).length}가지</div><div class="label">결과 유형</div></div>
       </div>
-      <p class="disclaimer">집중력·충동·활동성과 관련된 흔한 특성들을 참고해<br/>재구성한 자체 문항이며, 의학적 진단이 아닙니다.</p>
+      <p class="disclaimer">DSM-5가 다루는 증상 영역(부주의·충동성·과잉행동)을 참고해<br/>재구성한 자체 문항이며, 특정 임상 척도나 의학적 진단이 아닙니다.</p>
       <div class="cta">
         <button class="cta-btn" id="start-btn">테스트 시작하기</button>
       </div>
@@ -402,7 +402,7 @@ function renderTestIntro() {
   app.querySelector("#start-btn").addEventListener("click", () => {
     showModal({
       title: "⚠️ 시작 전 안내",
-      body: "이 테스트는 재미를 위한 자가 참고용 콘텐츠이며,\n의학적 진단 도구가 아닙니다.\n\n결과만으로 실제 상태를 판단할 수 없으니,\n집중력이나 충동 조절이 계속 걱정되신다면\n정신건강의학과 등 전문가와 상담해보시길 권해드립니다.",
+      body: "이 테스트는 재미를 위한 자가 참고용 콘텐츠이며,\n의학적 진단 도구가 아닙니다.\n\n결과만으로 ADHD 여부를 판단할 수 없으니,\n정확한 진단은 반드시 정신건강의학과 등\n전문 의료기관에서 전문가와 상담을 통해\n받으시길 권해드립니다.",
       confirmLabel: "확인했어요, 시작할게요",
       cancelLabel: "취소",
       onConfirm: () => {
@@ -605,10 +605,10 @@ function renderResult() {
     go("test-intro");
   });
 
-  // 예전엔 이 페이지 자체 주소(/test/focus/result, 모두에게 동일)를 복사했어서
+  // 예전엔 이 페이지 자체 주소(/test/adhd/result, 모두에게 동일)를 복사했어서
   // 친구가 링크를 열어도 빈 테스트만 보였다. 슬러그가 붙은 결과별 주소를 공유해야
   // 친구도 실제로 "이 결과"를 볼 수 있다.
-  const shareUrl = `${location.origin}/test/focus/result/${PROFILE_TO_SLUG[r.key]}`;
+  const shareUrl = `${location.origin}/test/adhd/result/${PROFILE_TO_SLUG[r.key]}`;
   const shareText = `나는 "${r.type.name}(${r.type.subtitle})"이 나왔어요! 너는 어떤 유형일까?`;
 
   const copyBtn = app.querySelector("#copy-link-btn");
@@ -668,7 +668,7 @@ function renderTestShared() {
         <p>${type.desc}</p>
       </div>
       <div class="result-tip">💡 ${type.tip}</div>
-      <p class="disclaimer">재미로 보는 성향 체크 결과이며, 의학적 진단이 아닙니다.</p>
+      <p class="disclaimer">DSM-5가 다루는 증상 영역을 참고해 재구성한 자체 문항에서 나온 결과이며,<br/>의학적 진단이 아닙니다.</p>
       <div class="cta" style="padding-top:10px;">
         <button class="cta-btn" data-nav="test-intro">나도 성향 체크해보기</button>
       </div>
@@ -717,7 +717,7 @@ function renderReactionIntro() {
     <div>
       <div class="back-row">
         <button class="back-btn" data-nav="test-result">‹</button>
-        <div class="back-title">집중력 및 산만함 지수 테스트</div>
+        <div class="back-title">성인 ADHD 성향 체크</div>
       </div>
       <div class="cover" style="background:linear-gradient(160deg,#2FCB86,#1B8F5C);">
         <div class="emoji">⚡</div>
@@ -904,7 +904,7 @@ function renderReactionResult() {
   if (bonus.impulse > 0) bonusParts.push(`충동 +${bonus.impulse}`);
   if (bonus.focus > 0) bonusParts.push(`집중 +${bonus.focus}`);
   const bonusNote = bonusParts.length
-    ? `🎯 이 결과가 방금 본 집중력·산만함 테스트에 반영돼요 (${bonusParts.join(" · ")}). 결과로 돌아가면 갱신된 점수를 볼 수 있어요.`
+    ? `🎯 이 결과가 방금 본 ADHD 성향 체크에 반영돼요 (${bonusParts.join(" · ")}). 결과로 돌아가면 갱신된 점수를 볼 수 있어요.`
     : "🎯 이번엔 추가로 반영된 점수가 없었어요 — 안정적인 결과였어요! 결과 화면은 그대로예요.";
 
   app.appendChild(el(`
