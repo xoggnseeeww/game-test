@@ -556,12 +556,20 @@ body {
   font-weight: 800;
   padding: 16px;
   border-radius: 16px;
+  border: none;
+  font-family: inherit;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
+  width: 100%;
   opacity: .55;
   cursor: default;
+}
+
+.share-kakao.active {
+  opacity: 1;
+  cursor: pointer;
 }
 
 .share-row {

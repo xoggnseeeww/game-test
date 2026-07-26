@@ -1,18 +1,22 @@
 "use strict";
 
+// 문항은 특정 임상 척도(ASRS 등)를 그대로 옮긴 게 아니라, DSM-5가 다루는 증상
+// 영역(부주의/충동성/과잉행동)을 참고해 자체적으로 재구성한 것이다. 축마다
+// 3문항은 정방향, 1문항은 역채점(reverse)으로 넣어서 "다 그렇다"로 답해도
+// 점수가 한쪽으로만 쏠리지 않게 했다 — 역채점 문항은 응답값을 4에서 뺀 값으로 집계한다.
 const QUESTIONS = [
   { text: "해야 할 일을 자꾸 마지막 순간까지\n미루다가 늘 벼락치기로 끝낸다.", group: "focus" },
-  { text: "대화 중에 딴생각에 빠져서\n방금 무슨 말을 들었는지 놓칠 때가 있다.", group: "focus" },
   { text: "지갑, 열쇠, 휴대폰을 어디 뒀는지\n매번 찾아 헤맨다.", group: "focus" },
-  { text: "하던 일을 끝까지 마무리하지 못하고\n자꾸 다른 일로 넘어간다.", group: "focus" },
+  { text: "대화 중에 다른 생각에 빠져서\n방금 들은 말을 놓칠 때가 있다.", group: "focus" },
+  { text: "중요한 서류나 일정은 특별히 신경 쓰지\n않아도 잘 챙기는 편이다.", group: "focus", reverse: true },
   { text: "줄을 서거나 신호를 기다리는 상황을\n유독 못 참는다.", group: "impulse" },
   { text: "좋은 생각이 떠오르면 앞뒤 재지 않고\n바로 저질러 버린다.", group: "impulse" },
   { text: "상대방 말이 끝나기도 전에\n끼어들어 말할 때가 많다.", group: "impulse" },
-  { text: "계획에 없던 물건을 충동적으로\n사거나 약속을 잡는다.", group: "impulse" },
+  { text: "결정을 내리기 전엔 여러 선택지를\n신중하게 따져보는 편이다.", group: "impulse", reverse: true },
   { text: "가만히 앉아있는 것보다\n몸을 움직이는 게 훨씬 편하다.", group: "energy" },
-  { text: "좋아하는 것에 꽂히면 시간 가는 줄\n모르고 몰입한다.", group: "energy" },
   { text: "회의나 수업 중에도 다리를 떨거나\n손을 계속 움직인다.", group: "energy" },
   { text: "새로운 자극이 없으면 금방 지루해하고\n딴짓을 찾는다.", group: "energy" },
+  { text: "가만히 앉아서 오랫동안 차분하게\n있는 게 크게 어렵지 않다.", group: "energy", reverse: true },
 ];
 
 const OPTIONS = [
@@ -95,10 +99,29 @@ const RESULT_TYPES = {
   },
 };
 
+// 결과를 공유했을 때 받는 사람도 실제로 "그 결과"를 볼 수 있도록, 프로필 키를
+// URL에 실을 수 있는 슬러그로 바꾼다 (/test/adhd/result/owl 같은 형태).
+const SLUG_TO_PROFILE = {
+  owl: "000",
+  fog: "100",
+  spark: "010",
+  bee: "001",
+  swirl: "110",
+  leaf: "101",
+  lightning: "011",
+  typhoon: "111",
+};
+const PROFILE_TO_SLUG = Object.fromEntries(Object.entries(SLUG_TO_PROFILE).map(([slug, key]) => [key, slug]));
+
+function sharedProfileFromPath(pathname) {
+  const m = normalizePath(pathname).match(/^\/test\/adhd\/result\/([a-z]+)$/);
+  return m ? SLUG_TO_PROFILE[m[1]] || null : null;
+}
+
 // 반응·주의력 게임: Go/No-Go 과제를 단순화한 10라운드 미니게임.
 // 초록불(go)엔 반응, 주황불(no-go)엔 억제 — 두 종류 오류와 반응시간 변산성을 측정한다.
-const CPT_ROUNDS = 10;
-const CPT_NOGO_COUNT = 3;
+const CPT_ROUNDS = 14;
+const CPT_NOGO_COUNT = 4;
 const CPT_GO_WINDOW = 1000; // go 신호 후 이 시간 안에 반응 못하면 누락(omission) 처리
 const CPT_NOGO_WINDOW = 1000; // no-go 신호 후 이 시간 동안 누르면 억제 실패(commission) 처리
 
@@ -162,7 +185,10 @@ function normalizePath(pathname) {
 }
 
 function pathToScreen(pathname) {
-  return ROUTES[normalizePath(pathname)] || "home";
+  const norm = normalizePath(pathname);
+  if (ROUTES[norm]) return ROUTES[norm];
+  if (sharedProfileFromPath(norm)) return "test-shared";
+  return "home";
 }
 
 const app = document.getElementById("app");
@@ -180,6 +206,7 @@ function render() {
     case "reaction-intro": renderReactionIntro(); break;
     case "reaction-play": renderReactionPlay(); break;
     case "reaction-result": renderReactionResult(); break;
+    case "test-shared": renderTestShared(); break;
   }
   app.classList.toggle("has-bottom-nav", !!app.querySelector(".bottom-nav"));
 }
@@ -208,6 +235,7 @@ const SCREEN_TITLES = {
   "reaction-intro": "반응속도 게임 | 과몰입구역",
   "reaction-play": "반응속도 게임 - 플레이 중 | 과몰입구역",
   "reaction-result": "반응속도 게임 결과 | 과몰입구역",
+  "test-shared": "친구의 성향 체크 결과 | 과몰입구역",
 };
 
 function setScreen(screen, { push = false, replace = false } = {}) {
@@ -220,6 +248,16 @@ function setScreen(screen, { push = false, replace = false } = {}) {
   render();
   window.scrollTo(0, 0);
   document.title = SCREEN_TITLES[resolved] || SCREEN_TITLES.home;
+
+  // test-shared는 슬러그마다 다른 주소(/test/adhd/result/owl 등)라 SCREEN_TO_PATH의
+  // "화면 하나 = 주소 하나" 가정이 깨진다. 이미 맞는 주소로 들어온 것이므로 건드리지
+  // 않고, popstate가 화면 정보를 들고 있도록 history.state만 채워둔다.
+  if (resolved === "test-shared") {
+    if (replace && !history.state) {
+      history.replaceState({ screen: resolved }, "", location.pathname + location.search);
+    }
+    return;
+  }
 
   const path = (SCREEN_TO_PATH[resolved] || "/") + location.search;
   if (push && normalizePath(location.pathname) !== SCREEN_TO_PATH[resolved]) {
@@ -353,7 +391,7 @@ function renderTestIntro() {
         <div class="meta-chip"><div class="value">${QUESTIONS.length}문항</div><div class="label">약 1분</div></div>
         <div class="meta-chip"><div class="value">${Object.keys(RESULT_TYPES).length}가지</div><div class="label">결과 유형</div></div>
       </div>
-      <p class="disclaimer">본 테스트는 재미를 위한 성향 체크이며, 의학적 진단이 아닙니다.</p>
+      <p class="disclaimer">DSM-5가 다루는 증상 영역(부주의·충동성·과잉행동)을 참고해<br/>재구성한 자체 문항이며, 특정 임상 척도나 의학적 진단이 아닙니다.</p>
       <div class="cta">
         <button class="cta-btn" id="start-btn">테스트 시작하기</button>
       </div>
@@ -404,7 +442,8 @@ function renderQuestion() {
       </button>
     `);
     btn.addEventListener("click", () => {
-      state.answers.push({ group: q.group, value: opt.value });
+      const value = q.reverse ? 4 - opt.value : opt.value;
+      state.answers.push({ group: q.group, value });
       if (state.answers.length >= QUESTIONS.length) {
         go("test-result");
       } else {
@@ -426,7 +465,9 @@ function renderQuestion() {
 
 // 게임 결과(state.lastReaction)를 충동/집중 보너스로 환산한다.
 // 근거: Go/No-Go·CPT(연속수행검사) 계열 과제에서 실제로 쓰이는 두 축을 그대로 옮긴 것.
-//  - 억제 실패(commission error, no-go에서 눌러버림) = 충동성(impulse) 지표
+//  - 억제 실패(commission error, no-go에서 눌러버림) + 성급한 반응(premature response,
+//    신호가 뜨기 전에 미리 누름) = 충동성(impulse) 지표. 둘 다 같은 구성개념(충동성)의
+//    서로 다른 신호라, 더 높게 나온 쪽을 채택한다(Math.max).
 //  - 누락 반응(omission error, go를 놓침) + 반응시간 변산성(RT variability) = 부주의(focus) 지표
 // "빨리 누를수록 충동적"이라는 예전 규칙은 반사신경과 충동성을 혼동한 것이라 폐기했다.
 // 에너지(과잉행동) 성향은 이 방식으로 측정할 근거가 없어 의도적으로 반영하지 않는다.
@@ -438,9 +479,13 @@ function gameBonuses() {
   if (g.noGoCount > 0) {
     const rate = g.commissionErrors / g.noGoCount;
     if (rate >= 1) impulse = 4;
-    else if (rate >= 0.66) impulse = 3;
-    else if (rate >= 0.33) impulse = 1;
+    else if (rate >= 0.75) impulse = 3;
+    else if (rate >= 0.5) impulse = 2;
+    else if (rate > 0) impulse = 1;
   }
+  if (g.prematureCount >= 3) impulse = Math.max(impulse, 3);
+  else if (g.prematureCount >= 1) impulse = Math.max(impulse, 1);
+  impulse = Math.min(4, impulse);
 
   let focus = 0;
   if (g.goCount > 0) {
@@ -476,9 +521,10 @@ function computeResult() {
     impulse: pct.impulse > prePct.impulse ? bonus.impulse : 0,
   };
 
-  const type = RESULT_TYPES[profileKey(pct)];
+  const key = profileKey(pct);
   return {
-    type,
+    type: RESULT_TYPES[key],
+    key,
     focus: pct.focus,
     impulse: pct.impulse,
     energy: pct.energy,
@@ -532,12 +578,12 @@ function renderResult() {
 
       <div class="share-block">
         <div class="share-title">친구는 무슨 유형일까? 👀</div>
-        <div class="share-kakao">💬 카카오톡으로 결과 공유</div>
+        <button class="share-kakao active" id="share-btn">📤 결과 공유하기</button>
         <div class="share-row">
           <button class="share-mini active" id="copy-link-btn">🔗 링크 복사</button>
           <div class="share-mini">🖼️ 이미지 저장</div>
         </div>
-        <p class="share-note">카카오톡 공유·이미지 저장은 준비 중이에요</p>
+        <p class="share-note">이미지 저장은 준비 중이에요</p>
       </div>
 
       <div class="ad-slot rect">카카오 AdFit<br/>250×250</div>
@@ -558,11 +604,18 @@ function renderResult() {
     state.answers = [];
     go("test-intro");
   });
+
+  // 예전엔 이 페이지 자체 주소(/test/adhd/result, 모두에게 동일)를 복사했어서
+  // 친구가 링크를 열어도 빈 테스트만 보였다. 슬러그가 붙은 결과별 주소를 공유해야
+  // 친구도 실제로 "이 결과"를 볼 수 있다.
+  const shareUrl = `${location.origin}/test/adhd/result/${PROFILE_TO_SLUG[r.key]}`;
+  const shareText = `나는 "${r.type.name}(${r.type.subtitle})"이 나왔어요! 너는 어떤 유형일까?`;
+
   const copyBtn = app.querySelector("#copy-link-btn");
   copyBtn.addEventListener("click", async () => {
     const original = copyBtn.textContent;
     try {
-      await navigator.clipboard.writeText(location.href);
+      await navigator.clipboard.writeText(shareUrl);
       copyBtn.textContent = "✅ 복사 완료!";
     } catch {
       copyBtn.textContent = "복사 실패, 직접 복사해주세요";
@@ -571,6 +624,57 @@ function renderResult() {
       copyBtn.textContent = original;
     }, 1500);
   });
+
+  const shareBtn = app.querySelector("#share-btn");
+  shareBtn.addEventListener("click", async () => {
+    const original = shareBtn.textContent;
+    // navigator.share는 모바일 브라우저에서 카카오톡을 포함한 네이티브 공유시트를
+    // 띄운다(카카오 전용 SDK가 아니라 OS 공유창). 지원 안 되는 환경(주로 데스크톱)
+    // 에서는 링크 복사로 자연스럽게 대체한다.
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "과몰입구역", text: shareText, url: shareUrl });
+      } catch {
+        // 사용자가 공유창을 취소한 경우 등 - 별다른 처리 없음
+      }
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      shareBtn.textContent = "✅ 링크를 복사했어요!";
+    } catch {
+      shareBtn.textContent = "공유 실패, 직접 복사해주세요";
+    }
+    setTimeout(() => {
+      shareBtn.textContent = original;
+    }, 1500);
+  });
+}
+
+function renderTestShared() {
+  const key = sharedProfileFromPath(location.pathname);
+  const type = RESULT_TYPES[key];
+  app.appendChild(el(`
+    <div>
+      <div class="back-row">
+        <button class="back-btn" data-nav="home">‹</button>
+        <div class="back-title">심리테스트</div>
+      </div>
+      <div class="result-card">
+        <div class="eyebrow">친구의 집중 유형은</div>
+        <div class="emoji">${type.emoji}</div>
+        <h2>${type.name}</h2>
+        <div class="result-subtitle">${type.subtitle}</div>
+        <p>${type.desc}</p>
+      </div>
+      <div class="result-tip">💡 ${type.tip}</div>
+      <p class="disclaimer">DSM-5가 다루는 증상 영역을 참고해 재구성한 자체 문항에서 나온 결과이며,<br/>의학적 진단이 아닙니다.</p>
+      <div class="cta" style="padding-top:10px;">
+        <button class="cta-btn" data-nav="test-intro">나도 성향 체크해보기</button>
+      </div>
+    </div>
+  `));
+  bindNav(app);
 }
 
 function renderGameList() {
@@ -626,7 +730,7 @@ function renderReactionIntro() {
         <div class="meta-chip"><div class="value">${best !== null ? best + "ms" : "-"}</div><div class="label">내 평균 반응속도</div></div>
         <div class="meta-chip"><div class="value">${CPT_NOGO_COUNT}회</div><div class="label">참아야 할 신호</div></div>
       </div>
-      <p class="disclaimer">너무 일찍 누르면 그 라운드만 다시 진행돼요(감점 없음). 주황불에서는 누르지 않는 게 정답이에요!</p>
+      <p class="disclaimer">너무 일찍 누르면 그 라운드는 다시 진행되지만, 성급하게 반응한 횟수도\n충동성 지표에 함께 기록돼요. 주황불에서는 누르지 않는 게 정답이에요!</p>
       <div class="cta">
         <button class="cta-btn" id="start-btn" style="background:#1FAE6A; box-shadow:0 8px 20px rgba(31,174,106,.32);">게임 시작하기</button>
       </div>
@@ -661,6 +765,7 @@ function renderReactionPlay() {
 
   const noGoRounds = new Set(shuffle([...Array(CPT_ROUNDS).keys()]).slice(0, CPT_NOGO_COUNT));
   const results = [];
+  let prematureCount = 0;
   let round = 0;
   let phase = "intro"; // intro -> waiting -> go/nogo -> feedback (-> waiting again on false start)
   let stimulusOnset = 0;
@@ -679,18 +784,23 @@ function renderReactionPlay() {
     reactionTimer = setTimeout(() => {
       const isGo = !noGoRounds.has(round);
       phase = isGo ? "go" : "nogo";
-      stimulusOnset = performance.now();
-      if (isGo) {
-        panel.style.background = "#1FAE6A";
-        msg.textContent = "지금 클릭!";
-      } else {
-        panel.style.background = "#F5A623";
-        msg.textContent = "누르지 마세요!";
-      }
-      reactionTimer = setTimeout(() => {
-        results.push(isGo ? { type: "go", correct: false } : { type: "nogo", correct: true });
-        nextRound();
-      }, isGo ? CPT_GO_WINDOW : CPT_NOGO_WINDOW);
+      // 스타일 변경 직후 performance.now()를 찍으면 실제 화면에 그려지기(paint) 전
+      // 시점을 기준으로 삼게 되어 반응시간이 체계적으로 부풀려진다. rAF 콜백 안에서
+      // 찍어야 브라우저가 다음 프레임을 그리기 직전 시점에 더 가깝게 맞출 수 있다.
+      requestAnimationFrame(() => {
+        stimulusOnset = performance.now();
+        if (isGo) {
+          panel.style.background = "#1FAE6A";
+          msg.textContent = "지금 클릭!";
+        } else {
+          panel.style.background = "#F5A623";
+          msg.textContent = "누르지 마세요!";
+        }
+        reactionTimer = setTimeout(() => {
+          results.push(isGo ? { type: "go", correct: false } : { type: "nogo", correct: true });
+          nextRound();
+        }, isGo ? CPT_GO_WINDOW : CPT_NOGO_WINDOW);
+      });
     }, delay);
   }
 
@@ -706,6 +816,7 @@ function renderReactionPlay() {
 
   function finish() {
     const stats = summarizeGameResults(results);
+    stats.prematureCount = prematureCount;
     const best = bestReactionTime();
     const isBest = stats.avgRt !== null && (best === null || stats.avgRt < best);
     if (isBest) saveBestReactionTime(stats.avgRt);
@@ -717,7 +828,11 @@ function renderReactionPlay() {
     if (phase === "intro") {
       startRound();
     } else if (phase === "waiting") {
+      // 신호가 뜨기 전에 미리 누르는 것(성급한 반응)도 CPT 계열 과제에서 충동성
+      // 신호로 쓰인다. 그 라운드 자체는 다시 진행하되(같은 라운드를 소모하지 않되),
+      // 성급하게 반응한 횟수는 따로 기록해서 충동 점수에 반영한다.
       clearTimeout(reactionTimer);
+      prematureCount++;
       phase = "feedback";
       panel.style.background = "#FCE7E5";
       msg.style.color = "#C23B32";
@@ -750,8 +865,8 @@ function renderReactionPlay() {
 // 억제 실패(commissionErrors)와 누락(omissionErrors)을 각각 따로만 보지 않고
 // 두 축의 조합으로 코멘트를 골라서, 단순 반응속도 하나보다 더 구체적인 피드백을 준다.
 function reactionComment(r) {
-  const highCommission = r.commissionErrors >= 2;
-  const someCommission = r.commissionErrors === 1;
+  const highCommission = r.commissionErrors >= 2 || r.prematureCount >= 3;
+  const someCommission = r.commissionErrors === 1 || r.prematureCount === 1 || r.prematureCount === 2;
   const highOmission = r.omissionErrors >= 2;
   const someOmission = r.omissionErrors === 1;
 
@@ -768,7 +883,7 @@ function reactionComment(r) {
     return "신중한 편이지만, 그만큼 놓치는 순간도 좀 있었어요 💭";
   }
   if (someCommission) {
-    return "대체로 안정적인데, 딱 한 번 성급하게 반응했어요";
+    return "대체로 안정적인데, 성급하게 반응한 순간이 한두 번 있었어요";
   }
   if (someOmission) {
     return "대체로 안정적인데, 딱 한 번 반응을 놓쳤어요";
@@ -778,7 +893,7 @@ function reactionComment(r) {
 
 function renderReactionResult() {
   const r = state.lastReaction || {
-    avgRt: null, rtSD: 0, omissionErrors: 0, commissionErrors: 0,
+    avgRt: null, rtSD: 0, omissionErrors: 0, commissionErrors: 0, prematureCount: 0,
     goCount: 0, noGoCount: 0, accuracy: 0, isBest: false,
   };
   const bonus = gameBonuses();
@@ -806,8 +921,9 @@ function renderReactionResult() {
         <div class="meta-chip"><div class="value">${r.rtSD}ms</div><div class="label">반응 일관성(SD)</div></div>
         <div class="meta-chip"><div class="value">${r.commissionErrors}/${r.noGoCount}</div><div class="label">충동억제 실패</div></div>
         <div class="meta-chip"><div class="value">${r.omissionErrors}/${r.goCount}</div><div class="label">주의력 누락</div></div>
+        <div class="meta-chip"><div class="value">${r.prematureCount}회</div><div class="label">성급한 반응</div></div>
       </div>
-      <p class="result-dominant">정확도: 알맞게 반응한 비율 · 일관성(SD): 반응속도가 얼마나 고르게 나왔는지(낮을수록 안정적) · 억제 실패: 참아야 할 때 누른 횟수 · 누락: 반응해야 할 때 놓친 횟수</p>
+      <p class="result-dominant">정확도: 알맞게 반응한 비율 · 일관성(SD): 반응속도가 얼마나 고르게 나왔는지(낮을수록 안정적) · 억제 실패: 참아야 할 때 누른 횟수 · 누락: 반응해야 할 때 놓친 횟수 · 성급한 반응: 신호가 뜨기 전에 미리 누른 횟수</p>
       <div class="result-tip">${bonusNote}</div>
       <p class="disclaimer">※ 이 수치는 재미로 보는 참고용이며, 실제 인지검사나 의학적 진단 결과가 아니에요.</p>
       <div class="cta" style="padding-top:10px;">
