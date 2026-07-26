@@ -721,16 +721,16 @@ function renderReactionIntro() {
       </div>
       <div class="cover" style="background:linear-gradient(160deg,#2FCB86,#1B8F5C);">
         <div class="emoji">⚡</div>
-        <div class="tag">충동억제 · 지속주의 측정</div>
+        <div class="tag">충동 조절 · 집중력 미니게임</div>
         <h2>반응속도 게임</h2>
-        <p>초록불엔 재빨리 탭, 주황불엔 참아보세요!<br/>${CPT_ROUNDS}라운드로 충동 조절과 집중력을 함께 측정해요.</p>
+        <p>초록불엔 재빨리 탭, 주황불엔 참아보세요!<br/>${CPT_ROUNDS}라운드로 충동 조절과 집중력을 함께 확인해봐요.</p>
       </div>
       <div class="meta-chips">
-        <div class="meta-chip"><div class="value">${CPT_ROUNDS}라운드</div><div class="label">측정 방식</div></div>
+        <div class="meta-chip"><div class="value">${CPT_ROUNDS}라운드</div><div class="label">게임 방식</div></div>
         <div class="meta-chip"><div class="value">${best !== null ? best + "ms" : "-"}</div><div class="label">내 평균 반응속도</div></div>
         <div class="meta-chip"><div class="value">${CPT_NOGO_COUNT}회</div><div class="label">참아야 할 신호</div></div>
       </div>
-      <p class="disclaimer">너무 일찍 누르면 그 라운드는 다시 진행되지만, 성급하게 반응한 횟수도\n충동성 지표에 함께 기록돼요. 주황불에서는 누르지 않는 게 정답이에요!</p>
+      <p class="disclaimer">너무 일찍 누르면 그 라운드는 다시 진행되지만, 성급했던 횟수도\n충동 점수에 함께 기록돼요. 주황불에서는 누르지 않는 게 정답이에요!</p>
       <div class="cta">
         <button class="cta-btn" id="start-btn" style="background:#1FAE6A; box-shadow:0 8px 20px rgba(31,174,106,.32);">게임 시작하기</button>
       </div>
@@ -912,18 +912,18 @@ function renderReactionResult() {
       <div class="result-card" style="background:linear-gradient(160deg,#2FCB86,#1B8F5C);">
         <div class="eyebrow">평균 반응속도(Go 라운드 기준)</div>
         <div class="emoji">⚡</div>
-        <h2>${r.avgRt !== null ? r.avgRt + "ms" : "측정 안 됨"}</h2>
+        <h2>${r.avgRt !== null ? r.avgRt + "ms" : "기록 없음"}</h2>
         <p>${comment}</p>
         ${r.isBest ? '<div class="result-stats"><span>🎉 새 최고기록!</span></div>' : ""}
       </div>
       <div class="meta-chips">
         <div class="meta-chip"><div class="value">${r.accuracy}%</div><div class="label">정확도</div></div>
-        <div class="meta-chip"><div class="value">${r.rtSD}ms</div><div class="label">반응 일관성(SD)</div></div>
-        <div class="meta-chip"><div class="value">${r.commissionErrors}/${r.noGoCount}</div><div class="label">충동억제 실패</div></div>
-        <div class="meta-chip"><div class="value">${r.omissionErrors}/${r.goCount}</div><div class="label">주의력 누락</div></div>
-        <div class="meta-chip"><div class="value">${r.prematureCount}회</div><div class="label">성급한 반응</div></div>
+        <div class="meta-chip"><div class="value">${r.rtSD}ms</div><div class="label">반응 일관성</div></div>
+        <div class="meta-chip"><div class="value">${r.commissionErrors}/${r.noGoCount}</div><div class="label">못 참은 순간</div></div>
+        <div class="meta-chip"><div class="value">${r.omissionErrors}/${r.goCount}</div><div class="label">놓친 순간</div></div>
+        <div class="meta-chip"><div class="value">${r.prematureCount}회</div><div class="label">성급했던 순간</div></div>
       </div>
-      <p class="result-dominant">정확도: 알맞게 반응한 비율 · 일관성(SD): 반응속도가 얼마나 고르게 나왔는지(낮을수록 안정적) · 억제 실패: 참아야 할 때 누른 횟수 · 누락: 반응해야 할 때 놓친 횟수 · 성급한 반응: 신호가 뜨기 전에 미리 누른 횟수</p>
+      <p class="result-dominant">정확도: 알맞게 반응한 비율 · 반응 일관성: 반응속도가 얼마나 고르게 나왔는지(낮을수록 안정적) · 못 참은 순간: 참아야 할 때 누른 횟수 · 놓친 순간: 반응해야 할 때 놓친 횟수 · 성급했던 순간: 신호가 뜨기 전에 미리 누른 횟수</p>
       <div class="result-tip">${bonusNote}</div>
       <p class="disclaimer">※ 이 수치는 재미로 보는 참고용이며, 실제 인지검사나 의학적 진단 결과가 아니에요.</p>
       <div class="cta" style="padding-top:10px;">
