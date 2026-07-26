@@ -289,6 +289,7 @@ function renderTestIntro() {
       cancelLabel: "취소",
       onConfirm: () => {
         state.answers = [];
+        state.lastReaction = null;
         go("test-question");
       },
     });
@@ -343,19 +344,34 @@ function renderQuestion() {
   });
 }
 
+// 반응속도가 빠를수록(=순간적으로 반응할수록) 충동성 점수에 보너스를 더한다.
+// 문항 하나의 배점(0~4)과 같은 스케일로 맞춰서 결과 유형 판정에 실제로 반영되게 한다.
+function reactionBonus() {
+  if (!state.lastReaction) return 0;
+  const t = state.lastReaction.time;
+  if (t < 200) return 4;
+  if (t < 250) return 3;
+  if (t < 320) return 2;
+  if (t < 400) return 1;
+  return 0;
+}
+
 function computeResult() {
   const totals = { focus: 0, impulse: 0, energy: 0 };
   state.answers.forEach((a) => {
     totals[a.group] += a.value;
   });
+  const bonus = reactionBonus();
+  totals.impulse += bonus;
   const total = totals.focus + totals.impulse + totals.energy;
   const type = RESULT_TYPES.find((t) => total <= t.max) || RESULT_TYPES[RESULT_TYPES.length - 1];
-  const toPct = (v) => Math.round((v / 16) * 100);
+  const toPct = (v) => Math.min(100, Math.round((v / 16) * 100));
   return {
     type,
     focus: toPct(totals.focus),
     impulse: toPct(totals.impulse),
     energy: toPct(totals.energy),
+    bonus,
   };
 }
 
@@ -373,6 +389,7 @@ function renderResult() {
           <span>충동 ${r.impulse}</span><span class="sep">·</span>
           <span>에너지 ${r.energy}</span>
         </div>
+        ${r.bonus > 0 ? `<div class="result-stats" style="margin-top:8px;"><span>⚡ 반응속도 게임 결과 반영됨 (충동 +${r.bonus})</span></div>` : ""}
       </div>
 
       <div class="result-tip">💡 ${r.type.tip}</div>
@@ -542,6 +559,7 @@ function renderReactionResult() {
         <p>${comment}</p>
         ${r.isBest ? '<div class="result-stats"><span>🎉 새 최고기록!</span></div>' : ""}
       </div>
+      <div class="result-tip">🎯 이 기록이 방금 본 ADHD 자가진단의 충동 점수에 반영돼요. 결과로 돌아가면 갱신된 점수를 볼 수 있어요.</div>
       <div class="cta" style="padding-top:20px;">
         <button class="cta-btn" id="retry-btn" style="background:#1FAE6A; box-shadow:0 8px 20px rgba(31,174,106,.32);">다시 도전하기</button>
       </div>
