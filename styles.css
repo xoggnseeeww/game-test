@@ -559,9 +559,16 @@ body {
   font-weight: 700;
   padding: 14px;
   border-radius: 14px;
+  border: none;
+  font-family: inherit;
   box-shadow: 0 2px 8px rgba(0,0,0,.05);
   opacity: .55;
   cursor: default;
+}
+
+.share-mini.active {
+  opacity: 1;
+  cursor: pointer;
 }
 
 .share-note {

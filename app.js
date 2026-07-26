@@ -115,6 +115,18 @@ function resolveScreen(screen) {
   return screen;
 }
 
+const SCREEN_TITLES = {
+  "home": "과몰입구역 - 심리테스트 · 미니게임",
+  "psych-list": "심리테스트 | 과몰입구역",
+  "test-intro": "성인 ADHD 자가진단 테스트 | 과몰입구역",
+  "test-question": "성인 ADHD 자가진단 - 진행 중 | 과몰입구역",
+  "test-result": "성인 ADHD 자가진단 결과 | 과몰입구역",
+  "game-list": "미니게임 | 과몰입구역",
+  "reaction-intro": "반응속도 게임 | 과몰입구역",
+  "reaction-play": "반응속도 게임 - 플레이 중 | 과몰입구역",
+  "reaction-result": "반응속도 게임 결과 | 과몰입구역",
+};
+
 function setScreen(screen, { push = false, replace = false } = {}) {
   if (reactionTimer) {
     clearTimeout(reactionTimer);
@@ -124,11 +136,12 @@ function setScreen(screen, { push = false, replace = false } = {}) {
   state.screen = resolved;
   render();
   window.scrollTo(0, 0);
+  document.title = SCREEN_TITLES[resolved] || SCREEN_TITLES.home;
 
-  const path = SCREEN_TO_PATH[resolved] || "/";
-  if (push && normalizePath(location.pathname) !== path) {
+  const path = (SCREEN_TO_PATH[resolved] || "/") + location.search;
+  if (push && normalizePath(location.pathname) !== SCREEN_TO_PATH[resolved]) {
     history.pushState({ screen: resolved }, "", path);
-  } else if (replace && (normalizePath(location.pathname) !== path || !history.state)) {
+  } else if (replace && (normalizePath(location.pathname) !== SCREEN_TO_PATH[resolved] || !history.state)) {
     history.replaceState({ screen: resolved }, "", path);
   }
 }
@@ -366,10 +379,10 @@ function renderResult() {
         <div class="share-title">친구는 무슨 유형일까? 👀</div>
         <div class="share-kakao">💬 카카오톡으로 결과 공유</div>
         <div class="share-row">
-          <div class="share-mini">🔗 링크 복사</div>
+          <button class="share-mini active" id="copy-link-btn">🔗 링크 복사</button>
           <div class="share-mini">🖼️ 이미지 저장</div>
         </div>
-        <p class="share-note">공유 기능은 준비 중이에요</p>
+        <p class="share-note">카카오톡 공유·이미지 저장은 준비 중이에요</p>
       </div>
 
       <div class="ad-slot rect">카카오 AdFit<br/>250×250</div>
@@ -389,6 +402,19 @@ function renderResult() {
   app.querySelector("#retry-btn").addEventListener("click", () => {
     state.answers = [];
     go("test-intro");
+  });
+  const copyBtn = app.querySelector("#copy-link-btn");
+  copyBtn.addEventListener("click", async () => {
+    const original = copyBtn.textContent;
+    try {
+      await navigator.clipboard.writeText(location.href);
+      copyBtn.textContent = "✅ 복사 완료!";
+    } catch {
+      copyBtn.textContent = "복사 실패, 직접 복사해주세요";
+    }
+    setTimeout(() => {
+      copyBtn.textContent = original;
+    }, 1500);
   });
 }
 
@@ -461,7 +487,7 @@ function renderReactionPlay() {
       </div>
     </div>
   `));
-  app.querySelector("[data-nav]").addEventListener("click", () => go("game-list"));
+  bindNav(app);
 
   const panel = app.querySelector("#game-panel");
   const msg = app.querySelector("#game-msg");
