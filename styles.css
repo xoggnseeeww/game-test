@@ -13,6 +13,18 @@
   --on-cover-body: #E4E0FF;
 }
 
+/* 반응속도 게임 화면. 예전엔 렌더러가 인라인 style로 초록색을 덮어썼다. */
+body.theme-game {
+  --accent: #1FAE6A;
+  --accent-shadow: rgba(31,174,106,.32);
+  --accent-soft: #E4F5EC;
+  --accent-ink: #1B8F5C;
+  --accent-dim: #7FD9AE;
+  --cover-grad: linear-gradient(160deg,#2FCB86,#1B8F5C);
+  --on-cover: #CFEFDF;
+  --on-cover-body: #DCF5E8;
+}
+
 * { box-sizing: border-box; }
 
 body {

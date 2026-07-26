@@ -17,6 +17,7 @@ import {
   computeResult,
   axisBreakdown,
   summarizeGameResults,
+  gameBonuses,
   reactionComment,
 } from "./score.js";
 
@@ -353,7 +354,7 @@ export function renderReactionIntro() {
         <button class="back-btn" data-nav="test-result">‹</button>
         <div class="back-title">성인 ADHD 성향 체크</div>
       </div>
-      <div class="cover" style="background:linear-gradient(160deg,#2FCB86,#1B8F5C);">
+      <div class="cover">
         <div class="emoji">⚡</div>
         <div class="tag">충동 조절 · 집중력 미니게임</div>
         <h2>반응속도 게임</h2>
@@ -366,7 +367,7 @@ export function renderReactionIntro() {
       </div>
       <p class="disclaimer">너무 일찍 누르면 그 라운드는 다시 진행되지만, 성급했던 횟수도\n충동 점수에 함께 기록돼요. 주황불에서는 누르지 않는 게 정답이에요!</p>
       <div class="cta">
-        <button class="cta-btn" id="start-btn" style="background:#1FAE6A; box-shadow:0 8px 20px rgba(31,174,106,.32);">게임 시작하기</button>
+        <button class="cta-btn" id="start-btn">게임 시작하기</button>
       </div>
     </div>
   `));
@@ -531,7 +532,7 @@ export function renderReactionResult() {
 
   app.appendChild(el(`
     <div>
-      <div class="result-card" style="background:linear-gradient(160deg,#2FCB86,#1B8F5C);">
+      <div class="result-card">
         <div class="eyebrow">평균 반응속도(Go 라운드 기준)</div>
         <div class="emoji">⚡</div>
         <h2>${r.avgRt !== null ? r.avgRt + "ms" : "기록 없음"}</h2>
@@ -549,7 +550,7 @@ export function renderReactionResult() {
       <div class="result-tip">${bonusNote}</div>
       <p class="disclaimer">※ 이 수치는 재미로 보는 참고용이며, 실제 인지검사나 의학적 진단 결과가 아니에요.</p>
       <div class="cta" style="padding-top:10px;">
-        <button class="cta-btn" id="retry-btn" style="background:#1FAE6A; box-shadow:0 8px 20px rgba(31,174,106,.32);">다시 도전하기</button>
+        <button class="cta-btn" id="retry-btn">다시 도전하기</button>
       </div>
       <button class="retry-btn" data-nav="test-result">🎯 테스트 결과로 돌아가기</button>
     </div>
