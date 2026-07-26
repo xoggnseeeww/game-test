@@ -458,6 +458,17 @@ body {
   letter-spacing: -.02em;
 }
 
+.result-subtitle {
+  display: inline-block;
+  background: rgba(255,255,255,.16);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 999px;
+  margin-bottom: 12px;
+}
+
 .result-card p {
   font-size: 13px;
   color: #E4E0FF;
@@ -482,6 +493,15 @@ body {
 }
 
 .result-stats .sep { color: #9F8FF5; }
+
+.result-dominant {
+  margin: 12px 20px 0;
+  font-size: 12px;
+  color: #8A8790;
+  text-align: center;
+  line-height: 1.6;
+  padding: 0 8px;
+}
 
 .result-tip {
   margin: 14px 20px 0;

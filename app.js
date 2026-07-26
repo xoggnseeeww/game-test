@@ -28,29 +28,33 @@ const RESULT_TYPES = [
     max: 12,
     emoji: "🦉",
     name: "차분한 올빼미형",
-    desc: "웬만한 자극에는 흔들리지 않고\n제 페이스대로 차근차근 해내는 편이에요.",
-    tip: "지금처럼 꾸준한 페이스를 유지해보세요.",
+    subtitle: "집중력 안정형",
+    desc: "집중·충동·에너지 3가지 영역 모두 낮게 나왔어요.\n웬만한 자극에는 흔들리지 않고, 하던 일을 제 페이스대로\n끝까지 해내는 편이에요. 딴생각이나 충동적인 행동에\n크게 휘둘리지 않는 게 강점이에요.",
+    tip: "지금처럼 안정적인 루틴을 유지하면서, 가끔은 새로운 자극도 즐겨보세요.",
   },
   {
     max: 24,
     emoji: "🐢",
     name: "느긋한 거북이형",
-    desc: "가끔 딴생각에 빠지긴 하지만\n결국엔 제 할 일을 끝까지 해내요.",
-    tip: "25분 집중 · 5분 휴식(뽀모도로)을 시도해보면 좋아요.",
+    subtitle: "완주형 집중러",
+    desc: "가끔 집중이 흐트러지거나 딴생각에 빠지지만,\n속도가 느릴 뿐 결국엔 할 일을 끝까지 마무리하는 편이에요.\n충동적으로 저지르기보다는 신중하게 움직이는 쪽에 가까워요.",
+    tip: "25분 집중 · 5분 휴식(뽀모도로) 루틴을 쓰면 흐트러지는 순간을 줄일 수 있어요.",
   },
   {
     max: 36,
     emoji: "🐿️",
     name: "호기심 폭발 다람쥐형",
-    desc: "관심사가 생기면 폭발적으로 몰입!\n대신 지루한 건 1초도 못 참아요.",
-    tip: "관심 가는 일부터 먼저 끝내는 순서로 할 일 목록을 짜보세요.",
+    subtitle: "몰입 스위치형",
+    desc: "관심 있는 일에는 시간 가는 줄 모르고 몰입하지만,\n흥미가 없는 일엔 집중을 유지하기가 유독 힘든 편이에요.\n새로운 자극을 찾아 움직이는 에너지가 크고,\n지루한 반복 작업은 잘 못 참아요.",
+    tip: "가장 하기 싫은 일을 가장 먼저 끝내버리는 순서로 할 일 목록을 짜보세요.",
   },
   {
     max: 48,
     emoji: "⚡",
     name: "번개 충동 폭풍형",
-    desc: "생각나면 바로 행동하는 추진력 만렙!\n대신 브레이크가 살짝 약해요.",
-    tip: "중요한 결정 전엔 '10초만 멈추기'를 연습해보세요.",
+    subtitle: "즉각 반응형",
+    desc: "생각이 떠오르면 재고 따지기 전에 먼저 움직이는\n추진력이 강해요. 남의 말이 끝나기 전에 끼어들거나,\n기다리는 상황을 유독 못 참는 모습도 자주 보여요.\n에너지와 실행력은 최고 수준이지만, 브레이크가 약한 편이에요.",
+    tip: "중요한 결정 앞에서는 '10초만 멈추기'를 연습하고, 몸을 움직이는 활동으로 에너지를 발산해보세요.",
   },
 ];
 
@@ -435,6 +439,22 @@ function computeResult() {
   };
 }
 
+// 유형 이름만으론 "그래서 어떤 성향이라는 건지" 와닿지 않는다는 피드백 반영:
+// 실제 집중/충동/에너지 percentage 중 어디가 두드러지는지를 짚어서 결과에 근거를 붙여준다.
+function dominantTraitNote(r) {
+  const axes = [
+    { label: "집중력", pct: r.focus, note: "특히 깜빡하거나 딴생각에 잘 빠지는 경향이 두드러졌어요." },
+    { label: "충동성", pct: r.impulse, note: "특히 생각보다 행동이 앞서는 충동적인 경향이 두드러졌어요." },
+    { label: "에너지", pct: r.energy, note: "특히 가만히 있지 못하고 움직이려는 에너지가 두드러졌어요." },
+  ];
+  axes.sort((a, b) => b.pct - a.pct);
+  const [top, second] = axes;
+  if (top.pct - second.pct < 10) {
+    return "이번 결과에서는 세 영역이 비교적 고르게 나타났어요.";
+  }
+  return `이번 결과에서는 ${top.label}(${top.pct}%) 영역이 가장 두드러졌어요. ${top.note}`;
+}
+
 function renderResult() {
   const r = computeResult();
   app.appendChild(el(`
@@ -443,6 +463,7 @@ function renderResult() {
         <div class="eyebrow">나의 집중 유형은</div>
         <div class="emoji">${r.type.emoji}</div>
         <h2>${r.type.name}</h2>
+        <div class="result-subtitle">${r.type.subtitle}</div>
         <p>${r.type.desc}</p>
         <div class="result-stats">
           <span>집중 ${r.focus}</span><span class="sep">·</span>
@@ -451,6 +472,8 @@ function renderResult() {
         </div>
         ${r.bonus.impulse > 0 || r.bonus.focus > 0 ? `<div class="result-stats" style="margin-top:8px;"><span>⚡ 반응·주의력 게임 결과 반영됨${r.bonus.impulse > 0 ? ` · 충동 +${r.bonus.impulse}` : ""}${r.bonus.focus > 0 ? ` · 집중 +${r.bonus.focus}` : ""}</span></div>` : ""}
       </div>
+
+      <p class="result-dominant">🔍 ${dominantTraitNote(r)}</p>
 
       <div class="result-tip">💡 ${r.type.tip}</div>
 
@@ -658,6 +681,35 @@ function renderReactionPlay() {
   updateProgress();
 }
 
+// 억제 실패(commissionErrors)와 누락(omissionErrors)을 각각 따로만 보지 않고
+// 두 축의 조합으로 코멘트를 골라서, 단순 반응속도 하나보다 더 구체적인 피드백을 준다.
+function reactionComment(r) {
+  const highCommission = r.commissionErrors >= 2;
+  const someCommission = r.commissionErrors === 1;
+  const highOmission = r.omissionErrors >= 2;
+  const someOmission = r.omissionErrors === 1;
+
+  if (!highCommission && !someCommission && !highOmission && !someOmission) {
+    return "완벽한 집중력과 충동 조절! 참을 때 참고, 반응할 때 반응했어요 🎯";
+  }
+  if (highCommission && highOmission) {
+    return "참아야 할 때 못 참고, 반응해야 할 땐 놓치고… 오늘따라 컨디션이 안 맞았나봐요 😅";
+  }
+  if (highCommission) {
+    return "반응은 빠른 편인데, 멈춰야 할 때 브레이크가 잘 안 걸리는 편이에요 ⚡";
+  }
+  if (highOmission) {
+    return "신중한 편이지만, 그만큼 놓치는 순간도 좀 있었어요 💭";
+  }
+  if (someCommission) {
+    return "대체로 안정적인데, 딱 한 번 성급하게 반응했어요";
+  }
+  if (someOmission) {
+    return "대체로 안정적인데, 딱 한 번 반응을 놓쳤어요";
+  }
+  return "전반적으로 안정적인 반응이었어요 👍";
+}
+
 function renderReactionResult() {
   const r = state.lastReaction || {
     avgRt: null, rtSD: 0, omissionErrors: 0, commissionErrors: 0,
@@ -665,11 +717,7 @@ function renderReactionResult() {
   };
   const bonus = gameBonuses();
 
-  let comment;
-  if (r.commissionErrors === 0 && r.omissionErrors === 0) comment = "완벽한 집중력과 충동 조절! 🎯";
-  else if (r.commissionErrors >= 2) comment = "충동을 참는 게 오늘은 좀 어려웠나봐요 ⚡";
-  else if (r.omissionErrors >= 2) comment = "잠깐씩 집중이 흐트러진 순간이 있었어요 💭";
-  else comment = "전반적으로 안정적인 반응이었어요 👍";
+  const comment = reactionComment(r);
 
   const bonusParts = [];
   if (bonus.impulse > 0) bonusParts.push(`충동 +${bonus.impulse}`);
@@ -693,6 +741,7 @@ function renderReactionResult() {
         <div class="meta-chip"><div class="value">${r.commissionErrors}/${r.noGoCount}</div><div class="label">충동억제 실패</div></div>
         <div class="meta-chip"><div class="value">${r.omissionErrors}/${r.goCount}</div><div class="label">주의력 누락</div></div>
       </div>
+      <p class="result-dominant">정확도: 알맞게 반응한 비율 · 일관성(SD): 반응속도가 얼마나 고르게 나왔는지(낮을수록 안정적) · 억제 실패: 참아야 할 때 누른 횟수 · 누락: 반응해야 할 때 놓친 횟수</p>
       <div class="result-tip">${bonusNote}</div>
       <p class="disclaimer">※ 이 수치는 재미로 보는 참고용이며, 실제 인지검사나 의학적 진단 결과가 아니에요.</p>
       <div class="cta" style="padding-top:10px;">
