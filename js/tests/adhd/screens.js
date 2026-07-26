@@ -1,6 +1,7 @@
 // 성인 ADHD 성향 체크의 모든 화면 + 반응속도 게임 화면.
 import { app, go, onLeave, parseSharedPath } from "../../core/router.js";
 import { el, bindNav, showModal } from "../../core/dom.js";
+import { shareBlockMarkup, wireShare } from "../../core/share.js";
 import { state } from "../../core/state.js";
 import { roundRect, shuffle, bestReactionTime, saveBestReactionTime } from "../../core/util.js";
 import {
@@ -111,12 +112,8 @@ export function renderQuestion() {
 }
 
 // 카톡·인스타에 바로 올릴 수 있는 결과 카드를 캔버스로 그려서 PNG로 내보낸다.
-// 서버 렌더링 없이 클라이언트에서만 그리므로, 웹폰트(Pretendard)가 이미 로드됐는지
-// 보장하기 위해 document.fonts.ready를 먼저 기다린다(못 기다리면 시스템 기본폰트로
-// 조용히 대체될 뿐이라 실패하진 않는다).
+// 웹폰트 로딩 대기와 저장/공유는 core/share.js가 맡는다.
 async function drawResultCard(r) {
-  await document.fonts.ready.catch(() => {});
-
   const W = 1080;
   const H = 1080;
   const canvas = document.createElement("canvas");
@@ -223,14 +220,7 @@ export function renderResult() {
 
       <div class="result-tip">💡 ${r.type.tip}</div>
 
-      <div class="share-block">
-        <div class="share-title">친구는 무슨 유형일까? 👀</div>
-        <button class="share-kakao active" id="share-btn">📤 결과 공유하기</button>
-        <div class="share-row">
-          <button class="share-mini active" id="copy-link-btn">🔗 링크 복사</button>
-          <button class="share-mini active" id="save-image-btn">🖼️ 이미지 저장</button>
-        </div>
-      </div>
+      ${shareBlockMarkup()}
 
       <div class="ad-slot rect">카카오 AdFit<br/>250×250</div>
 
@@ -251,71 +241,13 @@ export function renderResult() {
     go("test-intro");
   });
 
-  // 예전엔 이 페이지 자체 주소(/test/adhd/result, 모두에게 동일)를 복사했어서
-  // 친구가 링크를 열어도 빈 테스트만 보였다. 슬러그가 붙은 결과별 주소를 공유해야
-  // 친구도 실제로 "이 결과"를 볼 수 있다.
-  const shareUrl = `${location.origin}/test/adhd/result/${PROFILE_TO_SLUG[r.key]}`;
-  const shareText = `나는 "${r.type.name}(${r.type.subtitle})"이 나왔어요! 너는 어떤 유형일까?`;
-
-  const copyBtn = app.querySelector("#copy-link-btn");
-  copyBtn.addEventListener("click", async () => {
-    const original = copyBtn.textContent;
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-      copyBtn.textContent = "✅ 복사 완료!";
-    } catch {
-      copyBtn.textContent = "복사 실패, 직접 복사해주세요";
-    }
-    setTimeout(() => {
-      copyBtn.textContent = original;
-    }, 1500);
-  });
-
-  const shareBtn = app.querySelector("#share-btn");
-  shareBtn.addEventListener("click", async () => {
-    const original = shareBtn.textContent;
-    // navigator.share는 모바일 브라우저에서 카카오톡을 포함한 네이티브 공유시트를
-    // 띄운다(카카오 전용 SDK가 아니라 OS 공유창). 지원 안 되는 환경(주로 데스크톱)
-    // 에서는 링크 복사로 자연스럽게 대체한다.
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: "과몰입구역", text: shareText, url: shareUrl });
-      } catch {
-        // 사용자가 공유창을 취소한 경우 등 - 별다른 처리 없음
-      }
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-      shareBtn.textContent = "✅ 링크를 복사했어요!";
-    } catch {
-      shareBtn.textContent = "공유 실패, 직접 복사해주세요";
-    }
-    setTimeout(() => {
-      shareBtn.textContent = original;
-    }, 1500);
-  });
-
-  const imageBtn = app.querySelector("#save-image-btn");
-  imageBtn.addEventListener("click", async () => {
-    const original = imageBtn.textContent;
-    imageBtn.textContent = "그리는 중...";
-    try {
-      const canvas = await drawResultCard(r);
-      const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "과몰입구역-결과카드.png";
-      a.click();
-      URL.revokeObjectURL(url);
-      imageBtn.textContent = "✅ 저장 완료!";
-    } catch {
-      imageBtn.textContent = "저장 실패, 다시 시도해주세요";
-    }
-    setTimeout(() => {
-      imageBtn.textContent = original;
-    }, 1500);
+  // 이 페이지 자체 주소(/test/adhd/result)는 모두에게 동일해서, 친구가 열면 빈
+  // 테스트만 보인다. 슬러그가 붙은 결과별 주소를 공유해야 "이 결과"가 열린다.
+  wireShare(app, {
+    url: `${location.origin}/test/adhd/result/${PROFILE_TO_SLUG[r.key]}`,
+    text: `나는 "${r.type.name}(${r.type.subtitle})"이 나왔어요! 너는 어떤 유형일까?`,
+    filename: "과몰입구역-결과카드.png",
+    draw: () => drawResultCard(r),
   });
 }
 

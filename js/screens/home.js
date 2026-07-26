@@ -81,3 +81,9 @@ export function renderGameList() {
   `));
   bindNav(app);
 }
+
+export const commonScreens = [
+  { id: "home", path: "/", title: "과몰입구역 - 심리테스트 · 미니게임", render: renderHome },
+  { id: "psych-list", path: "/test", title: "심리테스트 | 과몰입구역", render: renderPsychList },
+  { id: "game-list", path: "/game", title: "미니게임 | 과몰입구역", render: renderGameList },
+];

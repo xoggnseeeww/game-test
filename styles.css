@@ -25,6 +25,18 @@ body.theme-game {
   --on-cover-body: #DCF5E8;
 }
 
+/* DISC 검사. 기존 보라(#5B44F2)·초록(#1FAE6A)과 확실히 구분되는 코랄 계열. */
+body.theme-disc {
+  --accent: #E8642E;
+  --accent-shadow: rgba(232,100,46,.30);
+  --accent-soft: #FFF0E8;
+  --accent-ink: #9C3D14;
+  --accent-dim: #F5B899;
+  --cover-grad: linear-gradient(160deg,#F0743C,#C94A18);
+  --on-cover: #FFDCC9;
+  --on-cover-body: #FFE9DD;
+}
+
 * { box-sizing: border-box; }
 
 body {
@@ -813,4 +825,268 @@ body {
   border: none;
   cursor: pointer;
   font-family: inherit;
+}
+
+
+/* ---------------------------------------------------------------- DISC 전용
+   기존 셀렉터는 건드리지 않고 새 클래스만 추가한다. 문항 선택지는 .option-btn을
+   그대로 쓰고 상태 모디파이어만 얹는다. */
+
+.disc-scene {
+  white-space: pre-line;
+}
+
+.disc-step-hint {
+  margin: 0 20px 12px;
+  padding: 9px 14px;
+  border-radius: 12px;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.disc-step-hint b { font-weight: 900; }
+
+.disc-step-hint.least {
+  background: #17171A;
+  color: #fff;
+}
+
+/* 1단계에서 고른 선택지는 지우지 않고 잠근다 — 비교할 맥락을 남기면서
+   같은 걸 두 번 고르는 걸 구조적으로 막는다. */
+.option-btn.picked-most {
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+.option-btn.picked-most .dot {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.option-btn.picked-most::after {
+  content: "가장 나 같음";
+  margin-left: auto;
+  padding-left: 8px;
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--accent);
+  white-space: nowrap; /* 줄바꿈되면 선택지 문구를 밀어내 두 줄로 만든다 */
+}
+
+.option-btn[disabled] {
+  opacity: .55;
+  cursor: default;
+}
+
+.radar-block {
+  margin: 16px 20px 0;
+  background: #fff;
+  border-radius: 22px;
+  padding: 16px 10px 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.05);
+}
+
+.disc-radar { display: block; }
+
+.radar-grid {
+  fill: none;
+  stroke: #E6E2DA;
+  stroke-width: 1;
+}
+
+.radar-axis {
+  stroke: #E6E2DA;
+  stroke-width: 1;
+}
+
+.radar-shape {
+  fill: rgba(232,100,46,.22); /* color-mix 미지원 브라우저용 */
+  fill: color-mix(in srgb, var(--accent) 22%, transparent);
+  stroke: var(--accent);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+
+.radar-label {
+  font-size: 12px;
+  font-weight: 800;
+  fill: #75727B;
+}
+
+.radar-caption {
+  margin: 6px 12px 0;
+  font-size: 11px;
+  line-height: 1.6;
+  color: #8A8790;
+  text-align: center;
+}
+
+.radar-caption b { color: #75727B; }
+
+.result-note {
+  margin: 12px 20px 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #F1EFEA;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #75727B;
+  text-align: center;
+}
+
+.life-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 20px;
+}
+
+.life-card {
+  background: #fff;
+  border-radius: 18px;
+  padding: 16px 18px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.05);
+}
+
+.life-card h4 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 800;
+  color: #17171A;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  letter-spacing: -.02em;
+}
+
+.life-card .icon { font-size: 16px; }
+
+.life-card p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #75727B;
+  white-space: pre-line;
+}
+
+.match-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 0 20px;
+}
+
+.match-card {
+  border: 0;
+  border-radius: 18px;
+  padding: 16px 12px;
+  text-align: center;
+  cursor: pointer;
+  font-family: inherit;
+  box-shadow: 0 2px 8px rgba(0,0,0,.05);
+}
+
+.match-card.best { background: var(--accent-soft); }
+.match-card.worst { background: #F1EFEA; }
+
+.match-card .badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: 999px;
+  margin-bottom: 8px;
+}
+
+.match-card.best .badge { background: var(--accent); color: #fff; }
+.match-card.worst .badge { background: #B4B0A8; color: #fff; }
+
+.match-card .emoji { font-size: 32px; line-height: 1; }
+
+.match-card .name {
+  margin-top: 6px;
+  font-size: 14px;
+  font-weight: 800;
+  color: #17171A;
+  letter-spacing: -.02em;
+}
+
+.match-card .why {
+  margin-top: 7px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: #75727B;
+}
+
+.dilemma-panel {
+  margin: 20px;
+  background: #fff;
+  border-radius: 24px;
+  padding: 24px 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.05);
+}
+
+.dilemma-scene {
+  margin: 0 0 18px;
+  font-size: 19px;
+  font-weight: 800;
+  line-height: 1.5;
+  color: #17171A;
+  white-space: pre-line;
+  letter-spacing: -.02em;
+  min-height: 58px;
+}
+
+/* 숫자 카운트다운 대신 조용히 줄어드는 막대.
+   초를 세어 보여주면 다들 급해져서 재려던 속도 차이가 사라진다. */
+.dilemma-timer {
+  height: 4px;
+  border-radius: 999px;
+  background: #EAE6DE;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.dilemma-timer-fill {
+  height: 100%;
+  width: 100%;
+  background: var(--accent-dim);
+}
+
+.dilemma-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  /* 선택지가 뜨기 전에도 같은 높이를 잡아둬야 패널이 튀지 않는다 */
+  min-height: 132px;
+}
+
+.dilemma-choice {
+  width: 100%;
+  border: 1.5px solid #E6E2DA;
+  background: #fff;
+  border-radius: 16px;
+  padding: 16px 18px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.5;
+  color: #17171A;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dilemma-choice:active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .result-card,
+  .result-card .emoji {
+    animation: none;
+  }
 }

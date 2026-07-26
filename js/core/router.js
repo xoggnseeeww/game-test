@@ -8,7 +8,9 @@
 import { normalizePath } from "./util.js";
 import { state } from "./state.js";
 
-export const app = document.getElementById("app");
+// 브라우저 밖(node --test)에서도 화면 디스크립터만 읽어볼 수 있게, 모듈을 불러오는
+// 것만으로 document를 건드리지 않는다. 실제 렌더는 브라우저에서만 일어난다.
+export const app = typeof document !== "undefined" ? document.getElementById("app") : null;
 
 const screens = new Map();
 const tests = new Map();
