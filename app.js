@@ -23,40 +23,77 @@ const OPTIONS = [
   { label: "전혀 아니다", value: 0 },
 ];
 
-const RESULT_TYPES = [
-  {
-    max: 12,
+// 결과 유형은 총점 합산이 아니라 집중/충동/에너지 3개 축 각각이 "높음/낮음"인지를
+// 조합해서 정한다 (DSM-5가 부주의 우세형/과잉행동-충동 우세형/복합형으로 나누는 방식과 동일한 축).
+// 한 축만 극단적으로 높아도 나머지 두 축에 묻혀 총점으로는 평범하게 나와버리는 문제를
+// 이렇게 축별 프로필로 바꿔서 근본적으로 없앴다.
+const AXIS_HIGH_THRESHOLD = 60; // 4문항 평균 응답이 "그렇다"(3점) 이상일 때 대략 나오는 퍼센트
+
+function profileKey({ focus, impulse, energy }) {
+  const f = focus >= AXIS_HIGH_THRESHOLD ? 1 : 0;
+  const i = impulse >= AXIS_HIGH_THRESHOLD ? 1 : 0;
+  const e = energy >= AXIS_HIGH_THRESHOLD ? 1 : 0;
+  return `${f}${i}${e}`;
+}
+
+const RESULT_TYPES = {
+  "000": {
     emoji: "🦉",
     name: "차분한 올빼미형",
-    subtitle: "집중력 안정형",
+    subtitle: "안정형",
     desc: "집중·충동·에너지 3가지 영역 모두 낮게 나왔어요.\n웬만한 자극에는 흔들리지 않고, 하던 일을 제 페이스대로\n끝까지 해내는 편이에요. 딴생각이나 충동적인 행동에\n크게 휘둘리지 않는 게 강점이에요.",
     tip: "지금처럼 안정적인 루틴을 유지하면서, 가끔은 새로운 자극도 즐겨보세요.",
   },
-  {
-    max: 24,
-    emoji: "🐢",
-    name: "느긋한 거북이형",
-    subtitle: "완주형 집중러",
-    desc: "가끔 집중이 흐트러지거나 딴생각에 빠지지만,\n속도가 느릴 뿐 결국엔 할 일을 끝까지 마무리하는 편이에요.\n충동적으로 저지르기보다는 신중하게 움직이는 쪽에 가까워요.",
-    tip: "25분 집중 · 5분 휴식(뽀모도로) 루틴을 쓰면 흐트러지는 순간을 줄일 수 있어요.",
+  "100": {
+    emoji: "🌫️",
+    name: "깜빡깜빡 안개형",
+    subtitle: "부주의 우세형",
+    desc: "충동적으로 저지르거나 몸이 들썩이진 않지만,\n집중력이 자꾸 흐려지는 게 눈에 띄어요. 물건을 어디 뒀는지\n까먹거나, 대화 중 딴생각에 빠지거나, 하던 일을 끝까지\n마무리하지 못하는 경우가 잦은 편이에요.",
+    tip: "체크리스트를 눈에 보이는 곳에 적어두고, 할 일을 잘게 쪼개서 하나씩 지워나가 보세요.",
   },
-  {
-    max: 36,
-    emoji: "🐿️",
-    name: "호기심 폭발 다람쥐형",
-    subtitle: "몰입 스위치형",
-    desc: "관심 있는 일에는 시간 가는 줄 모르고 몰입하지만,\n흥미가 없는 일엔 집중을 유지하기가 유독 힘든 편이에요.\n새로운 자극을 찾아 움직이는 에너지가 크고,\n지루한 반복 작업은 잘 못 참아요.",
-    tip: "가장 하기 싫은 일을 가장 먼저 끝내버리는 순서로 할 일 목록을 짜보세요.",
+  "010": {
+    emoji: "🔥",
+    name: "화끈한 불꽃형",
+    subtitle: "충동 우세형",
+    desc: "집중력이나 활동량은 평범한 편인데, 순간적인 충동을\n참는 게 유독 어려운 편이에요. 생각나면 바로 행동하거나,\n남의 말이 끝나기 전에 끼어들거나, 기다리는 상황을\n잘 못 견디는 모습이 자주 보여요.",
+    tip: "결정하기 전 '10초만 멈추기'를 습관처럼 연습해보세요.",
   },
-  {
-    max: 48,
+  "001": {
+    emoji: "🐝",
+    name: "들썩들썩 에너자이저형",
+    subtitle: "과잉행동 우세형",
+    desc: "생각이나 판단은 신중한 편인데, 몸이 가만히 있질 못해요.\n회의나 수업 중에도 계속 움직이고 싶고, 새로운 자극이\n없으면 금방 지루해져서 딴짓을 찾는 편이에요.",
+    tip: "짧은 스트레칭이나 산책처럼, 에너지를 건강하게 발산할 시간을 일부러 만들어보세요.",
+  },
+  "110": {
+    emoji: "🌀",
+    name: "생각 폭주 소용돌이형",
+    subtitle: "인지-충동 복합형",
+    desc: "몸을 움직이는 건 평범한데, 머릿속은 늘 분주해요.\n집중이 잘 안 되는 동시에 떠오른 생각을 바로 행동에\n옮기는 편이라, 계획했던 것과 다르게 흘러가는 일이 잦아요.",
+    tip: "행동하기 전에 딱 한 번, 종이에 적어보는 습관을 들여보세요. 생각을 붙잡아두는 데 도움이 돼요.",
+  },
+  "101": {
+    emoji: "🍃",
+    name: "정처 없는 나뭇잎형",
+    subtitle: "인지-활동 복합형",
+    desc: "충동적으로 저지르진 않지만, 집중력이 흐트러지는 동시에\n몸도 가만히 있질 못해요. 딴생각과 딴짓 사이를 오가느라\n하나에 오래 머무르기가 어려운 편이에요.",
+    tip: "한 번에 한 가지 활동만 눈에 보이게 두고, 타이머로 짧게 끊어서 진행해보세요.",
+  },
+  "011": {
     emoji: "⚡",
     name: "번개 충동 폭풍형",
-    subtitle: "즉각 반응형",
-    desc: "생각이 떠오르면 재고 따지기 전에 먼저 움직이는\n추진력이 강해요. 남의 말이 끝나기 전에 끼어들거나,\n기다리는 상황을 유독 못 참는 모습도 자주 보여요.\n에너지와 실행력은 최고 수준이지만, 브레이크가 약한 편이에요.",
+    subtitle: "충동-활동 복합형",
+    desc: "생각이 떠오르면 재고 따지기 전에 먼저 움직이는\n추진력이 강해요. 가만히 있지 못하고 기다리는 상황을\n유독 못 참는 모습도 자주 보여요. 집중력 자체는 평범한\n편이라, 마음만 먹으면 몰입도 잘하는 타입이에요.",
     tip: "중요한 결정 앞에서는 '10초만 멈추기'를 연습하고, 몸을 움직이는 활동으로 에너지를 발산해보세요.",
   },
-];
+  "111": {
+    emoji: "🌪️",
+    name: "종합 태풍형",
+    subtitle: "전영역 복합형",
+    desc: "집중·충동·에너지 세 영역 모두에서 뚜렷한 특징이\n나타났어요. 생각이 자꾸 흩어지고, 충동적으로 움직이고,\n몸도 가만히 있질 못하는 모습이 함께 나타나는 편이에요.\n세 가지가 겹치면 일상에서 꽤 힘들게 느껴질 수 있어요.",
+    tip: "혼자 다 해결하려 하기보다, 전문가와 함께 우선순위부터 정리해보는 것도 좋은 방법이에요.",
+  },
+};
 
 // 반응·주의력 게임: Go/No-Go 과제를 단순화한 10라운드 미니게임.
 // 초록불(go)엔 반응, 주황불(no-go)엔 억제 — 두 종류 오류와 반응시간 변산성을 측정한다.
@@ -164,9 +201,9 @@ function resolveScreen(screen) {
 const SCREEN_TITLES = {
   "home": "과몰입구역 - 심리테스트 · 미니게임",
   "psych-list": "심리테스트 | 과몰입구역",
-  "test-intro": "성인 ADHD 자가진단 테스트 | 과몰입구역",
-  "test-question": "성인 ADHD 자가진단 - 진행 중 | 과몰입구역",
-  "test-result": "성인 ADHD 자가진단 결과 | 과몰입구역",
+  "test-intro": "성인 ADHD 성향 체크 | 과몰입구역",
+  "test-question": "성인 ADHD 성향 체크 - 진행 중 | 과몰입구역",
+  "test-result": "성인 ADHD 성향 체크 결과 | 과몰입구역",
   "game-list": "미니게임 | 과몰입구역",
   "reaction-intro": "반응속도 게임 | 과몰입구역",
   "reaction-play": "반응속도 게임 - 플레이 중 | 과몰입구역",
@@ -288,7 +325,7 @@ function renderPsychList() {
         <button class="test-card" data-nav="test-intro">
           <div class="icon">🎯</div>
           <div class="body">
-            <div class="name">성인 ADHD 자가진단</div>
+            <div class="name">성인 ADHD 성향 체크</div>
             <div class="desc">집중 안 되는 나, 혹시…? · 12문항</div>
           </div>
           <div class="chevron">›</div>
@@ -308,16 +345,15 @@ function renderTestIntro() {
       </div>
       <div class="cover">
         <div class="emoji">🎯</div>
-        <div class="tag">집중력 자가진단</div>
-        <h2>성인 ADHD<br/>자가진단 테스트</h2>
+        <div class="tag">집중력 성향 체크</div>
+        <h2>성인 ADHD<br/>성향 체크</h2>
         <p>요즘 유독 집중이 안 되고<br/>깜빡깜빡한다면?</p>
       </div>
       <div class="meta-chips">
         <div class="meta-chip"><div class="value">${QUESTIONS.length}문항</div><div class="label">약 1분</div></div>
-        <div class="meta-chip"><div class="value">24.8만</div><div class="label">참여</div></div>
-        <div class="meta-chip"><div class="value">${RESULT_TYPES.length}가지</div><div class="label">결과 유형</div></div>
+        <div class="meta-chip"><div class="value">${Object.keys(RESULT_TYPES).length}가지</div><div class="label">결과 유형</div></div>
       </div>
-      <p class="disclaimer">본 테스트는 재미를 위한 자가 참고용이며, 의학적 진단이 아닙니다.</p>
+      <p class="disclaimer">본 테스트는 재미를 위한 성향 체크이며, 의학적 진단이 아닙니다.</p>
       <div class="cta">
         <button class="cta-btn" id="start-btn">테스트 시작하기</button>
       </div>
@@ -420,39 +456,56 @@ function gameBonuses() {
 }
 
 function computeResult() {
-  const totals = { focus: 0, impulse: 0, energy: 0 };
+  const raw = { focus: 0, impulse: 0, energy: 0 };
   state.answers.forEach((a) => {
-    totals[a.group] += a.value;
+    raw[a.group] += a.value;
   });
   const bonus = gameBonuses();
-  totals.impulse += bonus.impulse;
-  totals.focus += bonus.focus;
-  const total = totals.focus + totals.impulse + totals.energy;
-  const type = RESULT_TYPES.find((t) => total <= t.max) || RESULT_TYPES[RESULT_TYPES.length - 1];
   const toPct = (v) => Math.min(100, Math.round((v / 16) * 100));
+
+  // 게임 보너스를 더하기 전/후 퍼센트를 따로 계산해서, 이미 100%라 더 올라갈 데가
+  // 없는 축에는 실제로 반영되지 않은 보너스를 "반영됐다"고 표시하지 않는다.
+  const prePct = { focus: toPct(raw.focus), impulse: toPct(raw.impulse), energy: toPct(raw.energy) };
+  const pct = {
+    focus: toPct(raw.focus + bonus.focus),
+    impulse: toPct(raw.impulse + bonus.impulse),
+    energy: prePct.energy,
+  };
+  const visibleBonus = {
+    focus: pct.focus > prePct.focus ? bonus.focus : 0,
+    impulse: pct.impulse > prePct.impulse ? bonus.impulse : 0,
+  };
+
+  const type = RESULT_TYPES[profileKey(pct)];
   return {
     type,
-    focus: toPct(totals.focus),
-    impulse: toPct(totals.impulse),
-    energy: toPct(totals.energy),
-    bonus,
+    focus: pct.focus,
+    impulse: pct.impulse,
+    energy: pct.energy,
+    bonus: visibleBonus,
   };
 }
 
-// 유형 이름만으론 "그래서 어떤 성향이라는 건지" 와닿지 않는다는 피드백 반영:
-// 실제 집중/충동/에너지 percentage 중 어디가 두드러지는지를 짚어서 결과에 근거를 붙여준다.
+// 유형 이름/부제가 이미 "어떤 축이 높은지"를 알려주지만, 실제 숫자로 한 번 더 짚어서
+// 결과가 실제 답변에서 나온 것임을 보여준다. (버그였던 부분: 예전엔 1·2위 축의 차이만
+// 봐서 [100,100,0]처럼 두 축이 동시에 극단일 때도 "고르다"고 잘못 말했다 — 이제 전체
+// 축의 최댓값-최솟값 편차를 보고, 공동 1위가 있으면 그것도 그대로 알려준다.)
 function dominantTraitNote(r) {
   const axes = [
     { label: "집중력", pct: r.focus, note: "특히 깜빡하거나 딴생각에 잘 빠지는 경향이 두드러졌어요." },
     { label: "충동성", pct: r.impulse, note: "특히 생각보다 행동이 앞서는 충동적인 경향이 두드러졌어요." },
     { label: "에너지", pct: r.energy, note: "특히 가만히 있지 못하고 움직이려는 에너지가 두드러졌어요." },
   ];
-  axes.sort((a, b) => b.pct - a.pct);
-  const [top, second] = axes;
-  if (top.pct - second.pct < 10) {
+  const maxPct = Math.max(...axes.map((a) => a.pct));
+  const minPct = Math.min(...axes.map((a) => a.pct));
+  if (maxPct - minPct < 15) {
     return "이번 결과에서는 세 영역이 비교적 고르게 나타났어요.";
   }
-  return `이번 결과에서는 ${top.label}(${top.pct}%) 영역이 가장 두드러졌어요. ${top.note}`;
+  const top = axes.filter((a) => a.pct === maxPct);
+  if (top.length > 1) {
+    return `이번 결과에서는 ${top.map((a) => a.label).join(" · ")} 영역이 나란히 가장 두드러졌어요.`;
+  }
+  return `이번 결과에서는 ${top[0].label}(${top[0].pct}%) 영역이 가장 두드러졌어요. ${top[0].note}`;
 }
 
 function renderResult() {
@@ -536,9 +589,22 @@ function renderGameList() {
   bindNav(app);
 }
 
+// 프라이버시 모드 등에서 localStorage 접근 자체가 throw할 수 있어 방어한다.
 function bestReactionTime() {
-  const v = localStorage.getItem("gt_reaction_best");
-  return v ? parseInt(v, 10) : null;
+  try {
+    const v = localStorage.getItem("gt_reaction_best");
+    return v ? parseInt(v, 10) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveBestReactionTime(ms) {
+  try {
+    localStorage.setItem("gt_reaction_best", String(ms));
+  } catch {
+    // 저장 실패는 무시 — 이번 세션 결과 표시에는 영향 없음
+  }
 }
 
 function renderReactionIntro() {
@@ -547,7 +613,7 @@ function renderReactionIntro() {
     <div>
       <div class="back-row">
         <button class="back-btn" data-nav="test-result">‹</button>
-        <div class="back-title">성인 ADHD 자가진단</div>
+        <div class="back-title">성인 ADHD 성향 체크</div>
       </div>
       <div class="cover" style="background:linear-gradient(160deg,#2FCB86,#1B8F5C);">
         <div class="emoji">⚡</div>
@@ -642,7 +708,7 @@ function renderReactionPlay() {
     const stats = summarizeGameResults(results);
     const best = bestReactionTime();
     const isBest = stats.avgRt !== null && (best === null || stats.avgRt < best);
-    if (isBest) localStorage.setItem("gt_reaction_best", String(stats.avgRt));
+    if (isBest) saveBestReactionTime(stats.avgRt);
     state.lastReaction = { ...stats, isBest };
     go("reaction-result");
   }
@@ -723,7 +789,7 @@ function renderReactionResult() {
   if (bonus.impulse > 0) bonusParts.push(`충동 +${bonus.impulse}`);
   if (bonus.focus > 0) bonusParts.push(`집중 +${bonus.focus}`);
   const bonusNote = bonusParts.length
-    ? `🎯 이 결과가 방금 본 ADHD 자가진단에 반영돼요 (${bonusParts.join(" · ")}). 결과로 돌아가면 갱신된 점수를 볼 수 있어요.`
+    ? `🎯 이 결과가 방금 본 ADHD 성향 체크에 반영돼요 (${bonusParts.join(" · ")}). 결과로 돌아가면 갱신된 점수를 볼 수 있어요.`
     : "🎯 이번엔 추가로 반영된 점수가 없었어요 — 안정적인 결과였어요! 결과 화면은 그대로예요.";
 
   app.appendChild(el(`
