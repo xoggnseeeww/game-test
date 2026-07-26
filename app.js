@@ -89,16 +89,17 @@ let reactionTimer = null;
 function render() {
   app.innerHTML = "";
   switch (state.screen) {
-    case "home": return renderHome();
-    case "psych-list": return renderPsychList();
-    case "test-intro": return renderTestIntro();
-    case "test-question": return renderQuestion();
-    case "test-result": return renderResult();
-    case "game-list": return renderGameList();
-    case "reaction-intro": return renderReactionIntro();
-    case "reaction-play": return renderReactionPlay();
-    case "reaction-result": return renderReactionResult();
+    case "home": renderHome(); break;
+    case "psych-list": renderPsychList(); break;
+    case "test-intro": renderTestIntro(); break;
+    case "test-question": renderQuestion(); break;
+    case "test-result": renderResult(); break;
+    case "game-list": renderGameList(); break;
+    case "reaction-intro": renderReactionIntro(); break;
+    case "reaction-play": renderReactionPlay(); break;
+    case "reaction-result": renderReactionResult(); break;
   }
+  app.classList.toggle("has-bottom-nav", !!app.querySelector(".bottom-nav"));
 }
 
 // 뒤로/앞으로가기로 URL만 바뀌었을 때 화면-상태 불일치를 막기 위한 보정

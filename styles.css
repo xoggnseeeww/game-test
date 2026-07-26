@@ -14,7 +14,7 @@ body {
   background: #F6F4EF;
 }
 
-#app:has(.bottom-nav) {
+#app.has-bottom-nav {
   padding-bottom: 78px;
 }
 
