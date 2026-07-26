@@ -47,6 +47,7 @@ const RESULT_TYPES = {
     subtitle: "안정형",
     desc: "집중·충동·에너지 3가지 영역 모두 낮게 나왔어요.\n웬만한 자극에는 흔들리지 않고, 하던 일을 제 페이스대로\n끝까지 해내는 편이에요. 딴생각이나 충동적인 행동에\n크게 휘둘리지 않는 게 강점이에요.",
     tip: "지금처럼 안정적인 루틴을 유지하면서, 가끔은 새로운 자극도 즐겨보세요.",
+    tags: ["#흔들림없음", "#마이페이스", "#꾸준함끝판왕"],
   },
   "100": {
     emoji: "🌫️",
@@ -54,6 +55,7 @@ const RESULT_TYPES = {
     subtitle: "부주의 우세형",
     desc: "충동적으로 저지르거나 몸이 들썩이진 않지만,\n집중력이 자꾸 흐려지는 게 눈에 띄어요. 물건을 어디 뒀는지\n까먹거나, 대화 중 딴생각에 빠지거나, 하던 일을 끝까지\n마무리하지 못하는 경우가 잦은 편이에요.",
     tip: "체크리스트를 눈에 보이는 곳에 적어두고, 할 일을 잘게 쪼개서 하나씩 지워나가 보세요.",
+    tags: ["#물건찾기달인", "#딴생각챔피언", "#까먹기전문가"],
   },
   "010": {
     emoji: "🔥",
@@ -61,6 +63,7 @@ const RESULT_TYPES = {
     subtitle: "충동 우세형",
     desc: "집중력이나 활동량은 평범한 편인데, 순간적인 충동을\n참는 게 유독 어려운 편이에요. 생각나면 바로 행동하거나,\n남의 말이 끝나기 전에 끼어들거나, 기다리는 상황을\n잘 못 견디는 모습이 자주 보여요.",
     tip: "결정하기 전 '10초만 멈추기'를 습관처럼 연습해보세요.",
+    tags: ["#선저지름후생각", "#끼어들기장인", "#기다림실패"],
   },
   "001": {
     emoji: "🐝",
@@ -68,6 +71,7 @@ const RESULT_TYPES = {
     subtitle: "과잉행동 우세형",
     desc: "생각이나 판단은 신중한 편인데, 몸이 가만히 있질 못해요.\n회의나 수업 중에도 계속 움직이고 싶고, 새로운 자극이\n없으면 금방 지루해져서 딴짓을 찾는 편이에요.",
     tip: "짧은 스트레칭이나 산책처럼, 에너지를 건강하게 발산할 시간을 일부러 만들어보세요.",
+    tags: ["#가만히못있음", "#다리떨기달인", "#지루함제로"],
   },
   "110": {
     emoji: "🌀",
@@ -75,6 +79,7 @@ const RESULT_TYPES = {
     subtitle: "인지-충동 복합형",
     desc: "몸을 움직이는 건 평범한데, 머릿속은 늘 분주해요.\n집중이 잘 안 되는 동시에 떠오른 생각을 바로 행동에\n옮기는 편이라, 계획했던 것과 다르게 흘러가는 일이 잦아요.",
     tip: "행동하기 전에 딱 한 번, 종이에 적어보는 습관을 들여보세요. 생각을 붙잡아두는 데 도움이 돼요.",
+    tags: ["#생각과다", "#즉흥실행러", "#계획무너짐"],
   },
   "101": {
     emoji: "🍃",
@@ -82,6 +87,7 @@ const RESULT_TYPES = {
     subtitle: "인지-활동 복합형",
     desc: "충동적으로 저지르진 않지만, 집중력이 흐트러지는 동시에\n몸도 가만히 있질 못해요. 딴생각과 딴짓 사이를 오가느라\n하나에 오래 머무르기가 어려운 편이에요.",
     tip: "한 번에 한 가지 활동만 눈에 보이게 두고, 타이머로 짧게 끊어서 진행해보세요.",
+    tags: ["#딴생각딴짓콤보", "#집중력방랑", "#산만끝판왕"],
   },
   "011": {
     emoji: "⚡",
@@ -89,6 +95,7 @@ const RESULT_TYPES = {
     subtitle: "충동-활동 복합형",
     desc: "생각이 떠오르면 재고 따지기 전에 먼저 움직이는\n추진력이 강해요. 가만히 있지 못하고 기다리는 상황을\n유독 못 참는 모습도 자주 보여요. 집중력 자체는 평범한\n편이라, 마음만 먹으면 몰입도 잘하는 타입이에요.",
     tip: "중요한 결정 앞에서는 '10초만 멈추기'를 연습하고, 몸을 움직이는 활동으로 에너지를 발산해보세요.",
+    tags: ["#선빵필승", "#기다림혐오", "#추진력만렙"],
   },
   "111": {
     emoji: "🌪️",
@@ -96,6 +103,7 @@ const RESULT_TYPES = {
     subtitle: "전영역 복합형",
     desc: "집중·충동·에너지 세 영역 모두에서 뚜렷한 특징이\n나타났어요. 생각이 자꾸 흩어지고, 충동적으로 움직이고,\n몸도 가만히 있질 못하는 모습이 함께 나타나는 편이에요.\n세 가지가 겹치면 일상에서 꽤 힘들게 느껴질 수 있어요.",
     tip: "혼자 다 해결하려 하기보다, 전문가와 함께 우선순위부터 정리해보는 것도 좋은 방법이에요.",
+    tags: ["#3박자완성", "#올라운드산만", "#에너지폭발"],
   },
 };
 
@@ -554,6 +562,98 @@ function dominantTraitNote(r) {
   return `이번 결과에서는 ${top[0].label}(${top[0].pct}%) 영역이 가장 두드러졌어요. ${top[0].note}`;
 }
 
+function roundRect(ctx, x, y, w, h, radius) {
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.arcTo(x + w, y, x + w, y + h, radius);
+  ctx.arcTo(x + w, y + h, x, y + h, radius);
+  ctx.arcTo(x, y + h, x, y, radius);
+  ctx.arcTo(x, y, x + w, y, radius);
+  ctx.closePath();
+}
+
+// 카톡·인스타에 바로 올릴 수 있는 결과 카드를 캔버스로 그려서 PNG로 내보낸다.
+// 서버 렌더링 없이 클라이언트에서만 그리므로, 웹폰트(Pretendard)가 이미 로드됐는지
+// 보장하기 위해 document.fonts.ready를 먼저 기다린다(못 기다리면 시스템 기본폰트로
+// 조용히 대체될 뿐이라 실패하진 않는다).
+async function drawResultCard(r) {
+  await document.fonts.ready.catch(() => {});
+
+  const W = 1080;
+  const H = 1080;
+  const canvas = document.createElement("canvas");
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext("2d");
+
+  const bg = ctx.createLinearGradient(0, 0, W, H);
+  bg.addColorStop(0, "#6E58F5");
+  bg.addColorStop(1, "#4A32D6");
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.textAlign = "center";
+
+  ctx.fillStyle = "rgba(255,255,255,.85)";
+  ctx.font = "700 30px Pretendard, sans-serif";
+  ctx.fillText("과몰입구역", W / 2, 90);
+
+  ctx.font = "160px sans-serif";
+  ctx.fillText(r.type.emoji, W / 2, 300);
+
+  ctx.fillStyle = "#fff";
+  ctx.font = "800 62px Pretendard, sans-serif";
+  ctx.fillText(r.type.name, W / 2, 400);
+
+  const subtitleText = r.type.subtitle;
+  ctx.font = "700 28px Pretendard, sans-serif";
+  const subtitleWidth = ctx.measureText(subtitleText).width + 56;
+  ctx.fillStyle = "rgba(255,255,255,.18)";
+  roundRect(ctx, W / 2 - subtitleWidth / 2, 430, subtitleWidth, 52, 26);
+  ctx.fill();
+  ctx.fillStyle = "#fff";
+  ctx.fillText(subtitleText, W / 2, 465);
+
+  ctx.font = "600 30px Pretendard, sans-serif";
+  ctx.fillStyle = "#D8D2FF";
+  ctx.fillText(r.type.tags.join("   "), W / 2, 545);
+
+  const barData = [
+    { label: "집중", pct: r.focus },
+    { label: "충동", pct: r.impulse },
+    { label: "에너지", pct: r.energy },
+  ];
+  barData.forEach((b, i) => {
+    const y = 630 + i * 90;
+    ctx.textAlign = "left";
+    ctx.font = "700 30px Pretendard, sans-serif";
+    ctx.fillStyle = "#fff";
+    ctx.fillText(b.label, 100, y);
+    ctx.textAlign = "right";
+    ctx.fillText(`${b.pct}%`, W - 100, y);
+
+    const trackX = 100;
+    const trackY = y + 16;
+    const trackW = W - 200;
+    ctx.fillStyle = "rgba(255,255,255,.2)";
+    roundRect(ctx, trackX, trackY, trackW, 16, 8);
+    ctx.fill();
+    ctx.fillStyle = "#fff";
+    roundRect(ctx, trackX, trackY, Math.max(16, (trackW * b.pct) / 100), 16, 8);
+    ctx.fill();
+  });
+
+  ctx.textAlign = "center";
+  ctx.font = "700 34px Pretendard, sans-serif";
+  ctx.fillStyle = "#fff";
+  ctx.fillText("너도 테스트 해볼래?", W / 2, 950);
+  ctx.font = "600 26px Pretendard, sans-serif";
+  ctx.fillStyle = "rgba(255,255,255,.7)";
+  ctx.fillText(`${location.origin}/test/adhd`, W / 2, 992);
+
+  return canvas;
+}
+
 function renderResult() {
   const r = computeResult();
   app.appendChild(el(`
@@ -563,6 +663,7 @@ function renderResult() {
         <div class="emoji">${r.type.emoji}</div>
         <h2>${r.type.name}</h2>
         <div class="result-subtitle">${r.type.subtitle}</div>
+        <div class="result-tags">${r.type.tags.map((t) => `<span>${t}</span>`).join("")}</div>
         <p>${r.type.desc}</p>
         <div class="result-stats">
           <span>집중 ${r.focus}</span><span class="sep">·</span>
@@ -581,9 +682,8 @@ function renderResult() {
         <button class="share-kakao active" id="share-btn">📤 결과 공유하기</button>
         <div class="share-row">
           <button class="share-mini active" id="copy-link-btn">🔗 링크 복사</button>
-          <div class="share-mini">🖼️ 이미지 저장</div>
+          <button class="share-mini active" id="save-image-btn">🖼️ 이미지 저장</button>
         </div>
-        <p class="share-note">이미지 저장은 준비 중이에요</p>
       </div>
 
       <div class="ad-slot rect">카카오 AdFit<br/>250×250</div>
@@ -649,6 +749,28 @@ function renderResult() {
       shareBtn.textContent = original;
     }, 1500);
   });
+
+  const imageBtn = app.querySelector("#save-image-btn");
+  imageBtn.addEventListener("click", async () => {
+    const original = imageBtn.textContent;
+    imageBtn.textContent = "그리는 중...";
+    try {
+      const canvas = await drawResultCard(r);
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "과몰입구역-결과카드.png";
+      a.click();
+      URL.revokeObjectURL(url);
+      imageBtn.textContent = "✅ 저장 완료!";
+    } catch {
+      imageBtn.textContent = "저장 실패, 다시 시도해주세요";
+    }
+    setTimeout(() => {
+      imageBtn.textContent = original;
+    }, 1500);
+  });
 }
 
 function renderTestShared() {
@@ -665,6 +787,7 @@ function renderTestShared() {
         <div class="emoji">${type.emoji}</div>
         <h2>${type.name}</h2>
         <div class="result-subtitle">${type.subtitle}</div>
+        <div class="result-tags">${type.tags.map((t) => `<span>${t}</span>`).join("")}</div>
         <p>${type.desc}</p>
       </div>
       <div class="result-tip">💡 ${type.tip}</div>
