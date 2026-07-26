@@ -530,6 +530,45 @@ body {
   padding: 0 8px;
 }
 
+.axis-breakdown {
+  margin: 14px 20px 0;
+  background: #fff;
+  border-radius: 16px;
+  padding: 4px 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.05);
+}
+
+.axis-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 12px 0;
+}
+
+.axis-row + .axis-row {
+  border-top: 1px solid #F1EFEA;
+}
+
+.axis-row .axis-label {
+  flex: 0 0 auto;
+  width: 46px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #17171A;
+}
+
+.axis-row .axis-pct {
+  flex: 0 0 auto;
+  font-size: 13px;
+  font-weight: 800;
+  color: #5B44F2;
+}
+
+.axis-row .axis-text {
+  font-size: 12px;
+  color: #75727B;
+}
+
 .result-tip {
   margin: 14px 20px 0;
   background: #EFEBFF;

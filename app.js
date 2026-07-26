@@ -540,26 +540,25 @@ function computeResult() {
   };
 }
 
-// 유형 이름/부제가 이미 "어떤 축이 높은지"를 알려주지만, 실제 숫자로 한 번 더 짚어서
-// 결과가 실제 답변에서 나온 것임을 보여준다. (버그였던 부분: 예전엔 1·2위 축의 차이만
-// 봐서 [100,100,0]처럼 두 축이 동시에 극단일 때도 "고르다"고 잘못 말했다 — 이제 전체
-// 축의 최댓값-최솟값 편차를 보고, 공동 1위가 있으면 그것도 그대로 알려준다.)
-function dominantTraitNote(r) {
-  const axes = [
-    { label: "집중력", pct: r.focus, note: "특히 깜빡하거나 딴생각에 잘 빠지는 경향이 두드러졌어요." },
-    { label: "충동성", pct: r.impulse, note: "특히 생각보다 행동이 앞서는 충동적인 경향이 두드러졌어요." },
-    { label: "에너지", pct: r.energy, note: "특히 가만히 있지 못하고 움직이려는 에너지가 두드러졌어요." },
-  ];
-  const maxPct = Math.max(...axes.map((a) => a.pct));
-  const minPct = Math.min(...axes.map((a) => a.pct));
-  if (maxPct - minPct < 15) {
-    return "이번 결과에서는 세 영역이 비교적 고르게 나타났어요.";
-  }
-  const top = axes.filter((a) => a.pct === maxPct);
-  if (top.length > 1) {
-    return `이번 결과에서는 ${top.map((a) => a.label).join(" · ")} 영역이 나란히 가장 두드러졌어요.`;
-  }
-  return `이번 결과에서는 ${top[0].label}(${top[0].pct}%) 영역이 가장 두드러졌어요. ${top[0].note}`;
+// 유형은 "고/저" 2단계 조합 8가지로 고정하되(문항이 축당 4개뿐이라 3단계로
+// 쪼개면 오히려 경계가 얇아져 근거가 약해진다), 유형 안에서도 퍼센트가 정확히
+// 몇인지에 따라 다른 문장이 나오도록 축별 강도 설명을 별도로 붙인다.
+// 예: 같은 "충동 우세" 유형이어도 63%와 97%는 다른 문장을 받는다.
+function axisIntensityText(pct) {
+  if (pct >= 90) return "매우 두드러지게 나타났어요";
+  if (pct >= 75) return "뚜렷하게 높게 나타났어요";
+  if (pct >= 60) return "약간 높게 나타났어요";
+  if (pct >= 40) return "평범한 수준이에요";
+  if (pct >= 20) return "낮은 편이에요";
+  return "거의 나타나지 않았어요";
+}
+
+function axisBreakdown(r) {
+  return [
+    { label: "집중력", pct: r.focus },
+    { label: "충동성", pct: r.impulse },
+    { label: "에너지", pct: r.energy },
+  ].map((a) => ({ ...a, text: axisIntensityText(a.pct) }));
 }
 
 function roundRect(ctx, x, y, w, h, radius) {
@@ -673,7 +672,15 @@ function renderResult() {
         ${r.bonus.impulse > 0 || r.bonus.focus > 0 ? `<div class="result-stats" style="margin-top:8px;"><span>⚡ 반응·주의력 게임 결과 반영됨${r.bonus.impulse > 0 ? ` · 충동 +${r.bonus.impulse}` : ""}${r.bonus.focus > 0 ? ` · 집중 +${r.bonus.focus}` : ""}</span></div>` : ""}
       </div>
 
-      <p class="result-dominant">🔍 ${dominantTraitNote(r)}</p>
+      <div class="axis-breakdown">
+        ${axisBreakdown(r).map((a) => `
+          <div class="axis-row">
+            <span class="axis-label">${a.label}</span>
+            <span class="axis-pct">${a.pct}%</span>
+            <span class="axis-text">${a.text}</span>
+          </div>
+        `).join("")}
+      </div>
 
       <div class="result-tip">💡 ${r.type.tip}</div>
 
