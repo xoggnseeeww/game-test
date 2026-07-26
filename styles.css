@@ -1,3 +1,18 @@
+/* 테마 색은 여기 한 곳에서만 정의한다. 값은 예전에 하드코딩돼 있던 것과 동일하고,
+   아래 규칙들이 리터럴 대신 var()를 쓰도록 바꾼 것뿐이라 렌더링 결과는 그대로다.
+   테마 클래스는 #app이 아니라 body에 붙는다 — 모달이 #app 밖(document.body)에
+   붙기 때문에 #app 스코프로 두면 모달 버튼만 이전 색으로 남는다. */
+:root {
+  --accent: #5B44F2;
+  --accent-shadow: rgba(91,68,242,.32);
+  --accent-soft: #EFEBFF;
+  --accent-ink: #4B3FA0;
+  --accent-dim: #9F8FF5;
+  --cover-grad: linear-gradient(160deg,#6E58F5,#4A32D6);
+  --on-cover: #D8D2FF;
+  --on-cover-body: #E4E0FF;
+}
+
 * { box-sizing: border-box; }
 
 body {
@@ -35,7 +50,7 @@ body {
   width: 30px;
   height: 30px;
   border-radius: 9px;
-  background: #5B44F2;
+  background: var(--accent);
   color: #fff;
   display: flex;
   align-items: center;
@@ -119,7 +134,7 @@ body {
 }
 
 .category-card {
-  background: #EFEBFF;
+  background: var(--accent-soft);
   border-radius: 18px;
   padding: 16px 15px;
   border: none;
@@ -172,7 +187,7 @@ body {
 }
 
 .bottom-nav .nav-item.active {
-  color: #5B44F2;
+  color: var(--accent);
 }
 
 .bottom-nav .nav-item .nav-icon {
@@ -217,7 +232,7 @@ body {
   width: 56px;
   height: 56px;
   border-radius: 16px;
-  background: #5B44F2;
+  background: var(--accent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -255,7 +270,7 @@ body {
 
 .cover {
   margin: 14px 20px 0;
-  background: linear-gradient(160deg,#6E58F5,#4A32D6);
+  background: var(--cover-grad);
   border-radius: 26px;
   padding: 34px 24px 30px;
   text-align: center;
@@ -284,7 +299,7 @@ body {
 
 .cover p {
   font-size: 13px;
-  color: #D8D2FF;
+  color: var(--on-cover);
   margin: 0;
   line-height: 1.6;
 }
@@ -331,14 +346,14 @@ body {
 }
 
 .cta-btn {
-  background: #5B44F2;
+  background: var(--accent);
   color: #fff;
   text-align: center;
   font-size: 16px;
   font-weight: 800;
   padding: 17px;
   border-radius: 16px;
-  box-shadow: 0 8px 20px rgba(91,68,242,.32);
+  box-shadow: 0 8px 20px var(--accent-shadow);
   border: none;
   width: 100%;
   cursor: pointer;
@@ -362,7 +377,7 @@ body {
 
 .progress-fill {
   height: 100%;
-  background: #5B44F2;
+  background: var(--accent);
   border-radius: 999px;
   transition: width .2s ease;
 }
@@ -370,7 +385,7 @@ body {
 .progress-count {
   font-size: 13px;
   font-weight: 800;
-  color: #5B44F2;
+  color: var(--accent);
 }
 
 .progress-count .total { color: #B4B0A8; }
@@ -382,7 +397,7 @@ body {
 .question-block .qno {
   font-size: 13px;
   font-weight: 700;
-  color: #5B44F2;
+  color: var(--accent);
   margin-bottom: 12px;
 }
 
@@ -431,7 +446,7 @@ body {
 
 .result-card {
   margin: 14px 20px 0;
-  background: linear-gradient(160deg,#6E58F5,#4A32D6);
+  background: var(--cover-grad);
   border-radius: 26px;
   padding: 28px 24px;
   text-align: center;
@@ -452,7 +467,7 @@ body {
 .result-card .eyebrow {
   font-size: 12px;
   font-weight: 700;
-  color: #D8D2FF;
+  color: var(--on-cover);
   letter-spacing: .05em;
 }
 
@@ -493,12 +508,12 @@ body {
 .result-tags span {
   font-size: 12px;
   font-weight: 700;
-  color: #D8D2FF;
+  color: var(--on-cover);
 }
 
 .result-card p {
   font-size: 13px;
-  color: #E4E0FF;
+  color: var(--on-cover-body);
   margin: 0;
   line-height: 1.6;
   white-space: pre-line;
@@ -519,7 +534,7 @@ body {
   font-weight: 700;
 }
 
-.result-stats .sep { color: #9F8FF5; }
+.result-stats .sep { color: var(--accent-dim); }
 
 .result-dominant {
   margin: 12px 20px 0;
@@ -561,7 +576,7 @@ body {
   flex: 0 0 auto;
   font-size: 13px;
   font-weight: 800;
-  color: #5B44F2;
+  color: var(--accent);
 }
 
 .axis-row .axis-text {
@@ -571,11 +586,11 @@ body {
 
 .result-tip {
   margin: 14px 20px 0;
-  background: #EFEBFF;
+  background: var(--accent-soft);
   border-radius: 16px;
   padding: 14px 16px;
   font-size: 13px;
-  color: #4B3FA0;
+  color: var(--accent-ink);
   font-weight: 700;
   line-height: 1.6;
 }
@@ -765,7 +780,7 @@ body {
 }
 
 .modal-btn-primary {
-  background: #5B44F2;
+  background: var(--accent);
   color: #fff;
   font-size: 15px;
   font-weight: 800;
