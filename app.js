@@ -61,16 +61,17 @@ const state = {
 };
 
 // 심리테스트는 /test/이름, 미니게임은 /game/이름 경로를 갖는다.
+// 반응속도 게임은 별도 미니게임이 아니라 ADHD 테스트에 딸린 보너스라 /test/adhd 하위 경로를 쓴다.
 const ROUTES = {
   "/": "home",
   "/test": "psych-list",
   "/test/adhd": "test-intro",
   "/test/adhd/play": "test-question",
   "/test/adhd/result": "test-result",
+  "/test/adhd/reaction": "reaction-intro",
+  "/test/adhd/reaction/play": "reaction-play",
+  "/test/adhd/reaction/result": "reaction-result",
   "/game": "game-list",
-  "/game/reaction": "reaction-intro",
-  "/game/reaction/play": "reaction-play",
-  "/game/reaction/result": "reaction-result",
 };
 const SCREEN_TO_PATH = Object.fromEntries(Object.entries(ROUTES).map(([path, screen]) => [screen, path]));
 
@@ -426,16 +427,9 @@ function renderGameList() {
         <button class="back-btn" data-nav="home">‹</button>
         <div class="back-title">미니게임</div>
       </div>
-      <div class="section-title">🔥 지금 인기</div>
-      <div class="test-list">
-        <button class="test-card" data-nav="reaction-intro">
-          <div class="icon" style="background:#1FAE6A;">⚡</div>
-          <div class="body">
-            <div class="name">반응속도 게임</div>
-            <div class="desc">초록불이 뜨면 최대한 빨리 탭하기</div>
-          </div>
-          <div class="chevron">›</div>
-        </button>
+      <div class="empty-state">
+        <div class="emoji">🛠️</div>
+        <div class="msg">준비 중인 게임이 있어요<br/>조금만 기다려주세요!</div>
       </div>
     </div>
   `));
@@ -452,8 +446,8 @@ function renderReactionIntro() {
   app.appendChild(el(`
     <div>
       <div class="back-row">
-        <button class="back-btn" data-nav="game-list">‹</button>
-        <div class="back-title">미니게임</div>
+        <button class="back-btn" data-nav="test-result">‹</button>
+        <div class="back-title">성인 ADHD 자가진단</div>
       </div>
       <div class="cover" style="background:linear-gradient(160deg,#2FCB86,#1B8F5C);">
         <div class="emoji">⚡</div>
@@ -480,7 +474,7 @@ function renderReactionPlay() {
   app.appendChild(el(`
     <div>
       <div class="back-row">
-        <button class="back-btn" data-nav="game-list">‹</button>
+        <button class="back-btn" data-nav="test-result">‹</button>
         <div class="back-title">반응속도 게임</div>
       </div>
       <div id="game-panel" class="game-panel">
@@ -551,7 +545,7 @@ function renderReactionResult() {
       <div class="cta" style="padding-top:20px;">
         <button class="cta-btn" id="retry-btn" style="background:#1FAE6A; box-shadow:0 8px 20px rgba(31,174,106,.32);">다시 도전하기</button>
       </div>
-      <button class="retry-btn" data-nav="game-list">🎮 다른 게임 보러가기</button>
+      <button class="retry-btn" data-nav="test-result">🎯 테스트 결과로 돌아가기</button>
     </div>
   `));
   bindNav(app);
