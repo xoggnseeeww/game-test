@@ -60,6 +60,29 @@ const state = {
   lastReaction: null,
 };
 
+// 심리테스트는 /test/이름, 미니게임은 /game/이름 경로를 갖는다.
+const ROUTES = {
+  "/": "home",
+  "/test": "psych-list",
+  "/test/adhd": "test-intro",
+  "/test/adhd/play": "test-question",
+  "/test/adhd/result": "test-result",
+  "/game": "game-list",
+  "/game/reaction": "reaction-intro",
+  "/game/reaction/play": "reaction-play",
+  "/game/reaction/result": "reaction-result",
+};
+const SCREEN_TO_PATH = Object.fromEntries(Object.entries(ROUTES).map(([path, screen]) => [screen, path]));
+
+function normalizePath(pathname) {
+  if (pathname.length > 1 && pathname.endsWith("/")) pathname = pathname.slice(0, -1);
+  return pathname || "/";
+}
+
+function pathToScreen(pathname) {
+  return ROUTES[normalizePath(pathname)] || "home";
+}
+
 const app = document.getElementById("app");
 let reactionTimer = null;
 
@@ -78,15 +101,46 @@ function render() {
   }
 }
 
-function go(screen) {
+// 뒤로/앞으로가기로 URL만 바뀌었을 때 화면-상태 불일치를 막기 위한 보정
+function resolveScreen(screen) {
+  if (screen === "test-question" && state.answers.length >= QUESTIONS.length) {
+    state.answers = state.answers.slice(0, QUESTIONS.length - 1);
+  }
+  if (screen === "test-result" && state.answers.length < QUESTIONS.length) {
+    return "test-intro";
+  }
+  if (screen === "reaction-result" && !state.lastReaction) {
+    return "reaction-intro";
+  }
+  return screen;
+}
+
+function setScreen(screen, { push = false, replace = false } = {}) {
   if (reactionTimer) {
     clearTimeout(reactionTimer);
     reactionTimer = null;
   }
-  state.screen = screen;
+  const resolved = resolveScreen(screen);
+  state.screen = resolved;
   render();
   window.scrollTo(0, 0);
+
+  const path = SCREEN_TO_PATH[resolved] || "/";
+  if (push && normalizePath(location.pathname) !== path) {
+    history.pushState({ screen: resolved }, "", path);
+  } else if (replace && (normalizePath(location.pathname) !== path || !history.state)) {
+    history.replaceState({ screen: resolved }, "", path);
+  }
 }
+
+function go(screen) {
+  setScreen(screen, { push: true });
+}
+
+window.addEventListener("popstate", (e) => {
+  const screen = (e.state && e.state.screen) || pathToScreen(location.pathname);
+  setScreen(screen, { replace: true });
+});
 
 function el(html) {
   const t = document.createElement("template");
@@ -477,4 +531,4 @@ function renderReactionResult() {
   app.querySelector("#retry-btn").addEventListener("click", () => go("reaction-play"));
 }
 
-render();
+setScreen(pathToScreen(location.pathname), { replace: true });
