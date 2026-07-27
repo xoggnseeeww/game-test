@@ -80,19 +80,27 @@ js/tests/<id>/
 | `/test/adhd/reaction/play` | `reaction-play` | game | 답 부족 → `test-intro` |
 | `/test/disc` | `disc-intro` | disc | — |
 | `/test/disc/play` | `disc-question` | disc | 순서 미생성 → `disc-intro` |
-| `/test/disc/result` | `disc-result` | disc | 미완료 → `disc-intro` |
+| `/test/disc/result` | `disc-result` | disc | 문항 미완료 → `disc-intro` · 문항은 끝났지만 게임 미완료 → `dilemma-intro` |
 | `/test/disc/result/<slug>` | `disc-shared` | disc | 슬러그 안 풀리면 → `home` |
-| `/test/disc/dilemma` | `dilemma-intro` | disc | 미완료 → `disc-intro` |
-| `/test/disc/dilemma/play` | `dilemma-play` | disc | 미완료 → `disc-intro` |
-| `/test/disc/dilemma/result` | `dilemma-result` | disc | 결과 없음 → `dilemma-intro` |
+| `/test/disc/dilemma` | `dilemma-intro` | disc | 문항 미완료 → `disc-intro` |
+| `/test/disc/dilemma/play` | `dilemma-play` | disc | 문항 미완료 → `disc-intro` |
 
 > ADHD 화면 id가 `test-*`인 것은 DISC보다 먼저 만들어졌기 때문이다. **이름을 바꾸지 않는다**(위 §2).
 
-> 반응속도 게임(`reaction-*`)은 결과 화면 뒤에 오는 선택 보너스가 아니라, 문항 완료 직후 반드시
-> 거쳐야 하는 이 테스트의 마지막 단계다 — `test-question`이 마지막 문항 응답 직후 `reaction-intro`로
-> 바로 넘어가고, `test-result`의 guard가 `state.lastReaction` 없이는 결과를 보여주지 않는다.
-> 별도의 `reaction-result` 화면은 없다 — 게임 통계는 `test-result`에 병합돼 하나의 결과로 나온다.
-> → `docs/DECISIONS.md` D-18
+**두 테스트 모두 딸린 게임이 결과 화면 뒤의 선택 보너스가 아니라, 마지막 문항 직후 반드시
+거쳐야 하는 필수 단계로 통합돼 있다.** 게임 없이는(직접 URL 접속 포함) 결과를 볼 수 없고,
+별도의 "게임 결과" 화면도 없다 — 게임이 끝나면 곧장 검사 결과로 이동해 하나의 결과로 합쳐 보여준다.
+
+- **DISC**: 문항(12) → 딜레마 게임(8라운드) → 결과. 12번째 문항을 답하면 `dilemma-intro`로
+  넘어가고, `disc-result`의 guard가 게임 완료를 요구한다. `dilemma-play`의 `finish()`가
+  `state.disc.dilemma`를 채운 뒤 바로 `disc-result`로 이동하며, 게임이 실제로 유형에 영향을
+  줬을 때만 "⚡ 딜레마 게임 결과 반영됨" 줄이 붙는다(`docs/DECISIONS.md` D-18).
+  뒤로가기는 두 지점: `dilemma-intro`→`disc-question`(그 guard가 이미 "답이 다 차 있으면
+  마지막 문항으로 되돌림"을 하므로 별도 상태 없이 재사용), `dilemma-play`→`dilemma-intro`
+  (문항 답변은 유지한 채 게임만 재시작).
+- **ADHD**: 문항(12) → 반응속도 게임 → 결과. `test-question`이 마지막 문항 응답 직후
+  `reaction-intro`로 넘어가고, `test-result`의 guard가 `state.lastReaction` 없이는 결과를
+  보여주지 않는다. 게임 통계는 `test-result`에 병합돼 하나의 결과로 나온다(`docs/DECISIONS.md` D-19).
 
 ## 4. 상태(state) 모양
 
@@ -112,7 +120,7 @@ state = {
 
 **메모리 전용이다.** 새로고침하면 초기화된다. 영속 데이터는 없다 — 예전엔 `localStorage["gt_reaction_best"]`로
 반응속도 최고기록을 저장했으나, 게임의 "빠를수록 좋다"는 프레이밍이 채점 철학(D-5, 빠른 반응 ≠ 충동적)과
-충돌해서 제거했다(D-19).
+충돌해서 제거했다(D-20).
 
 `disc.pending`이 state에 있는 이유: `render()`가 매번 DOM을 버리므로, 반쪽 답을 지역 변수에 두면 뒤로가기·popstate에서 사라진다.
 

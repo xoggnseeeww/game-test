@@ -19,7 +19,7 @@
 - 도메인 `https://fun.data-pantry.com` / 저장소 `xoggnseeeww/game-test`
 - 호스팅: Cloudflare Pages — 빌드 명령 없음, 출력 디렉터리 = 레포 루트
 - SPA 폴백: `_redirects` (`/*  /index.html  200`) — 없으면 하위 경로 직접 접속이 404
-- 영속 데이터: **없음** (예전엔 `localStorage["gt_reaction_best"]`로 반응속도 최고기록을 저장했으나 D-19에서 제거) / 시크릿·환경변수·백엔드 **없음**
+- 영속 데이터: **없음** (예전엔 `localStorage["gt_reaction_best"]`로 반응속도 최고기록을 저장했으나 D-20에서 제거) / 시크릿·환경변수·백엔드 **없음**
 
 ## 기술 스택
 빌드 없는 정적 SPA. 브라우저 네이티브 ES 모듈(`<script type="module">`), 런타임 의존성 0.

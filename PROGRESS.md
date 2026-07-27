@@ -70,6 +70,25 @@
     가이드가 권하는 `wc -m` 측정법 자체가 한글 문서에서 틀린다 → `docs/ERRORS.md` A-4에 한글 인식 측정 명령으로 대체.
     (깎은 문구는 되돌리지 않았다 — 축약 자체는 손해가 없었다.)
 
+- **딜레마 게임을 문항 뒤 강제 단계로 재배치 + UI 점검** (2026-07-27):
+  - 요청 배경: 사용자가 "UI 개선해야 될게 많더라. 체크해서 손봐주고. 딜레마 게임이 문항뒤에 바로 이어서 진행되어서 그 게임의 결과까지 고려해서 유형을 정리해달라"고 요청.
+  - 원인: (버그 아님, 설계 변경) 딜레마 게임은 결과 화면의 "다음 콘텐츠"에서 선택적으로 들어가는 보너스였다.
+    문항만 풀고 게임은 건너뛰는 게 기본 경로가 되어, 게임이 있는 이유(속도·우선순위 신호 반영)가 대부분의 사용자에게 무의미했다.
+    390px 전 화면 스크린샷 감사에서 UI 결함 2건도 발견: 딜레마 게임의 1.2초 읽기 지연 동안 선택지 칸이 완전히 비어 있어 멈춘 것처럼 보였고,
+    결과 화면의 "다음 콘텐츠" 2카드(딜레마 게임/ADHD)가 게임 카드를 없애면 한쪽만 남아 레이아웃이 틀어질 상황이었다(다행히 `.next-card`가 `flex:1`이라 코드 변경 없이 자동 해결).
+  - 구현: 12번째 문항 응답 후 `disc-result`가 아니라 `dilemma-intro`로 이동하도록 바꾸고, `disc-result`의 guard를 "문항 완료 AND 게임 완료"로 강화했다(`docs/DECISIONS.md` D-18).
+    별도의 "게임 결과" 화면(`dilemma-result`)과 그 경로를 통째로 제거 — `dilemma-play`의 `finish()`가 곧장 `disc-result`로 이동한다.
+    뒤로가기 두 지점 재배선: `dilemma-intro`→`disc-question`(기존 guard가 마지막 문항으로 되돌림), `dilemma-play`→`dilemma-intro`.
+    딜레마 선택지가 뜨기 전 빈 칸에 "잠시 후 선택지가 나타나요…" 힌트 추가. `disc-intro`에 세 번째 meta-chip을 넣어 게임이 있다는 걸 시작 전에 알렸다.
+    복귀 도중 `js/tests/disc/screens.js`에서 리터럴 "12개"를 다시 하드코딩하는 실수를 스스로 저질렀는데, 병렬 세션이 `main`에 먼저 추가해둔 `test/copy.test.js`가 이걸 잡아냈다 — 도구가 실제로 일하는 걸 확인한 사례.
+  - 검증: `npm test` 29/29. `scripts/verify.cjs` 25개 항목 전부 통과(딜레마 루프 동기화 버그를 스크립트 자체에서 찾아 고침 — 클릭 직후 `armed=false`라 무시되는 재클릭을 계속 성공으로 오인하고 있었다.
+    `.dilemma-choice`가 `detached`될 때까지 기다리도록 고쳐서 8라운드가 실제로 8번만 진행되는 걸 확인했다).
+    Playwright로 별도 시나리오도 확인: 냉콜드 상태에서 `/test/disc/result` 직접 접속 → `disc-intro` 폴백, 옛 `/test/disc/dilemma/result` 경로 → 홈 폴백,
+    게임 도중 뒤로가기 후 재시작 가능, "다시 해보기" 시 문항·게임 둘 다 다시 강제됨, 보너스가 실제로 결과를 움직일 때만 배너가 뜨고 이미 상한이라 안 움직이면 안 뜸(둘 다 확인).
+    ADHD 전체 스냅샷은 이전과 바이트 단위로 동일 — 이 세션에서 손대지 않았다.
+    **확인 못 한 것**: 홈/목록 화면의 큰 여백은 `docs/design-draft.html`에 있던 상식퀴즈·이름생일 카드가 아직 구현되지 않아 생기는 콘텐츠 공백으로 보인다 —
+    이미 `CURRENT_TASK.md`에 있는 백로그와 겹쳐서 이번엔 손대지 않았다(가짜 기능을 만들어 채우는 건 더 나쁘다).
+
 - **반응속도 게임을 ADHD 테스트의 필수 마지막 단계로 전환** (2026-07-27):
   - 요청 배경: 사용자가 "ADHD 12문항 뒤에 바로 반응속도 게임으로 안 이어지네? 게임분석까지 써서 최종결과 뽑기로 했잖아. 아예 ADHD에 귀속된 게임으로 두기로 했잖아."
   - 원인: (버그 아님, 설계 미완) 마지막 문항 응답 후 `go("test-result")`로 바로 결과를 보여줬다. 게임은 결과 화면의 "이런 것도 해봤어?" 카드로만 닿을 수 있는 **선택 보너스**였고, 게임을 마치면 별도의 `reaction-result` 화면에 통계를 보여주고 "결과로 돌아가면 갱신된 점수를 볼 수 있어요"라고 안내할 뿐이었다 — 사용자에게는 검사 결과와 게임 결과가 서로 다른 두 결과로 보였다.
@@ -77,7 +96,7 @@
     - `renderQuestion`의 마지막 문항 분기를 `go("reaction-intro")`로 변경. `test-result`의 guard에 `state.lastReaction` 부재 시 `reaction-intro`로 보내는 조건을 추가해 게임을 안 거치고는(직접 URL 접속 포함) 결과를 볼 수 없게 만들었다. `reaction-intro`/`reaction-play`에도 문항 미완료 시 `test-intro`로 떨어지는 guard를 추가했다.
     - `reaction-play`의 `finish()`가 `go("reaction-result")` 대신 `go("test-result")`로 가도록 변경하고, **`reaction-result` 화면 자체를 삭제**했다 — 게임 통계(정확도·반응 일관성·못 참은/놓친/성급했던 횟수)와 코멘트를 `test-result`(`renderResult`) 안으로 병합했다.
     - 첫 병합은 결과 카드 두 개(설문용 하나, 게임용 하나)를 세로로 쌓는 형태였는데, 사용자가 "결과값이 12문항 검증한거 따로 게임따로 이렇게 나오니까 별로 안 좋은거같다"고 지적 → 하나의 result-card 안에 유형 설명과 게임 코멘트를 같은 문단으로 합치고, 게임의 숫자들은 별도 "결과"가 아니라 다른 화면에서도 쓰는 `meta-chips`(보조 데이터) 형태로 재배치했다.
-    - `docs/DECISIONS.md` D-18로 기록. `docs/architecture.md` 화면 표에서 `reaction-result` 행 제거, `test-result`/`reaction-intro`/`reaction-play`의 guard 설명 갱신.
+    - `docs/DECISIONS.md` D-19로 기록. `docs/architecture.md` 화면 표에서 `reaction-result` 행 제거, `test-result`/`reaction-intro`/`reaction-play`의 guard 설명 갱신.
   - 검증: 헤드리스 브라우저로 전체 플로우(문항 12개 → 게임 14라운드 → 결과)를 실제로 재생해 스크린샷으로 확인. `npm test` 27개(당시 기준) 통과.
     **확인 못 한 것**: 실기기에서의 체감 흐름(모바일 사파리 등) — 샌드박스는 헤드리스 Chromium만 가능.
 
@@ -91,7 +110,7 @@
   - 구현:
     - `reactionComment()`를 "없음/약간/심함" 3단계 × 2축(9개 조합) 명시적 분기로 재작성 — 모든 조합이 서로 다른 문장을 받는다.
     - 메타칩 라벨을 "내 최고기록"/"총 라운드"로 정정.
-    - `bestReactionTime()`/`saveBestReactionTime()`(`js/core/util.js`)과 그 호출부, `isBest` 배지, `localStorage["gt_reaction_best"]`를 전부 제거 → `docs/DECISIONS.md` D-19.
+    - `bestReactionTime()`/`saveBestReactionTime()`(`js/core/util.js`)과 그 호출부, `isBest` 배지, `localStorage["gt_reaction_best"]`를 전부 제거 → `docs/DECISIONS.md` D-20.
   - 검증: `test/adhd.score.test.js` 신설 — `reactionComment` 9개 조합이 전부 다른 문장을 주는지, premature와 commission이 같은 신호로 취급되는지, `gameBonuses`/`computeResult`의 경계 조건을 검사. `npm test` 32개 통과.
     **확인 못 한 것**: 없음(순수 함수라 노드 테스트만으로 충분히 검증됨).
 
@@ -112,8 +131,8 @@
   - 구현:
     - `git merge origin/main` — `js/tests/adhd/data.js`의 `CPT_ROUNDS` 주석 충돌만 main 쪽 문구로 해결.
     - `scripts/verify.cjs`: ADHD 섹션이 마지막 문항 응답 직후 `.result-card`를 기다리던 것을 `reaction-intro`로의 직행을 먼저 확인하도록 바꾸고, `playCptGame()` 헬퍼를 새로 작성해 14라운드를 실제로 클린 플레이한 뒤에야 `.result-card`를 기다리게 했다. 삭제된 `/test/adhd/reaction/result` guard 케이스를 `reaction-intro`/`reaction-play`의 새 guard(문항 미완료 → `test-intro`) 케이스로 교체했다. 게임 도중 이탈(`onLeave`) 확인은 하드 리로드 대신 결과 화면의 "다시하기" 버튼으로 재진입해 클라이언트 사이드에서 검사하도록 재작성했다.
-    - `CLAUDE.md`·`docs/architecture.md`의 "영속 데이터: `localStorage[\"gt_reaction_best\"]`" 서술을 "영속 데이터 없음"으로 갱신(D-19). `docs/architecture.md` 화면 표에서 `reaction-result` 행 제거, 남은 게임 화면 guard 설명 갱신, §8 테스트 스위트 표에 `test/adhd.score.test.js` 추가.
-    - `docs/DECISIONS.md`에 D-18(게임을 필수 단계로)·D-19(최고기록 제거) 추가, D-4에 D-18로의 갱신 메모 연결. `CURRENT_TASK.md`의 "다음 작업 1번"(미니게임 목록)에 반응속도 게임은 이제 단독 노출 대상이 아니라는 경고를 추가.
+    - `CLAUDE.md`·`docs/architecture.md`의 "영속 데이터: `localStorage[\"gt_reaction_best\"]`" 서술을 "영속 데이터 없음"으로 갱신(D-20). `docs/architecture.md` 화면 표에서 `reaction-result` 행 제거, 남은 게임 화면 guard 설명 갱신, §8 테스트 스위트 표에 `test/adhd.score.test.js` 추가.
+    - `docs/DECISIONS.md`에 D-19(게임을 필수 단계로)·D-20(최고기록 제거) 추가, D-4에 D-19로의 갱신 메모 연결. `CURRENT_TASK.md`의 "다음 작업 1번"(미니게임 목록)에 반응속도 게임은 이제 단독 노출 대상이 아니라는 경고를 추가.
   - 검증:
     - `playCptGame()`의 첫 구현(라운드마다 고정 700ms 대기)이 실제로는 **잘못됐다** — no-go를 올바르게 참았을 때는 최대 1초짜리 대기창이 있는데 700ms만 쉬고 다음 반복이 같은 "누르지 마세요!" 문구를 다시 읽어, 14번 반복했는데 실제 게임은 12라운드까지밖에 못 갔다(스크린샷으로 확인). 고정 대기를 버리고 **문구 자체가 바뀔 때까지 기다리는 방식**으로 재작성해 해결.
     - 새로 추가한 핵심 검사("ADHD 문항 완료 → 결과가 아니라 게임으로 직행")를 `test-result`의 guard 조건을 임시로 주석 처리하고 `renderQuestion`의 분기를 되돌려 **일부러 되살려서 빨간불이 뜨는 것을 확인**했다(`docs/DECISIONS.md` D-17 관례). 확인 후 원상복구, `git diff` 없음을 재확인.
