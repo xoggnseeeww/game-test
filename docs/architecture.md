@@ -81,13 +81,24 @@ js/tests/<id>/
 | `/test/adhd/reaction/result` | `reaction-result` | game | 결과 없음 → `reaction-intro` |
 | `/test/disc` | `disc-intro` | disc | — |
 | `/test/disc/play` | `disc-question` | disc | 순서 미생성 → `disc-intro` |
-| `/test/disc/result` | `disc-result` | disc | 미완료 → `disc-intro` |
+| `/test/disc/result` | `disc-result` | disc | 문항 미완료 → `disc-intro` · 문항은 끝났지만 게임 미완료 → `dilemma-intro` |
 | `/test/disc/result/<slug>` | `disc-shared` | disc | 슬러그 안 풀리면 → `home` |
-| `/test/disc/dilemma` | `dilemma-intro` | disc | 미완료 → `disc-intro` |
-| `/test/disc/dilemma/play` | `dilemma-play` | disc | 미완료 → `disc-intro` |
-| `/test/disc/dilemma/result` | `dilemma-result` | disc | 결과 없음 → `dilemma-intro` |
+| `/test/disc/dilemma` | `dilemma-intro` | disc | 문항 미완료 → `disc-intro` |
+| `/test/disc/dilemma/play` | `dilemma-play` | disc | 문항 미완료 → `disc-intro` |
 
 > ADHD 화면 id가 `test-*`인 것은 DISC보다 먼저 만들어졌기 때문이다. **이름을 바꾸지 않는다**(위 §2).
+
+**DISC는 문항(12) → 딜레마 게임(8라운드) → 결과 순으로 강제된다.** 딜레마 게임은 더 이상
+결과 화면에서 선택적으로 들어가는 보너스 콘텐츠가 아니다 — 12번째 문항을 답하면 곧바로
+`dilemma-intro`로 넘어가고, 게임이 끝나야 `disc-result`의 guard를 통과한다. 별도의
+"게임 결과" 화면(`dilemma-result`)은 없다 — `dilemma-play`의 `finish()`가
+`state.disc.dilemma`를 채운 뒤 바로 `disc-result`로 이동하고, 게임이 실제로 유형에
+영향을 줬을 때만 결과 화면에 "⚡ 딜레마 게임 결과 반영됨" 줄이 붙는다(`docs/DECISIONS.md` D-18).
+
+뒤로가기는 이 강제 순서 위에서 두 지점만 마련돼 있다: `dilemma-intro`의 뒤로가기는
+`disc-question`으로 가는데, 그 guard가 이미 "답이 다 차 있으면 마지막 문항으로 되돌림"을
+하므로 별도 상태 없이 마지막 문항(2단계)을 다시 풀게 된다. `dilemma-play`의 뒤로가기는
+`dilemma-intro`로 돌아가 게임을 처음부터 다시 시작할 수 있게 한다(문항 답변은 그대로 남는다).
 
 ## 4. 상태(state) 모양
 

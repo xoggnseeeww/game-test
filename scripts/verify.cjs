@@ -114,12 +114,33 @@ const check = (name, cond, detail = "") =>
     await page.waitForSelector(".options .option-btn:not([disabled])");
     await page.click(".options .option-btn:not([disabled])");
   }
+  // 문항이 끝나면 결과가 아니라 딜레마 게임으로 이어진다 — 게임 결과까지 반영된
+  // 유형을 한 번에 보여주기 위해 disc-result 가드가 게임 완료를 요구한다.
+  check("문항 완료 → 딜레마 인트로로 자동 이동", page.url().endsWith("/test/disc/dilemma"), page.url());
+
+  await page.click("#dilemma-start");
+  let dilemmaRounds = 0;
+  while (await page.isVisible(".dilemma-panel")) {
+    await page.waitForSelector(".dilemma-choice", { timeout: 3000 });
+    await page.click(".dilemma-choice >> nth=0");
+    // 클릭 직후엔 armed=false라 같은 버튼이 아직 DOM에 남아있어도 재클릭이 씹힌다.
+    // 다음 라운드로 넘어가며 선택지가 갈아끼워지거나(잠깐 사라짐) 결과로 이동해
+    // .dilemma-choice가 통째로 없어질 때까지 기다린 뒤에야 다시 확인해야 한다 —
+    // 안 그러면 같은 라운드를 반복 클릭하며 헛도는데 겉으로는 진행되는 것처럼 보인다.
+    await page.waitForSelector(".dilemma-choice", { state: "detached", timeout: 3000 }).catch(() => {});
+    dilemmaRounds++;
+    if (dilemmaRounds > 20) break; // 무한루프 방지 (버그가 있으면 여기서 멎는다)
+  }
   await page.waitForSelector(".result-card", { timeout: 5000 });
-  check("DISC 결과 주소", page.url().includes("/test/disc/result"), page.url());
+  check("딜레마 게임 완주 → 별도 결과 화면 없이 DISC 결과로 직행", page.url().includes("/test/disc/result"), page.url());
   check("DISC 결과에 유형 표시", (await page.textContent(".result-card")).trim().length > 20);
 
   // 같은 선택지를 most이자 least로 고를 수 없다 (2단계에서 disabled)
   check("DISC 강제선택 2단계 완주", true);
+
+  // 옛 /test/disc/dilemma/result 화면은 제거됐다 — 알 수 없는 경로는 홈으로
+  await goto("/test/disc/dilemma/result");
+  check("제거된 딜레마 결과 경로 → 홈 폴백", await page.isVisible(".hero-title"), page.url());
 
   // === 공유 슬러그 주소 (두 테스트 모두) ===
   // 불변식은 "결과 카드가 뜨고 홈이 아니다" — 화면 문구는 테스트마다 다르므로 문구로 검사하지 않는다.
