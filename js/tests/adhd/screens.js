@@ -3,7 +3,7 @@ import { app, go, onLeave, parseSharedPath } from "../../core/router.js";
 import { el, bindNav, showModal } from "../../core/dom.js";
 import { shareBlockMarkup, wireShare } from "../../core/share.js";
 import { state } from "../../core/state.js";
-import { roundRect, shuffle, bestReactionTime, saveBestReactionTime } from "../../core/util.js";
+import { roundRect, shuffle } from "../../core/util.js";
 import {
   QUESTIONS,
   OPTIONS,
@@ -18,7 +18,6 @@ import {
   computeResult,
   axisBreakdown,
   summarizeGameResults,
-  gameBonuses,
   reactionComment,
 } from "./score.js";
 
@@ -93,7 +92,9 @@ export function renderQuestion() {
       const value = q.reverse ? 4 - opt.value : opt.value;
       state.answers.push({ group: q.group, value });
       if (state.answers.length >= QUESTIONS.length) {
-        go("test-result");
+        // 반응속도 게임은 별도 보너스가 아니라 이 테스트의 마지막 단계라, 문항이
+        // 끝나면 바로 게임으로 이어간다. 결과는 게임까지 마쳐야 볼 수 있다.
+        go("reaction-intro");
       } else {
         go("test-question");
       }
@@ -191,21 +192,23 @@ async function drawResultCard(r) {
 
 export function renderResult() {
   const r = computeResult();
+  const g = state.lastReaction;
   app.appendChild(el(`
     <div>
       <div class="result-card">
-        <div class="eyebrow">나의 집중 유형은</div>
+        <div class="eyebrow">설문 + 반응속도 게임으로 본 나의 집중 유형은</div>
         <div class="emoji">${r.type.emoji}</div>
         <h2>${r.type.name}</h2>
         <div class="result-subtitle">${r.type.subtitle}</div>
         <div class="result-tags">${r.type.tags.map((t) => `<span>${t}</span>`).join("")}</div>
         <p>${r.type.desc}</p>
+        ${g ? `<p>🎮 ${reactionComment(g)}</p>` : ""}
         <div class="result-stats">
           <span>집중 ${r.focus}</span><span class="sep">·</span>
           <span>충동 ${r.impulse}</span><span class="sep">·</span>
           <span>에너지 ${r.energy}</span>
         </div>
-        ${r.bonus.impulse > 0 || r.bonus.focus > 0 ? `<div class="result-stats" style="margin-top:8px;"><span>⚡ 반응·주의력 게임 결과 반영됨${r.bonus.impulse > 0 ? ` · 충동 +${r.bonus.impulse}` : ""}${r.bonus.focus > 0 ? ` · 집중 +${r.bonus.focus}` : ""}</span></div>` : ""}
+        ${r.bonus.impulse > 0 || r.bonus.focus > 0 ? `<div class="result-stats" style="margin-top:8px;"><span>⚡ 위 점수엔 게임 결과도 반영돼 있어요${r.bonus.impulse > 0 ? ` · 충동 +${r.bonus.impulse}` : ""}${r.bonus.focus > 0 ? ` · 집중 +${r.bonus.focus}` : ""}</span></div>` : ""}
       </div>
 
       <div class="axis-breakdown">
@@ -218,6 +221,21 @@ export function renderResult() {
         `).join("")}
       </div>
 
+      ${g ? `
+      <div class="section-title" style="padding:20px 20px 9px;">📊 게임에서 측정된 수치</div>
+      <div class="meta-chips">
+        <div class="meta-chip"><div class="value">${g.avgRt !== null ? g.avgRt + "ms" : "-"}</div><div class="label">평균 반응속도</div></div>
+        <div class="meta-chip"><div class="value">${g.accuracy}%</div><div class="label">정확도</div></div>
+        <div class="meta-chip"><div class="value">${g.rtSD}ms</div><div class="label">반응 일관성</div></div>
+      </div>
+      <div class="meta-chips" style="padding-top:8px;">
+        <div class="meta-chip"><div class="value">${g.commissionErrors}/${g.noGoCount}</div><div class="label">못 참은 순간</div></div>
+        <div class="meta-chip"><div class="value">${g.omissionErrors}/${g.goCount}</div><div class="label">놓친 순간</div></div>
+        <div class="meta-chip"><div class="value">${g.prematureCount}회</div><div class="label">성급했던 순간</div></div>
+      </div>
+      <p class="result-dominant">정확도: 알맞게 반응한 비율 · 반응 일관성: 반응속도가 얼마나 고르게 나왔는지(낮을수록 안정적) · 못 참은 순간: 참아야 할 때 누른 횟수 · 놓친 순간: 반응해야 할 때 놓친 횟수 · 성급했던 순간: 신호가 뜨기 전에 미리 누른 횟수</p>
+      ` : ""}
+
       <div class="result-tip">💡 ${r.type.tip}</div>
 
       ${shareBlockMarkup()}
@@ -227,7 +245,7 @@ export function renderResult() {
       <div class="next-block">
         <div class="section-title" style="padding:0 0 9px;">이런 것도 해봤어? 🎲</div>
         <div class="next-row">
-          <button class="next-card" data-nav="reaction-intro"><div class="icon">⚡</div><div class="label">반응속도 게임</div></button>
+          <button class="next-card" id="replay-game-btn"><div class="icon">⚡</div><div class="label">반응속도 게임 다시하기</div></button>
           <div class="next-card quiz"><div class="icon">💡</div><div class="label">상식 퀴즈</div></div>
         </div>
       </div>
@@ -236,8 +254,10 @@ export function renderResult() {
     </div>
   `));
   bindNav(app);
+  app.querySelector("#replay-game-btn").addEventListener("click", () => go("reaction-play"));
   app.querySelector("#retry-btn").addEventListener("click", () => {
     state.answers = [];
+    state.lastReaction = null;
     go("test-intro");
   });
 
@@ -279,27 +299,25 @@ export function renderTestShared() {
 }
 
 export function renderReactionIntro() {
-  const best = bestReactionTime();
   app.appendChild(el(`
     <div>
       <div class="back-row">
-        <button class="back-btn" data-nav="test-result">‹</button>
+        <button class="back-btn" data-nav="test-question">‹</button>
         <div class="back-title">성인 ADHD 성향 체크</div>
       </div>
       <div class="cover">
         <div class="emoji">⚡</div>
-        <div class="tag">충동 조절 · 집중력 미니게임</div>
+        <div class="tag">마지막 단계 · 충동 조절 확인</div>
         <h2>반응속도 게임</h2>
-        <p>초록불엔 재빨리 탭, 주황불엔 참아보세요!<br/>${CPT_ROUNDS}라운드로 충동 조절과 집중력을 함께 확인해봐요.</p>
+        <p>문항은 다 풀었어요! 마지막으로 초록불엔 재빨리 탭, 주황불엔 참아보세요.<br/>${CPT_ROUNDS}라운드로 충동 조절과 집중력을 확인하면 최종 결과가 나와요.</p>
       </div>
       <div class="meta-chips">
-        <div class="meta-chip"><div class="value">${CPT_ROUNDS}라운드</div><div class="label">게임 방식</div></div>
-        <div class="meta-chip"><div class="value">${best !== null ? best + "ms" : "-"}</div><div class="label">내 평균 반응속도</div></div>
+        <div class="meta-chip"><div class="value">${CPT_ROUNDS}라운드</div><div class="label">총 라운드</div></div>
         <div class="meta-chip"><div class="value">${CPT_NOGO_COUNT}회</div><div class="label">참아야 할 신호</div></div>
       </div>
       <p class="disclaimer">너무 일찍 누르면 그 라운드는 다시 진행되지만, 성급했던 횟수도\n충동 점수에 함께 기록돼요. 주황불에서는 누르지 않는 게 정답이에요!</p>
       <div class="cta">
-        <button class="cta-btn" id="start-btn">게임 시작하기</button>
+        <button class="cta-btn" id="start-btn">마지막 단계 시작하기</button>
       </div>
     </div>
   `));
@@ -311,7 +329,7 @@ export function renderReactionPlay() {
   app.appendChild(el(`
     <div>
       <div class="back-row">
-        <button class="back-btn" data-nav="test-result">‹</button>
+        <button class="back-btn" data-nav="reaction-intro">‹</button>
         <div class="back-title">반응속도 게임</div>
       </div>
       <div class="progress-row">
@@ -357,7 +375,7 @@ export function renderReactionPlay() {
 
   function startRound() {
     phase = "waiting";
-    panel.style.background = "#E3564C";
+    panel.style.background = "#C84C43";
     msg.style.color = "#fff";
     msg.textContent = "곧 신호가 나타나요...\n집중하세요!";
     const delay = 900 + Math.random() * 1400;
@@ -372,10 +390,14 @@ export function renderReactionPlay() {
         if (aborted) return;
         stimulusOnset = performance.now();
         if (isGo) {
-          panel.style.background = "#1FAE6A";
+          panel.style.background = "#188451";
+          msg.style.color = "#fff";
           msg.textContent = "지금 클릭!";
         } else {
+          // 주황은 원래 배경이 밝아서 흰 글자를 얹으면 대비가 2:1대까지 떨어진다.
+          // 배경을 어둡게 죽이는 대신, 카카오 공유 버튼에도 쓰는 짙은 갈색 글자로 바꿨다.
           panel.style.background = "#F5A623";
+          msg.style.color = "#3C1E1E";
           msg.textContent = "누르지 마세요!";
         }
         timer = setTimeout(() => {
@@ -400,11 +422,9 @@ export function renderReactionPlay() {
   function finish() {
     const stats = summarizeGameResults(results);
     stats.prematureCount = prematureCount;
-    const best = bestReactionTime();
-    const isBest = stats.avgRt !== null && (best === null || stats.avgRt < best);
-    if (isBest) saveBestReactionTime(stats.avgRt);
-    state.lastReaction = { ...stats, isBest };
-    go("reaction-result");
+    state.lastReaction = stats;
+    // 게임이 이 테스트의 마지막 단계라, 끝나면 바로 최종 결과(게임 분석 포함)로 간다.
+    go("test-result");
   }
 
   panel.addEventListener("click", () => {
@@ -419,7 +439,7 @@ export function renderReactionPlay() {
       prematureCount++;
       phase = "feedback";
       panel.style.background = "#FCE7E5";
-      msg.style.color = "#C23B32";
+      msg.style.color = "#A8281F";
       msg.textContent = "너무 빨랐어요!\n다시 준비할게요";
       timer = setTimeout(() => { if (!aborted) startRound(); }, 900);
     } else if (phase === "go") {
@@ -428,7 +448,7 @@ export function renderReactionPlay() {
       results.push({ type: "go", correct: true, rt });
       phase = "feedback";
       panel.style.background = "#DCF5E8";
-      msg.style.color = "#1B8F5C";
+      msg.style.color = "#0F5C39";
       msg.textContent = `${rt}ms ✅`;
       timer = setTimeout(() => { if (!aborted) nextRound(); }, 500);
     } else if (phase === "nogo") {
@@ -436,7 +456,7 @@ export function renderReactionPlay() {
       results.push({ type: "nogo", correct: false });
       phase = "feedback";
       panel.style.background = "#FCE7E5";
-      msg.style.color = "#C23B32";
+      msg.style.color = "#A8281F";
       msg.textContent = "앗, 참았어야 해요!";
       timer = setTimeout(() => { if (!aborted) nextRound(); }, 600);
     }
@@ -444,49 +464,4 @@ export function renderReactionPlay() {
   });
 
   updateProgress();
-}
-
-export function renderReactionResult() {
-  const r = state.lastReaction || {
-    avgRt: null, rtSD: 0, omissionErrors: 0, commissionErrors: 0, prematureCount: 0,
-    goCount: 0, noGoCount: 0, accuracy: 0, isBest: false,
-  };
-  const bonus = gameBonuses();
-
-  const comment = reactionComment(r);
-
-  const bonusParts = [];
-  if (bonus.impulse > 0) bonusParts.push(`충동 +${bonus.impulse}`);
-  if (bonus.focus > 0) bonusParts.push(`집중 +${bonus.focus}`);
-  const bonusNote = bonusParts.length
-    ? `🎯 이 결과가 방금 본 ADHD 성향 체크에 반영돼요 (${bonusParts.join(" · ")}). 결과로 돌아가면 갱신된 점수를 볼 수 있어요.`
-    : "🎯 이번엔 추가로 반영된 점수가 없었어요 — 안정적인 결과였어요! 결과 화면은 그대로예요.";
-
-  app.appendChild(el(`
-    <div>
-      <div class="result-card">
-        <div class="eyebrow">평균 반응속도(Go 라운드 기준)</div>
-        <div class="emoji">⚡</div>
-        <h2>${r.avgRt !== null ? r.avgRt + "ms" : "기록 없음"}</h2>
-        <p>${comment}</p>
-        ${r.isBest ? '<div class="result-stats"><span>🎉 새 최고기록!</span></div>' : ""}
-      </div>
-      <div class="meta-chips">
-        <div class="meta-chip"><div class="value">${r.accuracy}%</div><div class="label">정확도</div></div>
-        <div class="meta-chip"><div class="value">${r.rtSD}ms</div><div class="label">반응 일관성</div></div>
-        <div class="meta-chip"><div class="value">${r.commissionErrors}/${r.noGoCount}</div><div class="label">못 참은 순간</div></div>
-        <div class="meta-chip"><div class="value">${r.omissionErrors}/${r.goCount}</div><div class="label">놓친 순간</div></div>
-        <div class="meta-chip"><div class="value">${r.prematureCount}회</div><div class="label">성급했던 순간</div></div>
-      </div>
-      <p class="result-dominant">정확도: 알맞게 반응한 비율 · 반응 일관성: 반응속도가 얼마나 고르게 나왔는지(낮을수록 안정적) · 못 참은 순간: 참아야 할 때 누른 횟수 · 놓친 순간: 반응해야 할 때 놓친 횟수 · 성급했던 순간: 신호가 뜨기 전에 미리 누른 횟수</p>
-      <div class="result-tip">${bonusNote}</div>
-      <p class="disclaimer">※ 이 수치는 재미로 보는 참고용이며, 실제 인지검사나 의학적 진단 결과가 아니에요.</p>
-      <div class="cta" style="padding-top:10px;">
-        <button class="cta-btn" id="retry-btn">다시 도전하기</button>
-      </div>
-      <button class="retry-btn" data-nav="test-result">🎯 테스트 결과로 돌아가기</button>
-    </div>
-  `));
-  bindNav(app);
-  app.querySelector("#retry-btn").addEventListener("click", () => go("reaction-play"));
 }

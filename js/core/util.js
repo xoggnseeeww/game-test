@@ -23,21 +23,3 @@ export function roundRect(ctx, x, y, w, h, radius) {
   ctx.arcTo(x, y, x + w, y, radius);
   ctx.closePath();
 }
-
-// 프라이버시 모드 등에서 localStorage 접근 자체가 throw할 수 있어 방어한다.
-export function bestReactionTime() {
-  try {
-    const v = localStorage.getItem("gt_reaction_best");
-    return v ? parseInt(v, 10) : null;
-  } catch {
-    return null;
-  }
-}
-
-export function saveBestReactionTime(ms) {
-  try {
-    localStorage.setItem("gt_reaction_best", String(ms));
-  } catch {
-    // 저장 실패는 무시 — 이번 세션 결과 표시에는 영향 없음
-  }
-}

@@ -2,13 +2,16 @@
    아래 규칙들이 리터럴 대신 var()를 쓰도록 바꾼 것뿐이라 렌더링 결과는 그대로다.
    테마 클래스는 #app이 아니라 body에 붙는다 — 모달이 #app 밖(document.body)에
    붙기 때문에 #app 스코프로 두면 모달 버튼만 이전 색으로 남는다. */
+/* --cover-grad의 두 stop은 .cover/.result-card 안의 흰색 계열 글자(제목·본문·eyebrow)가
+   전부 4.5:1 이상을 유지하는 밝기로 잡는다. 원래 값은 밝은 쪽 stop에서 온-커버 텍스트
+   대비가 1.7~3.3:1까지 떨어져 실제로 읽기 어려웠다(특히 theme-game). */
 :root {
   --accent: #5B44F2;
   --accent-shadow: rgba(91,68,242,.32);
   --accent-soft: #EFEBFF;
   --accent-ink: #4B3FA0;
   --accent-dim: #9F8FF5;
-  --cover-grad: linear-gradient(160deg,#6E58F5,#4A32D6);
+  --cover-grad: linear-gradient(160deg,#5A48C9,#3F2AB0);
   --on-cover: #D8D2FF;
   --on-cover-body: #E4E0FF;
 }
@@ -20,7 +23,7 @@ body.theme-game {
   --accent-soft: #E4F5EC;
   --accent-ink: #1B8F5C;
   --accent-dim: #7FD9AE;
-  --cover-grad: linear-gradient(160deg,#2FCB86,#1B8F5C);
+  --cover-grad: linear-gradient(160deg,#1B764E,#0F5C39);
   --on-cover: #CFEFDF;
   --on-cover-body: #DCF5E8;
 }
@@ -32,7 +35,7 @@ body.theme-disc {
   --accent-soft: #FFF0E8;
   --accent-ink: #9C3D14;
   --accent-dim: #F5B899;
-  --cover-grad: linear-gradient(160deg,#F0743C,#C94A18);
+  --cover-grad: linear-gradient(160deg,#9E4D28,#7A3A1C);
   --on-cover: #FFDCC9;
   --on-cover-body: #FFE9DD;
 }
@@ -44,6 +47,11 @@ body {
   font-family: "Pretendard Variable", Pretendard, system-ui, sans-serif;
   background: #EDEAE3;
   min-height: 100vh;
+  /* 한글은 띄어쓰기 단위로만 줄바꿈한다 — 기본값(break-word 유사 동작)은 "주황불엔" 같은
+     단어를 "주" / "황불엔"으로 갈라버려서, 화면 폭에 따라 매번 다른 위치에서 단어가
+     쪼개졌다. 영문/숫자가 섞여 폭을 넘으면 keep-all만으론 안 잘리니 overflow-wrap을 같이 둔다. */
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 #app {
@@ -286,7 +294,7 @@ body {
 .empty-state {
   padding: 60px 30px;
   text-align: center;
-  color: #9A97A0;
+  color: #5C5964;
 }
 
 .empty-state .emoji { font-size: 40px; margin-bottom: 12px; }
@@ -352,13 +360,13 @@ body {
 
 .meta-chip .label {
   font-size: 10px;
-  color: #8A8790;
+  color: #5C5964;
   margin-top: 1px;
 }
 
 .disclaimer {
   font-size: 12px;
-  color: #9A97A0;
+  color: #5C5964;
   text-align: center;
   padding: 14px 34px 0;
   line-height: 1.6;
@@ -563,7 +571,7 @@ body {
 .result-dominant {
   margin: 12px 20px 0;
   font-size: 12px;
-  color: #8A8790;
+  color: #5C5964;
   text-align: center;
   line-height: 1.6;
   padding: 0 8px;
@@ -636,7 +644,7 @@ body {
 .game-msg {
   font-size: 18px;
   font-weight: 800;
-  color: #75727B;
+  color: #5C5964;
   white-space: pre-line;
   line-height: 1.5;
 }
@@ -750,7 +758,7 @@ body {
 .retry-btn {
   text-align: center;
   padding: 12px 20px 24px;
-  color: #75727B;
+  color: #5C5964;
   font-size: 13px;
   font-weight: 700;
   background: none;

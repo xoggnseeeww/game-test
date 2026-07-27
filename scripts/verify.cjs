@@ -46,6 +46,50 @@ const ok = [];
 const check = (name, cond, detail = "") =>
   (cond ? ok : fails).push(`${name}${detail ? " — " + detail : ""}`);
 
+// Go/No-Go 게임을 실수 없이 끝까지 플레이한다(모든 go에 반응, 모든 no-go는 무시) —
+// 그래야 gameBonuses()가 0을 반환해서 이 파일의 축 퍼센트 회귀 확인값(75%)이 안 흔들린다.
+// 라운드 수는 데이터 상수를 들고 오지 않고 진행률 표시("1/14")에서 읽는다 — 이 파일도
+// docs/DECISIONS.md D-17(개수 하드코딩 금지)과 같은 원칙을 따른다.
+async function playCptGame(page) {
+  const totalText = await page.textContent(".progress-count .total");
+  const total = parseInt(totalText.replace("/", ""), 10);
+  if (!Number.isInteger(total) || total <= 0) {
+    throw new Error(`playCptGame: 라운드 수를 못 읽었다 — "${totalText}"`);
+  }
+
+  await page.waitForSelector("#game-panel");
+  await page.click("#game-panel"); // intro → 1라운드 시작
+
+  for (let round = 0; round < total; round++) {
+    // 이번 라운드의 신호가 뜰 때까지 기다린다. null이면 이미 화면을 벗어난 것
+    // (마지막 라운드가 결과로 넘어간 경우) — 그러면 더 볼 라운드가 없다.
+    let seenMsg = null;
+    for (let tries = 0; tries < 80; tries++) {
+      const msg = await page.textContent("#game-msg").catch(() => null);
+      if (msg === null) break;
+      if (msg.includes("지금 클릭") || msg.includes("누르지 마세요")) {
+        seenMsg = msg;
+        break;
+      }
+      await page.waitForTimeout(50);
+    }
+    if (seenMsg === null) break;
+    if (seenMsg.includes("지금 클릭")) await page.click("#game-panel");
+
+    // no-go를 올바르게 참았을 때는 피드백 화면 없이 최대 1초 대기 후 바로 다음
+    // 라운드로 넘어간다. 고정 시간만 기다리면 이 대기가 덜 끝난 상태에서 다음
+    // 반복이 같은 "누르지 마세요!" 문구를 다시 읽어 라운드를 잘못 센다 — 그래서
+    // 문구 자체가 바뀔 때까지(=다음 라운드로 실제로 넘어갈 때까지) 기다린다.
+    await page
+      .waitForFunction(
+        (prev) => document.querySelector("#game-msg")?.textContent !== prev,
+        seenMsg,
+        { timeout: 4000 }
+      )
+      .catch(() => {});
+  }
+}
+
 (async () => {
   const browser = await chromium.launch({
     executablePath: findChromium(),
@@ -75,7 +119,7 @@ const check = (name, cond, detail = "") =>
   const cards = await page.$$eval(".test-card .name", (n) => n.map((e) => e.textContent.trim()));
   check("목록 카드 자동 생성", cards.length >= 2, cards.join(" | "));
 
-  // === ADHD: 개수 문구 · 전 문항 응답 · 채점 회귀 ===
+  // === ADHD: 개수 문구 · 전 문항 응답 · 문항 후 게임으로 직행 · 채점 회귀 ===
   await page.click('[data-nav="test-intro"]');
   const adhdChips = await page.$$eval(".meta-chip .value", (n) => n.map((e) => e.textContent));
   check("ADHD 인트로 주소", page.url().endsWith("/test/adhd"), page.url());
@@ -87,16 +131,48 @@ const check = (name, cond, detail = "") =>
     await page.waitForSelector(".option-btn");
     await page.click(".options .option-btn:nth-child(1)"); // 전부 "매우 그렇다"
   }
+
+  // 반응속도 게임은 보너스가 아니라 이 테스트의 마지막 단계다 — 문항이 끝나면 결과가
+  // 아니라 게임으로 바로 이어진다. 결과는 게임까지 마쳐야 볼 수 있다(guard).
+  await page.waitForSelector('h2:has-text("반응속도 게임")', { timeout: 5000 });
+  check("ADHD 문항 완료 → 결과가 아니라 게임으로 직행", page.url().endsWith("/test/adhd/reaction"), page.url());
+  check(
+    "최고기록 게이미피케이션 없음 (게임 채점 철학과 충돌 — docs/DECISIONS.md D-19)",
+    !(await page.content()).includes("최고기록")
+  );
+
+  await page.click(".cta-btn"); // 게임 시작
+  await playCptGame(page); // 전부 정답으로 클린 플레이 (보너스 0 → 축 퍼센트가 안 흔들림)
+
   await page.waitForSelector(".result-card", { timeout: 5000 });
 
   // 전부 "매우 그렇다"(4점) → 축마다 역채점 1문항이 0점이 되어 (4+4+4+0)/16 = 75%
   // 75 >= AXIS_HIGH_THRESHOLD(60) 이므로 3축 모두 high → "111" 태풍형
+  // 게임을 클린 플레이했으므로 gameBonuses()는 0을 반환해 이 퍼센트를 흔들지 않는다.
   const pcts = await page.$$eval(".axis-row", (rows) =>
     rows.map((r) => r.textContent.replace(/\s+/g, " ").trim())
   );
   check("ADHD 전부 최고점 → 3축 75% (역채점 반영)", pcts.every((t) => /75%/.test(t)), pcts.join(" | "));
   check("ADHD 전부 최고점 → 111 태풍형", /태풍/.test(await page.textContent(".result-card")));
   check("ADHD 결과 주소", page.url().includes("/test/adhd/result"), page.url());
+  check(
+    "최종 결과에 게임 분석이 같은 결과로 병합됨 (별도 결과 화면 없음)",
+    (await page.content()).includes("게임에서 측정된 수치")
+  );
+
+  // === 게임 타이머 정리 (onLeave) — "다시하기"로 재진입해 라운드 도중 이탈해도
+  // 남은 rAF/timeout이 화면을 결과로 밀어버리지 않는가 (docs/ERRORS.md E-4) ===
+  await page.click("#replay-game-btn");
+  await page.waitForSelector("#game-panel");
+  await page.click("#game-panel"); // 라운드 시작 — 타이머가 예약된 상태
+  await page.waitForTimeout(300);
+  await page.click('[data-nav="reaction-intro"]'); // 라운드 도중 이탈
+  await page.waitForTimeout(2000); // 살아남은 콜백이 있으면 이 사이에 화면을 밀어버린다
+  check(
+    "게임 도중 이탈 후 화면이 밀리지 않음 (onLeave)",
+    await page.isVisible('h2:has-text("반응속도 게임")'),
+    page.url()
+  );
 
   // === DISC: 2단계 강제선택 흐름 ===
   await goto("/test/disc");
@@ -164,11 +240,15 @@ const check = (name, cond, detail = "") =>
   check("없는 슬러그 → 홈 폴백", await page.isVisible(".hero-title"), page.url());
 
   // === guard: 선행 상태 없이 결과·게임 주소 직접 접속 ===
+  // 반응속도 게임은 이제 문항을 다 풀어야만 들어갈 수 있는 필수 단계라(reaction-result
+  // 화면 자체가 사라졌다), reaction-intro·reaction-play 둘 다 답이 없으면 test-intro로
+  // 떨어진다 — docs/DECISIONS.md D-18.
   for (const [p, sel, label] of [
     ["/test/adhd/result", ".cover", "ADHD 결과"],
     ["/test/disc/result", ".cover", "DISC 결과"],
     ["/test/disc/dilemma", ".cover", "딜레마"],
-    ["/test/adhd/reaction/result", ".cover", "반응속도 결과"],
+    ["/test/adhd/reaction", ".cover", "반응속도 게임 (문항 미완료)"],
+    ["/test/adhd/reaction/play", ".cover", "반응속도 게임 플레이 (문항 미완료)"],
   ]) {
     await goto(p);
     check(`${label} 주소 직접 접속 → 인트로 폴백`, await page.isVisible(sel), page.url());
@@ -192,15 +272,12 @@ const check = (name, cond, detail = "") =>
     `disc="${discTheme}" list="${listTheme}"`
   );
 
-  // === 게임 타이머 정리 (onLeave) — 플레이 중 이탈 후 화면이 밀리지 않는가 ===
-  await goto("/test/adhd/reaction");
-  await page.click(".cta-btn").catch(() => {});
-  await page.waitForTimeout(300);
-  await goto("/");
-  await page.waitForTimeout(2000); // 살아남은 콜백이 있으면 이 사이에 화면을 밀어버린다
-  check("게임 이탈 후 홈이 유지됨 (onLeave)", await page.isVisible(".hero-title"), page.url());
+  // (게임 타이머 정리(onLeave) 확인은 ADHD 섹션에서 "다시하기"로 이미 검사했다 —
+  // reaction-intro/reaction-play가 문항 미완료 시 test-intro로 떨어지는 guard가 생겨서
+  // 답 없이 곧장 게임 주소로 들어가는 방식으로는 더 이상 게임 화면 자체를 확인할 수 없다.)
 
-  // === 모바일 레이아웃 ===
+  // === 모바일 레이아웃 === (.bottom-nav는 홈 화면에만 있다)
+  await goto("/");
   const box = await (await page.$(".bottom-nav"))?.boundingBox();
   check("하단 네비가 뷰포트 하단에 고정", box && Math.abs(box.y + box.height - 844) < 2, JSON.stringify(box));
   check("목업 잔재(가짜 상태바) 없음", !(await page.content()).includes("9:41"));

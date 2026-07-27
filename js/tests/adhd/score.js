@@ -118,28 +118,42 @@ export function axisBreakdown(r) {
 
 // 억제 실패(commissionErrors)와 누락(omissionErrors)을 각각 따로만 보지 않고
 // 두 축의 조합으로 코멘트를 골라서, 단순 반응속도 하나보다 더 구체적인 피드백을 준다.
+// 두 축을 각각 "없음/약간/심함" 3단계로 나눠 3×3 조합을 전부 커버한다 — 예전엔
+// if를 순서대로 훑다가 한쪽이 심하면 다른 쪽에 "약간"이 있어도 그 정보를 그냥
+// 버렸다(예: 억제 실패가 심하면서 누락도 한 번 있었던 경우, 누락 얘기가 통째로 빠졌다).
 export function reactionComment(r) {
-  const highCommission = r.commissionErrors >= 2 || r.prematureCount >= 3;
-  const someCommission = r.commissionErrors === 1 || r.prematureCount === 1 || r.prematureCount === 2;
-  const highOmission = r.omissionErrors >= 2;
-  const someOmission = r.omissionErrors === 1;
+  const commissionLevel =
+    r.commissionErrors >= 2 || r.prematureCount >= 3 ? "high" :
+    r.commissionErrors === 1 || r.prematureCount >= 1 ? "some" : "none";
+  const omissionLevel =
+    r.omissionErrors >= 2 ? "high" :
+    r.omissionErrors === 1 ? "some" : "none";
 
-  if (!highCommission && !someCommission && !highOmission && !someOmission) {
+  if (commissionLevel === "none" && omissionLevel === "none") {
     return "완벽한 집중력과 충동 조절! 참을 때 참고, 반응할 때 반응했어요 🎯";
   }
-  if (highCommission && highOmission) {
+  if (commissionLevel === "high" && omissionLevel === "high") {
     return "참아야 할 때 못 참고, 반응해야 할 땐 놓치고… 오늘따라 컨디션이 안 맞았나봐요 😅";
   }
-  if (highCommission) {
+  if (commissionLevel === "high" && omissionLevel === "some") {
+    return "멈춰야 할 때 브레이크가 잘 안 걸리는 편이고, 놓친 순간도 한 번 있었어요 ⚡";
+  }
+  if (commissionLevel === "high") {
     return "반응은 빠른 편인데, 멈춰야 할 때 브레이크가 잘 안 걸리는 편이에요 ⚡";
   }
-  if (highOmission) {
+  if (commissionLevel === "some" && omissionLevel === "high") {
+    return "신중한 편이지만 놓치는 순간이 많았고, 성급했던 순간도 한두 번 있었어요 💭";
+  }
+  if (omissionLevel === "high") {
     return "신중한 편이지만, 그만큼 놓치는 순간도 좀 있었어요 💭";
   }
-  if (someCommission) {
+  if (commissionLevel === "some" && omissionLevel === "some") {
+    return "대체로 안정적인데, 성급하게 반응한 순간과 놓친 순간이 한 번씩 있었어요";
+  }
+  if (commissionLevel === "some") {
     return "대체로 안정적인데, 성급하게 반응한 순간이 한두 번 있었어요";
   }
-  if (someOmission) {
+  if (omissionLevel === "some") {
     return "대체로 안정적인데, 딱 한 번 반응을 놓쳤어요";
   }
   return "전반적으로 안정적인 반응이었어요 👍";
