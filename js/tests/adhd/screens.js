@@ -375,7 +375,7 @@ export function renderReactionPlay() {
 
   function startRound() {
     phase = "waiting";
-    panel.style.background = "#E3564C";
+    panel.style.background = "#C84C43";
     msg.style.color = "#fff";
     msg.textContent = "곧 신호가 나타나요...\n집중하세요!";
     const delay = 900 + Math.random() * 1400;
@@ -390,10 +390,14 @@ export function renderReactionPlay() {
         if (aborted) return;
         stimulusOnset = performance.now();
         if (isGo) {
-          panel.style.background = "#1FAE6A";
+          panel.style.background = "#188451";
+          msg.style.color = "#fff";
           msg.textContent = "지금 클릭!";
         } else {
+          // 주황은 원래 배경이 밝아서 흰 글자를 얹으면 대비가 2:1대까지 떨어진다.
+          // 배경을 어둡게 죽이는 대신, 카카오 공유 버튼에도 쓰는 짙은 갈색 글자로 바꿨다.
           panel.style.background = "#F5A623";
+          msg.style.color = "#3C1E1E";
           msg.textContent = "누르지 마세요!";
         }
         timer = setTimeout(() => {
@@ -435,7 +439,7 @@ export function renderReactionPlay() {
       prematureCount++;
       phase = "feedback";
       panel.style.background = "#FCE7E5";
-      msg.style.color = "#C23B32";
+      msg.style.color = "#A8281F";
       msg.textContent = "너무 빨랐어요!\n다시 준비할게요";
       timer = setTimeout(() => { if (!aborted) startRound(); }, 900);
     } else if (phase === "go") {
@@ -444,7 +448,7 @@ export function renderReactionPlay() {
       results.push({ type: "go", correct: true, rt });
       phase = "feedback";
       panel.style.background = "#DCF5E8";
-      msg.style.color = "#1B8F5C";
+      msg.style.color = "#0F5C39";
       msg.textContent = `${rt}ms ✅`;
       timer = setTimeout(() => { if (!aborted) nextRound(); }, 500);
     } else if (phase === "nogo") {
@@ -452,7 +456,7 @@ export function renderReactionPlay() {
       results.push({ type: "nogo", correct: false });
       phase = "feedback";
       panel.style.background = "#FCE7E5";
-      msg.style.color = "#C23B32";
+      msg.style.color = "#A8281F";
       msg.textContent = "앗, 참았어야 해요!";
       timer = setTimeout(() => { if (!aborted) nextRound(); }, 600);
     }
