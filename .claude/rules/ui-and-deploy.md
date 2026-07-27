@@ -19,15 +19,22 @@ paths:
 **조건부 스타일은 JS가 클래스를 붙인다** (`app.classList.toggle("has-bottom-nav", ...)` 패턴)
 → `docs/ERRORS.md` E-6 · `docs/DECISIONS.md` D-11
 
-## 클래스명을 바꾸면 `app.js`도 같이 본다
-`app.js`의 클래스명은 템플릿 문자열 안에 있어 아무도 오타를 잡아주지 않는다.
+## 클래스명을 바꾸면 `js/`도 같이 본다
+템플릿 문자열 안의 클래스명은 타입 체크가 없어 아무도 오타를 잡아주지 않는다.
 
 ```bash
-grep -n '<클래스명>' app.js styles.css   # 양쪽에 다 있어야 함
+grep -rn '<클래스명>' js/ styles.css   # 양쪽에 다 있어야 함
 ```
 
+## 테마는 CSS custom properties로
+브랜드 색은 인라인 스타일이 아니라 변수로 두고, `body.theme-adhd` / `theme-game` / `theme-disc`가 값을 갈아끼운다.
+**테마 값을 새로 만들면 `js/core/router.js`의 `THEME_CLASSES` 배열에도 추가**해야 화면을 떠날 때 제거된다.
+모달은 `#app` 밖(`document.body`)에 붙으므로 테마 클래스도 body에 있어야 모달 버튼 색까지 따라온다.
+
 ## `index.html`
-- 메타·OG 태그는 **전 페이지 공통**이다. 페이지별 동적 미리보기는 지원하지 않는다(정적 사이트).
+- 메타·OG 태그는 **전 주소 공통**이다. 특정 테스트 이름을 넣으면 **다른 테스트 링크가 엉뚱하게 미리보기된다.**
+  결과별 미리보기가 필요하면 결과 주소마다 정적 셸을 만들어야 한다.
+- `<script type="module">`이다. 모듈은 `file://`로 열면 CORS로 죽는다 — 반드시 `serve.py`로 띄운다.
 - `<meta name="referrer" content="strict-origin-when-cross-origin">` — 결과 경로(`/test/adhd/result/...`)가 외부로 새지 않게 하는 장치. **제거하지 말 것.**
 - 스크립트/스타일 경로가 실제 파일명과 다르면 흰 화면이 된다 → `docs/ERRORS.md` E-5
 

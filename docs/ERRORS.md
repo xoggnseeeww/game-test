@@ -10,6 +10,7 @@
 |------|------|
 | 화면 문구의 개수가 실제와 다름 | E-1 `count-hardcode` |
 | 새 화면이 뒤로가기/직접 접속에서 깨짐 | E-2 `route-partial` |
+| **배포 직후에만** 뒤로가기가 빈 화면 | E-2b `stale-screen-id` |
 | 공유 링크를 열면 빈 테스트가 나옴 | E-3 `share-fallback` |
 | 이전 화면의 타이머가 새 화면에서 발동 | E-4 `stale-timer` |
 | 배포는 됐는데 사이트가 안 뜸 / 직접 접속 404 | E-5 `pages-serving` |
@@ -35,46 +36,74 @@
 ```
 
 - **재현 조건**: `QUESTIONS` / `RESULT_TYPES` / `CPT_ROUNDS` 를 늘리거나 줄인 뒤 목록·인트로 화면을 확인
-- **확인 방법**: `grep -nE '>[^<{]*[0-9]+(문항|가지|라운드)' app.js` → **출력이 없어야 함** (설계 배경을 적은 주석은 걸리지 않게 HTML 텍스트 노드만 본다)
-- **실측**: `renderPsychList()`가 `12문항`을 리터럴로 들고 있었다. 같은 파일의 `renderTestIntro()`는 `${QUESTIONS.length}`를 쓰고 있어서, 두 화면이 서로 다른 숫자를 말할 수 있는 상태였다.
-  같은 커밋의 주석에도 `CPT_ROUNDS`가 14인데 "10라운드"라고 적혀 있었다 — **주석도 같은 종류의 하드코딩이다.**
+- **확인 방법**: `npm test` (`test/copy.test.js`가 자동 검사). 수동으로 보려면
+  `grep -rnE '>[^<{]*[0-9]+(문항|가지|라운드|개)' js/` → **출력이 없어야 함** (설계 배경을 적은 주석은 걸리지 않게 HTML 텍스트 노드만 본다)
+- **실측 3회 → 4단(코드 강제)으로 승격**:
+  1. ADHD 목록 카드가 `12문항` 리터럴 (인트로는 `${QUESTIONS.length}`) — 두 화면이 서로 다른 숫자를 말할 수 있었다
+  2. Go/No-Go 주석이 "10라운드" (`CPT_ROUNDS`는 14) — **주석도 같은 종류의 하드코딩이다**
+  3. DISC 인트로 본문이 `상황 12개` 리터럴 (같은 화면의 칩은 `${TETRADS.length}`)
+  → 3회차에서 문서 규칙을 **테스트로 승격**시켰다: `test/copy.test.js`. 이제 `npm test`가 막는다.
+- **정규식 함정**: 초판 검사는 `문항|가지|라운드`만 봐서 **`상황 12개`를 통과시켰다** — 단위가 숫자 뒤에 오는 조사형(`개`)이라 잡히지 않았다.
+  검사를 추가했으면 **버그를 일부러 되살려 빨간불이 뜨는지 확인**할 것. 초록불만 보면 검사가 비어 있어도 모른다.
 
 ### E-2. `route-partial` — 새 화면이 뒤로가기·직접 접속에서 조용히 깨진다
-라우트는 4곳에 흩어져 있다. 하나만 빠뜨려도 **에러 없이** 홈으로 폴백하거나 빈 화면이 뜬다.
+**대부분 해결됨(구조적).** 예전엔 라우트가 5곳(`ROUTES`·`SCREEN_TO_PATH`·`SCREEN_TITLES`·`render()` switch·`resolveScreen()`)에
+흩어져 있어 하나만 빠뜨려도 에러 없이 홈 폴백·빈 화면이 됐다. 지금은 **디스크립터 하나**로 모인다(`docs/DECISIONS.md` D-13).
+
+남아 있는 실패 지점은 두 개뿐이다.
 
 | 빠뜨린 곳 | 증상 |
 |-----------|------|
-| `ROUTES` | 주소 직접 입력 시 홈으로 폴백 |
-| `render()` switch | 화면이 빈 채로 남음 (`app.innerHTML=""` 직후 아무것도 안 붙음) |
-| `SCREEN_TITLES` | 탭 제목이 홈 제목으로 남음 |
-| `resolveScreen()` 가드 | 선행 상태 없이 결과 화면에 진입 → `undefined` 참조 |
+| `js/main.js`의 `registerScreens` | 화면 자체가 미등록 → 주소 직접 접속이 홈 폴백 |
+| `js/main.js`의 `registerTest` | 화면은 뜨는데 **목록 카드와 공유 URL이 빠진다** (`listTests()`·`slugToKey`가 못 찾음) |
 
-- **확인 방법**: 새 화면 추가 후 ① 해당 주소 직접 접속 ② 진입 후 뒤로가기 ③ 뒤로가기 후 앞으로가기 — 3가지를 실제 브라우저에서 재현
-- 관련 규칙: `CLAUDE.md` 동기화 매트릭스, `.claude/rules/app-js.md`
+- **자동으로 잡히는 것**: 화면 id·경로 중복은 등록 시점에 **throw**하고, `test/modules.test.js`가 이를 검사한다. 조용히 덮어쓰던 예전 동작과 다르다.
+- **확인 방법**: `npm test` 후 실제 브라우저에서 ① 주소 직접 접속 ② 진입 후 뒤로가기 ③ 뒤로가기 후 앞으로가기
+- 관련 규칙: `CLAUDE.md` ABSOLUTE RULES, `.claude/rules/js-modules.md`
 
-### E-3. `share-fallback` — 공유 링크를 열면 빈 테스트가 나온다
-`sharedProfileFromPath()`가 슬러그를 못 찾으면 `null`을 반환하고 `pathToScreen()`이 `home`으로 폴백한다.
+### E-2b. `stale-screen-id` — 배포 직후에만 뒤로가기가 깨진다
+화면 `id`는 `history.state`에 저장된다. 배포 전에 열어둔 탭에는 **지금은 없는 id**가 남아 있다.
+
+- **증상**: 배포 직후 일부 사용자만 뒤로가기 시 빈 화면. 새로고침하면 정상 → 재현이 어렵다.
+- **현재 방어**: `resolveScreen()`이 미등록 id를 만나면 `pathToScreen(location.pathname)`으로 떨어진다.
+- **규칙**: 그래도 **화면 id는 바꾸지 않는다.** ADHD 화면이 아직 `test-*`인 것은 이 때문이며, 일관성을 위해 개명하고 싶은 유혹을 참은 결과다.
+
+### E-3. `share-fallback` — 공유 링크를 열면 빈 테스트/홈이 나온다
+`parseSharedPath()`가 슬러그를 못 찾으면 `null`을 반환하고, 화면 guard가 `home`으로 떨어뜨린다.
 **공유 버튼은 정상 동작한 것처럼 보이므로 공유한 사람은 끝까지 모른다.**
 
-- **재현 조건**: `RESULT_TYPES`에 키를 추가하고 `SLUG_TO_PROFILE`에 슬러그를 안 넣은 상태에서 그 유형의 결과를 공유
-- **확인 방법** (두 값이 같아야 함):
+- **재현 조건**: 결과 유형을 추가하고 그 테스트 `data.js`의 슬러그 맵에 항목을 안 넣은 상태에서 그 유형의 결과를 공유
+- **확인 방법** (유형 수와 슬러그 수가 같아야 함):
   ```bash
-  grep -cE '^  "[01]{3}": \{' app.js       # RESULT_TYPES 키 수
-  grep -cE '^  [a-z]+: "[01]{3}",' app.js  # SLUG_TO_PROFILE 항목 수
+  node -e "import('./js/tests/adhd/data.js').then(m=>console.log(Object.keys(m.RESULT_TYPES).length, Object.keys(m.SLUG_TO_PROFILE).length))"
+  node -e "import('./js/tests/disc/data.js').then(m=>console.log(Object.keys(m.DISC_TYPES).length, Object.keys(m.DISC_SLUG_TO_KEY).length))"
   ```
+  DISC는 `slug`가 유형 정의 안의 필드고 맵이 거기서 파생되므로 **구조적으로 어긋날 수 없다** — ADHD만 수동 동기화 대상이다.
+  `scripts/verify.cjs`가 두 테스트의 공유 주소를 실제로 열어 확인한다.
 - 설계 배경: `docs/DECISIONS.md` D-7 (되돌림 항목 포함)
 
-### E-4. `stale-timer` — 이전 화면의 타이머가 새 화면에서 발동한다
-`render()`는 매번 `app.innerHTML = ""`로 DOM을 통째로 버린다. 그래서 **DOM 참조는 자동으로 정리되지만 타이머는 남는다.**
-남은 `setTimeout` 콜백은 이미 사라진 요소를 찾다가 `null` 참조로 죽거나, 최악의 경우 새 화면의 동명 요소를 건드린다.
+### E-4. `stale-timer` — 이전 화면의 콜백이 새 화면을 밀어버린다
+`render()`는 매번 `app.innerHTML = ""`로 DOM을 통째로 버린다. **DOM 참조는 정리되지만 예약된 콜백은 남는다.**
+
+- **실측**: `setScreen()`이 반응속도 게임의 `setTimeout` **하나만** 직접 `clearTimeout` 했다.
+  `requestAnimationFrame` 콜백은 그 방식으로 막을 수 없어서, **게임 도중 뒤로가기를 하면 살아남은 콜백이 엉뚱한 화면을 결과 화면으로 밀어버렸다.**
+  → 특정 타이머를 이름으로 관리하던 방식 자체가 원인이었다. 정리 대상을 **등록받는 구조**로 바꿔서 종결했다.
 
 ```js
-// ✅ setScreen()이 단일 관문이라 여기서 해제한다
-if (reactionTimer) { clearTimeout(reactionTimer); reactionTimer = null; }
+// ❌ 특정 타이머만 이름으로 관리 — 새로운 종류(rAF, 리스너)가 생길 때마다 샌다
+if (reactionTimer) clearTimeout(reactionTimer);
+
+// ✅ 화면이 스스로 정리 방법을 등록한다
+const id = setTimeout(tick, 1000);
+onLeave(() => clearTimeout(id));
+
+const raf = requestAnimationFrame(loop);
+onLeave(() => cancelAnimationFrame(raf));
 ```
 
-- **규칙**: 새 화면에서 `setTimeout` / `setInterval`을 쓰면 **모듈 스코프 변수에 담고 `setScreen()`의 해제 목록에 추가**한다. 지역 변수에만 담으면 해제할 방법이 없다.
-- **재현 조건**: 게임 플레이 중 뒤로가기 → 다른 화면에서 1초 이내 대기
+- **규칙**: 화면에서 타이머·`requestAnimationFrame`·전역 리스너를 만들면 **반드시 `onLeave()`에 해제를 등록**한다.
+- **재현 조건**: 게임 플레이 중 뒤로가기 → 다른 화면에서 1~2초 대기
+- **일반 원칙**: "이번 것도 빠뜨리지 말자"는 규칙보다, **빠뜨릴 수 없는 구조**가 낫다(`docs/DECISIONS.md` D-14).
 
 ### E-8. `scoring-flatten` — 결과 유형이 사용자의 답변과 모순된다
 3개 축 점수를 **합산해서** 평탄한 임계값(12/24/36/48)에 맞추면, 한 축을 최대로 찍은 사람이 나머지 두 축에 희석돼 "차분한 유형"을 받는다.
@@ -83,7 +112,7 @@ if (reactionTimer) { clearTimeout(reactionTimer); reactionTimer = null; }
 - **원인**: 총점 합산 자체 — 임계값 조정으로는 못 고친다.
 - **해결**: 축별 독립 판정(`profileKey()`, `AXIS_HIGH_THRESHOLD`)으로 구조를 바꿈 → `docs/DECISIONS.md` D-1
 - **같이 잡힌 것**: `[100, 100, 0]`을 "균형잡힘"이라 부르던 버그(상위 두 축만 비교), 이미 100%인 축에 보너스 배지가 뜨던 버그(`visibleBonus`)
-- **회귀 확인용 입력 세트** (`scripts/verify.js`가 첫 줄을 자동 확인한다):
+- **회귀 확인용 입력 세트** (`scripts/verify.cjs`가 첫 줄을 자동 확인한다):
 
   | 입력 | 축 퍼센트 | 유형 |
   |------|-----------|------|
@@ -142,17 +171,28 @@ if (reactionTimer) { clearTimeout(reactionTimer); reactionTimer = null; }
 
 ## AI 반복 실수
 
-### A-1. "정적 검사로 확인했다"를 검증이라고 보고하는 것
-이 프로젝트에는 빌드도 테스트도 없다. `grep`이나 코드 읽기로는 **이벤트 바인딩·라우팅·타이머·레이아웃을 하나도 못 잡는다.**
-E-2·E-4·E-6·E-7이 전부 정적 검사를 통과하는 버그였다.
+### A-1. "`npm test` 통과"를 검증 완료라고 보고하는 것
+`npm test`는 **채점 로직과 모듈 정합성만** 본다. 브라우저를 띄우지 않으므로 이벤트 바인딩·라우팅·타이머·레이아웃은 하나도 못 잡는다.
+E-2·E-4·E-6·E-7이 전부 여기를 통과하는 버그였다. 빌드가 없어 "빌드 통과"라는 신호조차 없다는 점도 잊기 쉽다.
 
-- **규칙**: 변경 후 `scripts/verify.js`를 돌린다(실행법은 `CLAUDE.md` 커맨드 표). 새 화면·새 채점 규칙을 추가했으면 케이스도 함께 추가한다.
+- **규칙**: `npm test` **와** `scripts/verify.cjs`를 둘 다 돌린다(실행법은 `CLAUDE.md` 커맨드 표). 새 화면·새 채점 규칙을 추가했으면 케이스도 함께 추가한다.
   재현하지 못한 항목은 **"확인하지 못했다"고 명시하고 `CURRENT_TASK.md`의 "배포 후 확인 필요"로 옮긴다.** 침묵은 "확인됨"으로 오독된다.
 - **샌드박스 한계**: 아웃바운드가 프록시로 막혀 CDN(폰트·광고)이 로드되지 않는다.
   → 폰트 적용 상태의 결과 카드 렌더링, `navigator.share` 네이티브 공유시트, 광고 노출은 **여기서 확인할 수 없다.** 배포 후 확인 항목이다.
 
 ### A-2. 화면 문구의 숫자를 손으로 맞추기
 E-1과 같은 뿌리. 숫자를 고치는 게 아니라 **하드코딩을 없앤다.** 같은 값이 두 곳 이상에 나타나면 그 자체가 리팩터링 신호다.
+
+### A-4. `wc -m`으로 한글 문서 크기를 재고 예산을 오판하기
+로케일이 C/POSIX면 `wc -m`은 **문자가 아니라 바이트**를 센다. UTF-8 한글은 1자 = 3바이트라 **크기가 2~3배로 부풀려 보인다.**
+
+- **실측**: `CLAUDE.md`가 `wc -m` 기준 6,597로 나와 "예산 초과"로 판단했는데, 실제 문자 수는 4,113(한글 1,186)이었다. 추정 토큰은 약 3,000으로 상한의 절반이었다.
+- **위험**: 멀쩡한 문서를 예산 때문에 깎게 된다. 반대로 영문 위주 문서에서는 차이가 없어 **한글 문서에서만 틀린다.**
+- **확인 방법**:
+  ```bash
+  python3 -c "import re,sys;s=open(sys.argv[1]).read();h=len(re.findall(r'[가-힣]',s));print(f'{len(s)}자 (한글 {h}) → 약 {h*1.8+(len(s)-h)*0.3:.0f} 토큰')" CLAUDE.md
+  ```
+  (한글 ≈1.8토큰/자, ASCII·코드·경로 ≈0.3토큰/자)
 
 ### A-3. 이미 되돌린 접근을 다시 제안하기
 `docs/DECISIONS.md`의 **되돌림** 항목(D-5 속도 기반 충동 점수, D-7 페이지 자체 주소 공유, D-10 ADHD 명칭 제거)은 전부 한 번 시도했다가 되돌린 것이다.

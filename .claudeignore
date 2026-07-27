@@ -7,6 +7,9 @@ archive/
 # 원래 시안을 대조해야 할 때만 명시적으로 Read.
 docs/design-draft.html
 
+# 의존성 (레포에는 런타임 의존성이 없지만, 검증 도구를 여기 설치하면 생긴다)
+node_modules/
+
 # 기타
 .DS_Store
 *.png
