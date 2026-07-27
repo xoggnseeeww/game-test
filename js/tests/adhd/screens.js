@@ -196,18 +196,20 @@ export function renderResult() {
   app.appendChild(el(`
     <div>
       <div class="result-card">
-        <div class="eyebrow">나의 집중 유형은</div>
+        <div class="eyebrow">설문 + 반응속도 게임으로 본 나의 집중 유형은</div>
         <div class="emoji">${r.type.emoji}</div>
         <h2>${r.type.name}</h2>
         <div class="result-subtitle">${r.type.subtitle}</div>
         <div class="result-tags">${r.type.tags.map((t) => `<span>${t}</span>`).join("")}</div>
         <p>${r.type.desc}</p>
+        ${g ? `<p>🎮 ${reactionComment(g)}</p>` : ""}
         <div class="result-stats">
           <span>집중 ${r.focus}</span><span class="sep">·</span>
           <span>충동 ${r.impulse}</span><span class="sep">·</span>
           <span>에너지 ${r.energy}</span>
         </div>
-        ${r.bonus.impulse > 0 || r.bonus.focus > 0 ? `<div class="result-stats" style="margin-top:8px;"><span>⚡ 반응·주의력 게임 결과 반영됨${r.bonus.impulse > 0 ? ` · 충동 +${r.bonus.impulse}` : ""}${r.bonus.focus > 0 ? ` · 집중 +${r.bonus.focus}` : ""}</span></div>` : ""}
+        ${r.bonus.impulse > 0 || r.bonus.focus > 0 ? `<div class="result-stats" style="margin-top:8px;"><span>⚡ 위 점수엔 게임 결과도 반영돼 있어요${r.bonus.impulse > 0 ? ` · 충동 +${r.bonus.impulse}` : ""}${r.bonus.focus > 0 ? ` · 집중 +${r.bonus.focus}` : ""}</span></div>` : ""}
+        ${g && g.isBest ? '<div class="result-stats" style="margin-top:8px;"><span>🎉 반응속도 새 최고기록!</span></div>' : ""}
       </div>
 
       <div class="axis-breakdown">
@@ -221,16 +223,13 @@ export function renderResult() {
       </div>
 
       ${g ? `
-      <div class="section-title" style="padding:20px 20px 9px;">⚡ 반응속도 게임 분석</div>
-      <div class="result-card" style="margin-top:0;">
-        <div class="eyebrow">평균 반응속도(Go 라운드 기준)</div>
-        <h2>${g.avgRt !== null ? g.avgRt + "ms" : "기록 없음"}</h2>
-        <p>${reactionComment(g)}</p>
-        ${g.isBest ? '<div class="result-stats"><span>🎉 새 최고기록!</span></div>' : ""}
-      </div>
+      <div class="section-title" style="padding:20px 20px 9px;">📊 게임에서 측정된 수치</div>
       <div class="meta-chips">
+        <div class="meta-chip"><div class="value">${g.avgRt !== null ? g.avgRt + "ms" : "-"}</div><div class="label">평균 반응속도</div></div>
         <div class="meta-chip"><div class="value">${g.accuracy}%</div><div class="label">정확도</div></div>
         <div class="meta-chip"><div class="value">${g.rtSD}ms</div><div class="label">반응 일관성</div></div>
+      </div>
+      <div class="meta-chips" style="padding-top:8px;">
         <div class="meta-chip"><div class="value">${g.commissionErrors}/${g.noGoCount}</div><div class="label">못 참은 순간</div></div>
         <div class="meta-chip"><div class="value">${g.omissionErrors}/${g.goCount}</div><div class="label">놓친 순간</div></div>
         <div class="meta-chip"><div class="value">${g.prematureCount}회</div><div class="label">성급했던 순간</div></div>
