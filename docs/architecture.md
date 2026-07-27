@@ -74,11 +74,10 @@ js/tests/<id>/
 | `/game` | `game-list` | — | — |
 | `/test/adhd` | `test-intro` | — | — |
 | `/test/adhd/play` | `test-question` | — | 답이 다 차 있으면 마지막 문항으로 되돌림 |
-| `/test/adhd/result` | `test-result` | — | 답 부족 → `test-intro` |
+| `/test/adhd/result` | `test-result` | — | 답 부족 → `test-intro`, 게임 미완료 → `reaction-intro` |
 | `/test/adhd/result/<slug>` | `test-shared` | — | 슬러그 안 풀리면 → `home` |
-| `/test/adhd/reaction` | `reaction-intro` | game | — |
-| `/test/adhd/reaction/play` | `reaction-play` | game | — |
-| `/test/adhd/reaction/result` | `reaction-result` | game | 결과 없음 → `reaction-intro` |
+| `/test/adhd/reaction` | `reaction-intro` | game | 답 부족 → `test-intro` |
+| `/test/adhd/reaction/play` | `reaction-play` | game | 답 부족 → `test-intro` |
 | `/test/disc` | `disc-intro` | disc | — |
 | `/test/disc/play` | `disc-question` | disc | 순서 미생성 → `disc-intro` |
 | `/test/disc/result` | `disc-result` | disc | 미완료 → `disc-intro` |
@@ -88,6 +87,12 @@ js/tests/<id>/
 | `/test/disc/dilemma/result` | `dilemma-result` | disc | 결과 없음 → `dilemma-intro` |
 
 > ADHD 화면 id가 `test-*`인 것은 DISC보다 먼저 만들어졌기 때문이다. **이름을 바꾸지 않는다**(위 §2).
+
+> 반응속도 게임(`reaction-*`)은 결과 화면 뒤에 오는 선택 보너스가 아니라, 문항 완료 직후 반드시
+> 거쳐야 하는 이 테스트의 마지막 단계다 — `test-question`이 마지막 문항 응답 직후 `reaction-intro`로
+> 바로 넘어가고, `test-result`의 guard가 `state.lastReaction` 없이는 결과를 보여주지 않는다.
+> 별도의 `reaction-result` 화면은 없다 — 게임 통계는 `test-result`에 병합돼 하나의 결과로 나온다.
+> → `docs/DECISIONS.md` D-18
 
 ## 4. 상태(state) 모양
 
@@ -105,7 +110,9 @@ state = {
 }
 ```
 
-**메모리 전용이다.** 새로고침하면 초기화된다. 영속되는 건 `localStorage["gt_reaction_best"]` 하나뿐.
+**메모리 전용이다.** 새로고침하면 초기화된다. 영속 데이터는 없다 — 예전엔 `localStorage["gt_reaction_best"]`로
+반응속도 최고기록을 저장했으나, 게임의 "빠를수록 좋다"는 프레이밍이 채점 철학(D-5, 빠른 반응 ≠ 충동적)과
+충돌해서 제거했다(D-19).
 
 `disc.pending`이 state에 있는 이유: `render()`가 매번 DOM을 버리므로, 반쪽 답을 지역 변수에 두면 뒤로가기·popstate에서 사라진다.
 
@@ -152,6 +159,7 @@ state = {
 |------|---------------|
 | `test/modules.test.js` | import가 실재하는 export를 가리키는가 / export 없이 쓰는 곳이 없는가 / 화면 id·경로 중복 없는가 |
 | `test/disc.score.test.js` | DISC 채점 불변식 (합 0, 순서 무관, 결정론, 대척점 배제, 12유형 도달, 슬러그 왕복) |
+| `test/adhd.score.test.js` | 반응 코멘트가 억제 실패×누락 9개 조합 모두 다른 문장을 주는가 / 게임 보너스 임계값 / 이미 100%인 축엔 보너스가 안 보이는가 |
 | `test/copy.test.js` | 화면 문구의 개수가 데이터에서 파생되는가 (`docs/ERRORS.md` E-1) |
 
 **여기서 안 잡히는 것**: 라우팅·이벤트 바인딩·타이머·레이아웃 → `scripts/verify.cjs`(헤드리스 브라우저)의 몫이다.
