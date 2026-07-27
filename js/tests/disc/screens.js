@@ -84,14 +84,16 @@ export function renderDiscIntro() {
         <div class="emoji">🎭</div>
         <div class="tag">DISC 행동유형 검사</div>
         <h2>나는 어떤<br/>행동유형일까?</h2>
-        <p>상황 12개, 고르기만 하면 끝.<br/>남들이랑 확실히 다르게 나와요.</p>
+        <p>상황 12개와 짧은 게임 하나.<br/>남들이랑 확실히 다르게 나와요.</p>
       </div>
       <div class="meta-chips">
-        <div class="meta-chip"><div class="value">${N}상황</div><div class="label">약 2분</div></div>
+        <div class="meta-chip"><div class="value">${N}상황</div><div class="label">먼저</div></div>
+        <div class="meta-chip"><div class="value">+${DILEMMAS.length}라운드</div><div class="label">미니게임</div></div>
         <div class="meta-chip"><div class="value">${Object.keys(DISC_TYPES).length}가지</div><div class="label">결과 유형</div></div>
       </div>
       <p class="disclaimer">상황마다 <b>가장 나 같은 것</b>과 <b>가장 아닌 것</b>을 하나씩 고릅니다.
-      한쪽을 고르면 다른 쪽 점수가 내려가는 방식이라, 전부 "그렇다"로 밀어붙일 수 없어요.</p>
+      한쪽을 고르면 다른 쪽 점수가 내려가는 방식이라, 전부 "그렇다"로 밀어붙일 수 없어요.<br/>
+      문항이 끝나면 짧은 미니게임이 바로 이어지고, 두 결과를 합쳐 유형이 정해져요.</p>
       <div class="cta">
         <button class="cta-btn" id="disc-start">시작하기</button>
       </div>
@@ -155,7 +157,9 @@ export function renderDiscQuestion() {
         } else {
           state.disc.answers.push({ most: pendingMost, least: opt.axis });
           state.disc.pending.most = null;
-          go(state.disc.answers.length >= N ? "disc-result" : "disc-question");
+          // 문항이 끝나면 결과로 바로 가지 않고 딜레마 게임을 거친다 — 게임 결과까지
+          // 반영된 최종 유형을 한 번에 보여주기 위해서다.
+          go(state.disc.answers.length >= N ? "dilemma-intro" : "disc-question");
         }
       });
     }
@@ -289,7 +293,6 @@ export function renderDiscResult() {
       <div class="next-block">
         <div class="section-title" style="padding:0 0 9px;">이런 것도 해봤어? 🎲</div>
         <div class="next-row">
-          <button class="next-card" data-nav="dilemma-intro"><div class="icon">⚖️</div><div class="label">딜레마 게임</div></button>
           <button class="next-card" data-nav="test-intro"><div class="icon">🎯</div><div class="label">ADHD 성향 체크</div></button>
         </div>
       </div>
@@ -429,17 +432,17 @@ export function renderDilemmaIntro() {
   app.appendChild(el(`
     <div>
       <div class="back-row">
-        <button class="back-btn" data-nav="disc-result">‹</button>
+        <button class="back-btn" id="dilemma-intro-back">‹</button>
         <div class="back-title">딜레마 게임</div>
       </div>
       <div class="cover">
         <div class="emoji">⚖️</div>
-        <div class="tag">DISC 보너스 게임</div>
+        <div class="tag">DISC 마지막 단계</div>
         <h2>고민할 시간,<br/>많지 않아요</h2>
-        <p>정답 없는 상황 ${DILEMMAS.length}개.<br/>무엇을 고르는지, 얼마나 빨리 고르는지를 봅니다.</p>
+        <p>문항 ${N}개는 끝났어요.<br/>정답 없는 상황 ${DILEMMAS.length}개만 더 고르면 결과가 나와요.</p>
       </div>
       <p class="disclaimer">DISC는 <b>무엇을 우선하는가</b>(과제/사람)와 <b>얼마나 빨리 움직이는가</b>로 설명하는
-      모델이에요. 이 게임은 그 두 가지를 직접 재서 결과에 조금 반영합니다. 안 해도 결과는 이미 완성돼 있어요.</p>
+      모델이에요. 문항에서 고른 것과 여기서 고르는 것을 합쳐 최종 유형이 정해져요.</p>
       <div class="cta">
         <button class="cta-btn" id="dilemma-start">게임 시작하기</button>
       </div>
@@ -447,6 +450,10 @@ export function renderDilemmaIntro() {
   `));
   bindNav(app);
   app.querySelector("#dilemma-start").addEventListener("click", () => go("dilemma-play"));
+  // disc-result는 이제 게임까지 끝나야 들어갈 수 있는 화면이라 뒤로가기 대상이 될 수
+  // 없다 — 대신 마지막 문항(2단계)으로 되돌아간다. disc-question의 guard가 답을 하나
+  // 지우고 그 자리로 되돌려준다.
+  app.querySelector("#dilemma-intro-back").addEventListener("click", () => go("disc-question"));
 }
 
 export function renderDilemmaPlay() {
@@ -469,7 +476,7 @@ export function renderDilemmaPlay() {
   app.appendChild(el(`
     <div>
       <div class="back-row">
-        <button class="back-btn" data-nav="disc-result">‹</button>
+        <button class="back-btn" data-nav="dilemma-intro">‹</button>
         <div class="back-title">딜레마 게임</div>
       </div>
       <div class="progress-row">
@@ -492,8 +499,9 @@ export function renderDilemmaPlay() {
   const count = app.querySelector("#d-count");
 
   function finish() {
+    // 문항 결과와 합쳐 최종 유형을 결정한다 — 이 게임만의 별도 결과 화면은 없다.
     state.disc.dilemma = summarizeDilemma(rounds);
-    go("dilemma-result");
+    go("disc-result");
   }
 
   function record(choice, ms, timedOut, length) {
@@ -521,12 +529,13 @@ export function renderDilemmaPlay() {
     count.innerHTML = `${round + 1}<span class="total">/${DILEMMAS.length}</span>`;
     sceneEl.textContent = d.scene;
     timerEl.style.width = "100%";
-    choicesEl.innerHTML = "";
+    choicesEl.innerHTML = `<p class="dilemma-hint">잠시 후 선택지가 나타나요…</p>`;
 
     // 상황을 읽을 시간을 먼저 주고, 선택지가 뜨는 순간부터 잰다.
     // 이걸 안 하면 측정값의 대부분이 읽는 속도가 된다.
     timer = setTimeout(() => {
       if (aborted) return;
+      choicesEl.innerHTML = "";
       for (const kind of shuffle(["task", "people"])) {
         const btn = el(`<button class="dilemma-choice">${d[kind]}</button>`);
         btn.addEventListener("click", () => record(kind, Math.round(performance.now() - openedAt), false, length));
@@ -553,50 +562,4 @@ export function renderDilemmaPlay() {
   }
 
   startRound();
-}
-
-export function renderDilemmaResult() {
-  const s = state.disc.dilemma;
-  // 보너스를 그대로 보여주면, 이미 한계라 실제로는 아무것도 안 움직인 경우까지
-  // "반영했어요"라고 말하게 된다. 검사 결과 쪽이 쓰는 값과 같은 걸 본다.
-  const visible = computeDisc().visibleBonus;
-  const applied = AXES.filter((ax) => visible[ax]);
-
-  const priority =
-    s.taskCount > s.peopleCount ? "할 일을 먼저 챙기는 쪽" : s.peopleCount > s.taskCount ? "사람을 먼저 챙기는 쪽" : "그때그때 다른 쪽";
-  const pace =
-    s.paceBand === "fast" ? "결정이 빠른 편" : s.paceBand === "slow" ? "한 번 더 생각하는 편" : "속도는 일정하지 않았어요";
-
-  app.appendChild(el(`
-    <div>
-      <div class="result-card">
-        <div class="eyebrow">딜레마 게임 결과</div>
-        <div class="emoji">⚖️</div>
-        <h2>${priority}</h2>
-        <div class="result-subtitle">${pace}</div>
-        <p>${DILEMMAS.length}번의 선택 중 ${s.taskCount}번은 할 일을,\n${s.peopleCount}번은 사람을 먼저 골랐어요.${s.timeouts ? `\n${s.timeouts}번은 시간 안에 못 고르셨고요.` : ""}</p>
-        <div class="result-stats">
-          <span>과제 ${s.taskCount}</span><span class="sep">·</span>
-          <span>사람 ${s.peopleCount}</span><span class="sep">·</span>
-          <span>시간초과 ${s.timeouts}</span>
-        </div>
-      </div>
-
-      <div class="result-tip">
-        ${applied.length
-          ? `💡 ${applied.map((ax) => `${AXIS_LABELS[ax]} +${visible[ax]}`).join(", ")} 만큼 DISC 결과에 반영했어요.`
-          : "💡 이번엔 결과를 움직일 만큼 한쪽으로 기울지는 않았어요."}
-      </div>
-
-      ${!s.paceBand && applied.length
-        ? `<p class="result-note">속도는 라운드마다 들쭉날쭉해서 쓰지 않았어요.<br/>고른 내용만 반영했습니다.</p>`
-        : ""}
-
-      <div class="cta" style="padding-top:18px;">
-        <button class="cta-btn" data-nav="disc-result">결과 다시 보기</button>
-      </div>
-      <button class="retry-btn" data-nav="dilemma-intro">🔄 게임 다시하기</button>
-    </div>
-  `));
-  bindNav(app);
 }

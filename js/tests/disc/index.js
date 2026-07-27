@@ -9,7 +9,6 @@ import {
   renderDiscShared,
   renderDilemmaIntro,
   renderDilemmaPlay,
-  renderDilemmaResult,
 } from "./screens.js";
 
 export const discTest = {
@@ -21,7 +20,7 @@ export const discTest = {
     emoji: "🎭",
     color: "#E8642E",
     name: "DISC 행동유형 검사",
-    desc: `나는 어떤 유형일까? · 상황 ${TETRADS.length}개`,
+    desc: `나는 어떤 유형일까? · 상황 ${TETRADS.length}개 + 게임`,
   },
 };
 
@@ -54,7 +53,13 @@ export const discScreens = [
     title: "DISC 행동유형 검사 결과 | 과몰입구역",
     render: renderDiscResult,
     theme: "disc",
-    guard: () => (done() ? null : "disc-intro"),
+    // 문항과 딜레마 게임을 둘 다 마쳐야 결과를 볼 수 있다. 게임 결과까지 반영된
+    // 유형을 한 번에 보여주기 위해서라, 문항만 끝난 상태로 들어오면 게임으로 보낸다.
+    guard: () => {
+      if (!done()) return "disc-intro";
+      if (!state.disc.dilemma) return "dilemma-intro";
+      return null;
+    },
   },
   {
     id: "disc-shared",
@@ -79,13 +84,5 @@ export const discScreens = [
     render: renderDilemmaPlay,
     theme: "disc",
     guard: () => (done() ? null : "disc-intro"),
-  },
-  {
-    id: "dilemma-result",
-    path: "/test/disc/dilemma/result",
-    title: "딜레마 게임 결과 | 과몰입구역",
-    render: renderDilemmaResult,
-    theme: "disc",
-    guard: () => (state.disc.dilemma ? null : "dilemma-intro"),
   },
 ];

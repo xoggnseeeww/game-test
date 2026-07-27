@@ -1064,6 +1064,16 @@ body {
   min-height: 132px;
 }
 
+/* 선택지가 뜨기 전 읽는 시간(1.2초) 동안 빈 칸만 보이면 멈춘 것처럼 보인다 */
+.dilemma-hint {
+  margin: 0;
+  padding: 46px 0;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #B4B0A8;
+}
+
 .dilemma-choice {
   width: 100%;
   border: 1.5px solid #E6E2DA;
