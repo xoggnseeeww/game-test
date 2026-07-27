@@ -27,6 +27,7 @@ export function renderTestIntro() {
       <div class="back-row">
         <button class="back-btn" data-nav="psych-list">‹</button>
         <div class="back-title">심리테스트</div>
+        <button class="exit-btn" data-nav="home" aria-label="홈으로 가기">🏠</button>
       </div>
       <div class="cover">
         <div class="emoji">🎯</div>
@@ -72,7 +73,7 @@ export function renderQuestion() {
         <button class="back-btn" id="q-back">‹</button>
         <div class="progress-track"><div class="progress-fill" style="width:${pct}%;"></div></div>
         <div class="progress-count">${i + 1}<span class="total">/${QUESTIONS.length}</span></div>
-        <button class="exit-btn" aria-label="홈으로 나가기">✕</button>
+        <button class="exit-btn" aria-label="홈으로 가기">🏠</button>
       </div>
       <div class="question-block">
         <div class="qno">Q${i + 1}.</div>
@@ -201,6 +202,9 @@ export function renderResult() {
   const g = state.lastReaction;
   app.appendChild(el(`
     <div>
+      <div class="back-row">
+        <button class="exit-btn" data-nav="home" aria-label="홈으로 가기">🏠</button>
+      </div>
       <div class="result-card">
         <div class="eyebrow">설문 + 반응속도 게임으로 본 나의 집중 유형은</div>
         <div class="emoji">${r.type.emoji}</div>
@@ -310,7 +314,7 @@ export function renderReactionIntro() {
       <div class="back-row">
         <button class="back-btn" data-nav="test-question">‹</button>
         <div class="back-title">성인 ADHD 성향 체크</div>
-        <button class="exit-btn" aria-label="홈으로 나가기">✕</button>
+        <button class="exit-btn" aria-label="홈으로 가기">🏠</button>
       </div>
       <div class="cover">
         <div class="emoji">⚡</div>
@@ -350,7 +354,7 @@ export function renderReactionPlay() {
       <div class="back-row">
         <button class="back-btn" data-nav="reaction-intro">‹</button>
         <div class="back-title">반응속도 게임</div>
-        <button class="exit-btn" aria-label="홈으로 나가기">✕</button>
+        <button class="exit-btn" aria-label="홈으로 가기">🏠</button>
       </div>
       <div class="progress-row">
         <div class="progress-track"><div class="progress-fill" id="round-fill" style="width:0%;"></div></div>

@@ -29,12 +29,6 @@ export function renderHome() {
           <div class="sub">반응속도·기억력</div>
         </button>
       </div>
-      <div class="bottom-nav">
-        <div class="nav-item active"><div class="nav-icon">🏠</div><div class="nav-label">홈</div></div>
-        <div class="nav-item"><div class="nav-icon">🔥</div><div class="nav-label">인기</div></div>
-        <div class="nav-item"><div class="nav-icon">🔖</div><div class="nav-label">저장</div></div>
-        <div class="nav-item"><div class="nav-icon">👤</div><div class="nav-label">내정보</div></div>
-      </div>
     </div>
   `));
   bindNav(app);

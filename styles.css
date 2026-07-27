@@ -61,10 +61,6 @@ body {
   background: #F6F4EF;
 }
 
-#app.has-bottom-nav {
-  padding-bottom: 78px;
-}
-
 .header {
   padding: 18px 20px 8px;
   display: flex;
@@ -115,10 +111,11 @@ body {
   line-height: 1;
 }
 
-/* 진행 중인 테스트·게임 화면에서 홈으로 바로 나가는 버튼. back-row·progress-row
-   양쪽에서 재사용하므로 margin-left:auto로 컨테이너 오른쪽 끝에 붙인다 —
-   두 컨테이너의 다른 자식 구성(뒤로가기+제목 / 뒤로가기+진행바+카운트)을
-   신경 쓰지 않고 항상 맨 끝에 자리잡는다. */
+/* 모든 화면 우상단의 홈 버튼. back-row·progress-row 양쪽에서 재사용하므로
+   margin-left:auto로 컨테이너 오른쪽 끝에 붙인다 — 두 컨테이너의 다른 자식 구성
+   (뒤로가기+제목 / 뒤로가기+진행바+카운트)을 신경 쓰지 않고 항상 맨 끝에 자리잡는다.
+   잃을 진행 상황이 없는 화면(인트로·결과)은 data-nav="home"으로 바로 이동하고,
+   문항·게임 진행 화면은 data-nav 없이 bindExit()의 확인 모달을 거쳐 이동한다. */
 .exit-btn {
   margin-left: auto;
   font-size: 19px;
@@ -210,40 +207,6 @@ body {
 .category-card .sub {
   font-size: 11px;
   color: #8A8790;
-  margin-top: 2px;
-}
-
-.bottom-nav {
-  position: fixed;
-  left: 50%;
-  bottom: 0;
-  transform: translateX(-50%);
-  width: 100%;
-  max-width: 480px;
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  padding: 14px 20px calc(14px + env(safe-area-inset-bottom, 0px));
-  border-top: 1px solid #EAE6DE;
-  background: #fff;
-}
-
-.bottom-nav .nav-item {
-  text-align: center;
-  color: #B4B0A8;
-}
-
-.bottom-nav .nav-item.active {
-  color: var(--accent);
-}
-
-.bottom-nav .nav-item .nav-icon {
-  font-size: 19px;
-}
-
-.bottom-nav .nav-item .nav-label {
-  font-size: 10px;
-  font-weight: 700;
   margin-top: 2px;
 }
 
@@ -1125,27 +1088,22 @@ body {
 }
 
 /* ---------------------------------------------------------------- 데스크톱
-   #app은 여전히 480px 고정폭 모바일 레이아웃 그대로다(콘텐츠·로직 변경 없음).
-   넓은 화면에서 그 좁은 칼럼이 밋밋한 회색 배경 한가운데 방치된 것처럼 보이던
-   것을, 그림자·둥근 위쪽 모서리를 얹어 의도된 "폰 카드"로 보이게만 한다.
-   아래쪽은 일부러 각지게 둔다 — 실제 폰 하단 탭바도 화면 끝에 딱 붙어 있어서,
-   .bottom-nav(position:fixed, 뷰포트 기준)와 자연스럽게 맞아떨어진다. */
+   화면·로직 구조는 그대로다(레이아웃 재설계 아님) — #app의 max-width만 넓혀서
+   480px 폰 폭 그대로일 때보다 카드 자체가 커 보이게 한다. 그림자·둥근 모서리는
+   그 위에 얹은 "카드"라는 인상을 준다. */
 @media (min-width: 768px) {
   body {
     background: linear-gradient(180deg, #F4F2EC 0%, #E3DFD4 100%);
   }
 
   #app {
-    margin: 28px auto 0;
-    min-height: calc(100vh - 28px);
-    border-radius: 28px 28px 0 0;
+    max-width: 640px;
+    margin: 28px auto;
+    min-height: calc(100vh - 56px);
+    border-radius: 28px;
     box-shadow: 0 36px 90px -24px rgba(23, 23, 26, .35), 0 0 0 1px rgba(23, 23, 26, .04);
-    /* transform이 없어 position:fixed 자식(.bottom-nav, 모달)의 컨테이닝 블록은
-       계속 뷰포트다 — overflow만으로는 그걸 가두지 않는다. */
+    /* transform이 없어 position:fixed 자식(모달)의 컨테이닝 블록은 계속 뷰포트다
+       — overflow만으로는 그걸 가두지 않는다. */
     overflow: hidden;
-  }
-
-  .bottom-nav {
-    box-shadow: 0 -8px 24px rgba(23, 23, 26, .08);
   }
 }

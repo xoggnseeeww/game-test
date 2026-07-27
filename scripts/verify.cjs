@@ -277,10 +277,9 @@ async function playCptGame(page) {
   // reaction-intro/reaction-play가 문항 미완료 시 test-intro로 떨어지는 guard가 생겨서
   // 답 없이 곧장 게임 주소로 들어가는 방식으로는 더 이상 게임 화면 자체를 확인할 수 없다.)
 
-  // === 모바일 레이아웃 === (.bottom-nav는 홈 화면에만 있다)
+  // === 모바일 레이아웃 ===
   await goto("/");
-  const box = await (await page.$(".bottom-nav"))?.boundingBox();
-  check("하단 네비가 뷰포트 하단에 고정", box && Math.abs(box.y + box.height - 844) < 2, JSON.stringify(box));
+  check("장식뿐이던 하단 네비게이션 제거됨", !(await page.$(".bottom-nav")));
   check("목업 잔재(가짜 상태바) 없음", !(await page.content()).includes("9:41"));
 
   check("콘솔/페이지 에러 없음", errors.length === 0, errors.join(" ; "));

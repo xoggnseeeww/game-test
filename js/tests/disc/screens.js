@@ -79,6 +79,7 @@ export function renderDiscIntro() {
       <div class="back-row">
         <button class="back-btn" data-nav="psych-list">‹</button>
         <div class="back-title">심리테스트</div>
+        <button class="exit-btn" data-nav="home" aria-label="홈으로 가기">🏠</button>
       </div>
       <div class="cover">
         <div class="emoji">🎭</div>
@@ -126,7 +127,7 @@ export function renderDiscQuestion() {
         <button class="back-btn" id="disc-back">‹</button>
         <div class="progress-track"><div class="progress-fill" style="width:${progress}%;"></div></div>
         <div class="progress-count">${i + 1}<span class="total">/${N}</span></div>
-        <button class="exit-btn" aria-label="홈으로 나가기">✕</button>
+        <button class="exit-btn" aria-label="홈으로 가기">🏠</button>
       </div>
       <div class="question-block">
         <div class="qno">Q${i + 1}.</div>
@@ -260,6 +261,9 @@ export function renderDiscResult() {
 
   app.appendChild(el(`
     <div>
+      <div class="back-row">
+        <button class="exit-btn" data-nav="home" aria-label="홈으로 가기">🏠</button>
+      </div>
       <div class="result-card">
         <div class="eyebrow">나의 DISC 유형은</div>
         <div class="emoji">${t.emoji}</div>
@@ -437,7 +441,7 @@ export function renderDilemmaIntro() {
       <div class="back-row">
         <button class="back-btn" id="dilemma-intro-back">‹</button>
         <div class="back-title">딜레마 게임</div>
-        <button class="exit-btn" aria-label="홈으로 나가기">✕</button>
+        <button class="exit-btn" aria-label="홈으로 가기">🏠</button>
       </div>
       <div class="cover">
         <div class="emoji">⚖️</div>
@@ -484,7 +488,7 @@ export function renderDilemmaPlay() {
       <div class="back-row">
         <button class="back-btn" data-nav="dilemma-intro">‹</button>
         <div class="back-title">딜레마 게임</div>
-        <button class="exit-btn" aria-label="홈으로 나가기">✕</button>
+        <button class="exit-btn" aria-label="홈으로 가기">🏠</button>
       </div>
       <div class="progress-row">
         <div class="progress-track"><div class="progress-fill" id="d-fill" style="width:0%;"></div></div>
