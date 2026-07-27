@@ -2,6 +2,7 @@
 import { app, go, onLeave, parseSharedPath } from "../../core/router.js";
 import { el, bindNav, showModal } from "../../core/dom.js";
 import { shareBlockMarkup, wireShare } from "../../core/share.js";
+import { adSlotMarkup } from "../../core/ads.js";
 import { state } from "../../core/state.js";
 import { roundRect, shuffle } from "../../core/util.js";
 import {
@@ -42,7 +43,7 @@ export function renderTestIntro() {
       <div class="cta">
         <button class="cta-btn" id="start-btn">테스트 시작하기</button>
       </div>
-      <div class="ad-slot banner" style="margin:6px 20px 22px;">카카오 AdFit · 320×50</div>
+      ${adSlotMarkup("banner", "margin:6px 20px 22px;")}
     </div>
   `));
   bindNav(app);
@@ -240,7 +241,7 @@ export function renderResult() {
 
       ${shareBlockMarkup()}
 
-      <div class="ad-slot rect">카카오 AdFit<br/>250×250</div>
+      ${adSlotMarkup("rect")}
 
       <div class="next-block">
         <div class="section-title" style="padding:0 0 9px;">이런 것도 해봤어? 🎲</div>

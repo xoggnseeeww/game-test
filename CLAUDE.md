@@ -30,7 +30,7 @@
 ```
 index.html            진입점 (메타·OG·referrer 정책은 전 주소 공통 — 페이지별 미리보기 불가)
 js/main.js            부팅: 화면·테스트를 라우터에 등록
-js/core/              router(레지스트리·guard·teardown) · state · dom · share · util
+js/core/              router(레지스트리·guard·teardown) · state · dom · share · util · ads
 js/screens/home.js    홈 · 심리테스트 목록(등록된 테스트에서 자동 생성) · 미니게임 목록
 js/tests/<id>/        테스트 1개 = 폴더 1개: data · score · screens · index(디스크립터)
                       현재 adhd(+반응속도 게임), disc(+딜레마 게임)
