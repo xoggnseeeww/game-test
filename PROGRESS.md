@@ -161,6 +161,13 @@
   - 검증: `npm test` 34개 통과. `scripts/verify.cjs` 29개(기존 회귀, 안내 모달 클릭 포함) 통과. 추가로 헤드리스 스크립트를 두 개 작성해 확인: ① 1440px/390px 뷰포트에서 `#app`의 `border-radius`·`box-shadow`·`margin-top`이 데스크톱에서만 적용되고 모바일은 그대로인지, ② ADHD·DISC 양쪽에서 `.exit-btn` 클릭 → 확인 모달 → 홈 이동 → 진행 화면 재진입 시 1번 문항부터 시작(state 리셋 확인) — 전부 통과. 병합 후 `renderReactionIntro`에서 나가기 버튼(그만둘까요 모달)과 시작 버튼(시작 전 안내 모달)이 서로 다른 모달을 올바르게 띄우는지도 별도 확인.
     **확인 못 한 것**: 없음 (실기기 반응형 확인은 `CURRENT_TASK.md`에 이미 있는 "배포 후 확인 필요" 항목들과 별개로, 이번 변경은 헤드리스에서 뷰포트 크기를 바꿔가며 직접 확인했다).
 
+- **카카오 AdFit 실연동 + 메인 머지** (2026-07-27):
+  - 요청 배경: 사용자가 카카오 AdFit 광고 코드를 발급받아 Cloudflare Pages의 "Variables and secrets"에 `ADFIT_KEY`(320×50)·`ADFIT_MINI_KEY`(250×250) 이름으로 등록해두고 "이 키를 쓰는 걸로 코드를 적으면 되잖아"라고 요청, 이어서 "메인머지하고 관련파일 업데이트해줘".
+  - 원인: (버그 아님, 오해 정정) 이 레포는 빌드 스텝도 Pages Functions도 없어 Cloudflare의 환경변수/시크릿은 브라우저에 배달되는 정적 파일 안에서 애초에 읽을 방법이 없다 — 변수명 문자열이 치환 없이 그대로 나갈 뿐이었다. 게다가 AdFit 단위 코드(`DAN-...`)는 렌더링되는 순간 모든 방문자에게 노출되는 값이라 Secret으로 감출 실익도 없다. 사용자가 Cloudflare 대시보드에서 실제 값(320×50: `DAN-YtXY1keVu0glLXJQ`, 250×250: `DAN-PKr3oCfRI9IIiXwz`)을 확인해 전달했다.
+  - 구현: `js/core/ads.js`를 새로 만들어 두 단위 코드를 한 곳에서만 관리(`adSlotMarkup(kind, style)`). `index.html` head에 AdFit 로더 스크립트(`t1.daumcdn.net/kas/static/ba.min.js`) 1회 추가. `.ad-slot` 플레이스홀더 텍스트 7곳(`home.js` 1 · `disc/screens.js` 3 · `adhd/screens.js` 2, 위치별 배너 5/사각 2)을 전부 실제 `<ins class="kakao_ad_area">` 태그로 교체. 부수 발견: `.ad-slot.rect`가 자리표시자 시절엔 안 드러났지만 실제 250px 높이 광고에 비해 CSS `height`가 120px로 짧았다 — 250px로 수정. 이후 사용자가 요청한 대로 `origin/main`(그 사이 5커밋 앞서 있었음 — PC 레이아웃 카드 프레임, `bindExit` 등)을 현재 브랜치로 병합, 충돌 없이 자동 병합됨.
+  - 검증: `npm test` 34개 통과. `scripts/verify.cjs` 29개 통과, 1건은 원래도 실패하던 항목(외부 도메인 아웃바운드가 프록시로 막힌 샌드박스 제약 — 폰트 CDN과 동일한 원인, AdFit 스크립트 403). `CURRENT_TASK.md`의 광고 슬롯 항목을 완료로 표시하고 "배포 후 확인 필요"에 AdFit 노출 확인을 남겼다.
+    **확인 못 한 것**: 실제 배포본에서 광고가 렌더링되는지(샌드박스 네트워크 제약으로 원천 불가) — 실기기 확인 필요.
+
 ---
 
 ## 이전 이력 (git 히스토리에서 추출, 요약)
