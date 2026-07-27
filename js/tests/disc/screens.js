@@ -4,6 +4,7 @@ import { el, bindNav, bindExit } from "../../core/dom.js";
 import { state } from "../../core/state.js";
 import { shuffle, roundRect } from "../../core/util.js";
 import { shareBlockMarkup, wireShare } from "../../core/share.js";
+import { adSlotMarkup } from "../../core/ads.js";
 import { TETRADS, DILEMMAS, DISC_TYPES, AXIS_LABELS } from "./data.js";
 import {
   AXES,
@@ -97,7 +98,7 @@ export function renderDiscIntro() {
       <div class="cta">
         <button class="cta-btn" id="disc-start">시작하기</button>
       </div>
-      <div class="ad-slot banner" style="margin:6px 20px 22px;">카카오 AdFit · 320×50</div>
+      ${adSlotMarkup("banner", "margin:6px 20px 22px;")}
     </div>
   `));
   bindNav(app);
@@ -291,7 +292,7 @@ export function renderDiscResult() {
 
       ${shareBlockMarkup()}
 
-      <div class="ad-slot rect">카카오 AdFit<br/>250×250</div>
+      ${adSlotMarkup("rect")}
 
       <div class="next-block">
         <div class="section-title" style="padding:0 0 9px;">이런 것도 해봤어? 🎲</div>
@@ -351,7 +352,7 @@ export function renderDiscShared() {
       <div class="cta" style="padding-top:18px;">
         <button class="cta-btn" data-nav="disc-intro">나는 어떤 유형인지 해보기</button>
       </div>
-      <div class="ad-slot banner" style="margin:6px 20px 22px;">카카오 AdFit · 320×50</div>
+      ${adSlotMarkup("banner", "margin:6px 20px 22px;")}
     </div>
   `));
   bindNav(app);

@@ -3,16 +3,13 @@
 > 이 파일은 1~2k 토큰 이하를 유지한다 — "언젠가 할 일"이 아니라 "지금 유효한 작업"만.
 
 ## 현재 작업
-없음 (PC 레이아웃 개선 + 테스트 진행 중 홈 나가기 버튼 추가 완료, 2026-07-27)
+없음 (카카오 AdFit 실연동 + main 머지 완료, 2026-07-27)
 
-- **PC 레이아웃**: `styles.css`에 `@media (min-width: 768px)` 블록 추가. #app은 여전히 480px 고정폭
-  모바일 레이아웃 그대로(콘텐츠·로직 변경 없음) — 넓은 화면에서만 둥근 위쪽 모서리·그림자·상단 여백을 얹어
-  "폰 카드"처럼 보이게 함. 아래쪽은 각지게 둬서 `.bottom-nav`(position:fixed, 뷰포트 기준)와 자연스럽게 맞물림.
-  → `docs/DECISIONS.md` D-21
-- **테스트 진행 중 홈 나가기**: 문항 수만큼 뒤로가기를 눌러야 홈에 갈 수 있던 문제. `js/core/dom.js`에
-  `bindExit(root, onExit)` 추가 — `.exit-btn`(✕) 클릭 시 확인 모달 → 확인하면 상태 초기화 후 `go("home")`.
-  적용 화면: ADHD `test-question`·`reaction-intro`·`reaction-play`, DISC `disc-question`·`dilemma-intro`·`dilemma-play`.
-  → `docs/DECISIONS.md` D-22
+- **AdFit 실연동**: `js/core/ads.js`(단위 코드 단일 소스, `adSlotMarkup(kind, style)`) 추가, `index.html`에 로더 스크립트,
+  `.ad-slot` 플레이스홀더 7곳을 실제 `<ins class="kakao_ad_area">`로 교체. 배너 `DAN-YtXY1keVu0glLXJQ`(320×50) ·
+  사각 `DAN-PKr3oCfRI9IIiXwz`(250×250). 부수 수정: `.ad-slot.rect` 높이가 120px로 짧았던 것(실제 250px)을 250px로.
+  이어서 그 사이 5커밋 앞서 있던 `origin/main`(PC 레이아웃 카드 프레임 · `bindExit`)을 머지 — 충돌 없음.
+- (이전 세션 작업) PC 레이아웃(`@media (min-width: 768px)` 폰 카드 프레임) + 테스트 진행 중 홈 나가기 버튼(`bindExit`) 추가.
 - (이전 세션 작업) 딜레마 게임을 DISC 문항 뒤 강제 단계로, 반응속도 게임을 ADHD 문항 뒤 필수 단계로 각각 재배치 +
   UI 대비/줄바꿈 정리 + 반응속도 게임 시작 전 확인 모달 추가 완료
 
@@ -23,7 +20,7 @@
    ⚠️ **반응속도 게임은 여기 넣지 않는다** — 이제 ADHD 문항을 다 풀어야만 들어갈 수 있는 필수 단계라(D-19),
    미니게임 목록에서 단독으로 열도록 노출하면 guard가 사용자를 ADHD 인트로로 되돌려버려 혼란만 준다.
 2. **홈 하단 네비게이션이 장식** — 인기·저장·내정보 탭이 클릭해도 아무 동작 없음. 동작 부여 또는 제거 / 관련 파일: `js/screens/home.js` · `styles.css` `.bottom-nav`
-3. **광고 슬롯 자리표시자** — `.ad-slot`이 "카카오 AdFit · 320×50" 텍스트만 있는 상태. 실제 연동 또는 제거 / 관련 파일: `js/screens/home.js` · `js/tests/*/screens.js` · `styles.css` `.ad-slot`
+3. ~~광고 슬롯 자리표시자~~ — 2026-07-27 카카오 AdFit 실연동 완료 (`js/core/ads.js`, 배너 `DAN-YtXY1keVu0glLXJQ` · 사각 `DAN-PKr3oCfRI9IIiXwz`). 배포 후 실제 노출 확인 필요(아래 항목)
 
 ## 배포 후 확인 필요
 > 샌드박스는 아웃바운드가 프록시로 막혀 아래를 **확인하지 못했다.** "확인됨"으로 간주하지 말 것.
@@ -31,7 +28,7 @@
 - **결과 카드 폰트** — CDN 차단으로 결과 카드가 sans-serif 폴백으로만 그려졌다
 - **`navigator.share` 공유시트** — 헤드리스엔 API가 없어 클립보드 폴백 경로만 확인됨. 실기기 확인 필요
 - **`_redirects` 실동작** — 로컬은 `serve.py`로 흉내 낸 것. 배포본에서 `/test/disc/result/lion` 직접 접속이 200인지 확인
-- **광고 슬롯** — 자리표시자 상태라 노출 확인 불가
+- **광고 슬롯** — AdFit 코드 연동 완료. 샌드박스에서 외부 스크립트(`t1.daumcdn.net`)가 막혀 실제 노출/렌더링은 배포 후 실기기로 확인 필요
 
 ## 알려진 이슈
 | 이슈 | 영향 | 우선순위 |

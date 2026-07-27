@@ -1,6 +1,7 @@
 // 홈 · 심리테스트 목록 · 미니게임 목록.
 import { app, listTests } from "../core/router.js";
 import { el, bindNav } from "../core/dom.js";
+import { adSlotMarkup } from "../core/ads.js";
 
 export function renderHome() {
   app.appendChild(el(`
@@ -12,7 +13,7 @@ export function renderHome() {
         </div>
         <div style="width:34px; height:34px; border-radius:11px; background:#fff; box-shadow:0 2px 8px rgba(0,0,0,.06); display:flex; align-items:center; justify-content:center; color:#75727B; font-size:16px;">☰</div>
       </div>
-      <div class="ad-slot banner">카카오 AdFit · 320×50</div>
+      ${adSlotMarkup("banner")}
       <div class="hero">
         <p class="hero-title">오늘, 뭐에 과몰입해볼까?</p>
         <p class="hero-sub">1분이면 끝나는 테스트 · 게임 · 퀴즈</p>

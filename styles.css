@@ -152,7 +152,7 @@ body {
 }
 
 .ad-slot.banner { height: 52px; }
-.ad-slot.rect { height: 120px; margin: 16px 20px 4px; }
+.ad-slot.rect { height: 250px; margin: 16px 20px 4px; }
 
 .hero {
   padding: 16px 20px 6px;
