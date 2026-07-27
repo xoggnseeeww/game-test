@@ -13,6 +13,26 @@ export function bindNav(root) {
   });
 }
 
+// 진행 중인 테스트·게임 화면의 .exit-btn(있으면)을 홈으로 나가는 확인 모달에 연결한다.
+// 뒤로가기를 문항 수만큼 눌러야 홈에 갈 수 있던 것의 대안 — 한 번에 나간다.
+// onExit은 화면별로 어떤 state를 비울지 다르므로 호출부가 넘긴다.
+export function bindExit(root, onExit) {
+  const btn = root.querySelector(".exit-btn");
+  if (!btn) return;
+  btn.addEventListener("click", () => {
+    showModal({
+      title: "테스트를 그만둘까요?",
+      body: "지금까지 답한 내용은 저장되지 않고 사라져요.",
+      confirmLabel: "홈으로 나가기",
+      cancelLabel: "계속 진행",
+      onConfirm: () => {
+        onExit();
+        go("home");
+      },
+    });
+  });
+}
+
 export function showModal({ title, body, confirmLabel = "확인", cancelLabel = "취소", onConfirm }) {
   const overlay = el(`
     <div class="modal-overlay">

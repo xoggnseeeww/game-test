@@ -1,6 +1,6 @@
 // DISC 검사의 모든 화면 + 딜레마 미니게임 화면.
 import { app, go, onLeave, parseSharedPath } from "../../core/router.js";
-import { el, bindNav } from "../../core/dom.js";
+import { el, bindNav, bindExit } from "../../core/dom.js";
 import { state } from "../../core/state.js";
 import { shuffle, roundRect } from "../../core/util.js";
 import { shareBlockMarkup, wireShare } from "../../core/share.js";
@@ -127,6 +127,7 @@ export function renderDiscQuestion() {
         <button class="back-btn" id="disc-back">‹</button>
         <div class="progress-track"><div class="progress-fill" style="width:${progress}%;"></div></div>
         <div class="progress-count">${i + 1}<span class="total">/${N}</span></div>
+        <button class="exit-btn" aria-label="홈으로 나가기">✕</button>
       </div>
       <div class="question-block">
         <div class="qno">Q${i + 1}.</div>
@@ -179,6 +180,8 @@ export function renderDiscQuestion() {
       go("disc-intro");
     }
   });
+
+  bindExit(app, startDiscTest);
 }
 
 // ---------------------------------------------------------------- 결과
@@ -435,6 +438,7 @@ export function renderDilemmaIntro() {
       <div class="back-row">
         <button class="back-btn" id="dilemma-intro-back">‹</button>
         <div class="back-title">딜레마 게임</div>
+        <button class="exit-btn" aria-label="홈으로 나가기">✕</button>
       </div>
       <div class="cover">
         <div class="emoji">⚖️</div>
@@ -455,6 +459,8 @@ export function renderDilemmaIntro() {
   // 없다 — 대신 마지막 문항(2단계)으로 되돌아간다. disc-question의 guard가 답을 하나
   // 지우고 그 자리로 되돌려준다.
   app.querySelector("#dilemma-intro-back").addEventListener("click", () => go("disc-question"));
+
+  bindExit(app, startDiscTest);
 }
 
 export function renderDilemmaPlay() {
@@ -479,6 +485,7 @@ export function renderDilemmaPlay() {
       <div class="back-row">
         <button class="back-btn" data-nav="dilemma-intro">‹</button>
         <div class="back-title">딜레마 게임</div>
+        <button class="exit-btn" aria-label="홈으로 나가기">✕</button>
       </div>
       <div class="progress-row">
         <div class="progress-track"><div class="progress-fill" id="d-fill" style="width:0%;"></div></div>
@@ -492,6 +499,7 @@ export function renderDilemmaPlay() {
     </div>
   `));
   bindNav(app);
+  bindExit(app, startDiscTest);
 
   const sceneEl = app.querySelector("#d-scene");
   const choicesEl = app.querySelector("#d-choices");

@@ -1,6 +1,6 @@
 // 성인 ADHD 성향 체크의 모든 화면 + 반응속도 게임 화면.
 import { app, go, onLeave, parseSharedPath } from "../../core/router.js";
-import { el, bindNav, showModal } from "../../core/dom.js";
+import { el, bindNav, bindExit, showModal } from "../../core/dom.js";
 import { shareBlockMarkup, wireShare } from "../../core/share.js";
 import { adSlotMarkup } from "../../core/ads.js";
 import { state } from "../../core/state.js";
@@ -73,6 +73,7 @@ export function renderQuestion() {
         <button class="back-btn" id="q-back">‹</button>
         <div class="progress-track"><div class="progress-fill" style="width:${pct}%;"></div></div>
         <div class="progress-count">${i + 1}<span class="total">/${QUESTIONS.length}</span></div>
+        <button class="exit-btn" aria-label="홈으로 나가기">✕</button>
       </div>
       <div class="question-block">
         <div class="qno">Q${i + 1}.</div>
@@ -110,6 +111,11 @@ export function renderQuestion() {
       state.answers.pop();
       go("test-question");
     }
+  });
+
+  bindExit(app, () => {
+    state.answers = [];
+    state.lastReaction = null;
   });
 }
 
@@ -305,6 +311,7 @@ export function renderReactionIntro() {
       <div class="back-row">
         <button class="back-btn" data-nav="test-question">‹</button>
         <div class="back-title">성인 ADHD 성향 체크</div>
+        <button class="exit-btn" aria-label="홈으로 나가기">✕</button>
       </div>
       <div class="cover">
         <div class="emoji">⚡</div>
@@ -332,6 +339,10 @@ export function renderReactionIntro() {
       onConfirm: () => go("reaction-play"),
     });
   });
+  bindExit(app, () => {
+    state.answers = [];
+    state.lastReaction = null;
+  });
 }
 
 export function renderReactionPlay() {
@@ -340,6 +351,7 @@ export function renderReactionPlay() {
       <div class="back-row">
         <button class="back-btn" data-nav="reaction-intro">‹</button>
         <div class="back-title">반응속도 게임</div>
+        <button class="exit-btn" aria-label="홈으로 나가기">✕</button>
       </div>
       <div class="progress-row">
         <div class="progress-track"><div class="progress-fill" id="round-fill" style="width:0%;"></div></div>
@@ -351,6 +363,10 @@ export function renderReactionPlay() {
     </div>
   `));
   bindNav(app);
+  bindExit(app, () => {
+    state.answers = [];
+    state.lastReaction = null;
+  });
 
   const panel = app.querySelector("#game-panel");
   const msg = app.querySelector("#game-msg");

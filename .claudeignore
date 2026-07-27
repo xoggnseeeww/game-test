@@ -3,6 +3,10 @@
 PROGRESS.md
 archive/
 
+# docs/DECISIONS.md가 300줄/15KB를 넘어 분리된 전체 항목 아카이브(반기 단위).
+# docs/DECISIONS.md의 인덱스에서 필요한 D-번호를 찾은 뒤에만 명시적으로 Read 한다.
+docs/decisions/
+
 # 최초 디자인 목업. 앱 동작·배포와 무관하며 크다.
 # 원래 시안을 대조해야 할 때만 명시적으로 Read.
 docs/design-draft.html

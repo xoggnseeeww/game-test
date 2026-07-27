@@ -115,6 +115,21 @@ body {
   line-height: 1;
 }
 
+/* 진행 중인 테스트·게임 화면에서 홈으로 바로 나가는 버튼. back-row·progress-row
+   양쪽에서 재사용하므로 margin-left:auto로 컨테이너 오른쪽 끝에 붙인다 —
+   두 컨테이너의 다른 자식 구성(뒤로가기+제목 / 뒤로가기+진행바+카운트)을
+   신경 쓰지 않고 항상 맨 끝에 자리잡는다. */
+.exit-btn {
+  margin-left: auto;
+  font-size: 19px;
+  color: #B4B0A8;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+}
+
 .back-title {
   font-size: 14px;
   font-weight: 700;
@@ -1106,5 +1121,31 @@ body {
   .result-card,
   .result-card .emoji {
     animation: none;
+  }
+}
+
+/* ---------------------------------------------------------------- 데스크톱
+   #app은 여전히 480px 고정폭 모바일 레이아웃 그대로다(콘텐츠·로직 변경 없음).
+   넓은 화면에서 그 좁은 칼럼이 밋밋한 회색 배경 한가운데 방치된 것처럼 보이던
+   것을, 그림자·둥근 위쪽 모서리를 얹어 의도된 "폰 카드"로 보이게만 한다.
+   아래쪽은 일부러 각지게 둔다 — 실제 폰 하단 탭바도 화면 끝에 딱 붙어 있어서,
+   .bottom-nav(position:fixed, 뷰포트 기준)와 자연스럽게 맞아떨어진다. */
+@media (min-width: 768px) {
+  body {
+    background: linear-gradient(180deg, #F4F2EC 0%, #E3DFD4 100%);
+  }
+
+  #app {
+    margin: 28px auto 0;
+    min-height: calc(100vh - 28px);
+    border-radius: 28px 28px 0 0;
+    box-shadow: 0 36px 90px -24px rgba(23, 23, 26, .35), 0 0 0 1px rgba(23, 23, 26, .04);
+    /* transform이 없어 position:fixed 자식(.bottom-nav, 모달)의 컨테이닝 블록은
+       계속 뷰포트다 — overflow만으로는 그걸 가두지 않는다. */
+    overflow: hidden;
+  }
+
+  .bottom-nav {
+    box-shadow: 0 -8px 24px rgba(23, 23, 26, .08);
   }
 }
