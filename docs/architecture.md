@@ -28,6 +28,7 @@ js/core/
   dom.js                el() · bindNav() · showModal()
   share.js              공유 URL · navigator.share · 결과 카드 캔버스
   util.js               shuffle · normalizePath · roundRect · localStorage 방어 래퍼
+  ads.js                카카오 AdFit 광고 단위 마크업 (단위 코드 단일 소스)
 js/screens/home.js      홈 · 심리테스트 목록 · 미니게임 목록 + commonScreens
 js/tests/<id>/
   data.js               문항·결과 유형·슬러그·게임 상수 (단일 소스)

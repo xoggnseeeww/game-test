@@ -3,7 +3,7 @@
 > 이 파일은 1~2k 토큰 이하를 유지한다 — "언젠가 할 일"이 아니라 "지금 유효한 작업"만.
 
 ## 현재 작업
-없음 (PC 레이아웃·전 화면 홈 버튼·하단 네비 제거 완료, 2026-07-27)
+없음 (PC 레이아웃·전 화면 홈 버튼·하단 네비 제거 + 카카오 AdFit 실연동, 병렬 세션 머지 완료, 2026-07-27)
 
 - **PC 레이아웃 v2 (카드 넓히기)**: 1차로 480px 그대로 두고 카드 프레임(그림자·둥근 모서리)만 얹었더니
   사용자가 "여전히 폰 화면 보는 느낌"이라고 피드백. `@media (min-width: 768px)`에서 `#app { max-width: 640px; }`로
@@ -14,10 +14,14 @@
   → `docs/DECISIONS.md` D-22
 - **홈 하단 네비게이션 제거**: 장식만 하던 인기·저장·내정보 탭을 완전히 삭제(`js/screens/home.js`,
   `styles.css`의 `.bottom-nav`/`#app.has-bottom-nav`, `js/core/router.js`의 토글 로직, `scripts/verify.cjs`의
-  관련 검사까지 전부 정리). 아래 "알려진 이슈"의 해당 항목 해소.
+  관련 검사까지 전부 정리). → `docs/DECISIONS.md` D-23
 - **테스트 진행 중 홈 나가기**: 문항 수만큼 뒤로가기를 눌러야 홈에 갈 수 있던 문제. `js/core/dom.js`에
   `bindExit(root, onExit)` 추가 — `.exit-btn`(🏠) 클릭 시 확인 모달 → 확인하면 상태 초기화 후 `go("home")`.
   적용 화면: ADHD `test-question`·`reaction-intro`·`reaction-play`, DISC `disc-question`·`dilemma-intro`·`dilemma-play`.
+- (병렬 세션 작업) **카카오 AdFit 실연동**: `js/core/ads.js`(단위 코드 단일 소스, `adSlotMarkup(kind, style)`) 추가,
+  `index.html`에 로더 스크립트, `.ad-slot` 플레이스홀더 7곳을 실제 `<ins class="kakao_ad_area">`로 교체.
+  배너 `DAN-YtXY1keVu0glLXJQ`(320×50) · 사각 `DAN-PKr3oCfRI9IIiXwz`(250×250). `.ad-slot.rect` 높이도
+  120px(플레이스홀더 시절 값)에서 실제 250px로 수정.
 - (이전 세션 작업) 딜레마 게임을 DISC 문항 뒤 강제 단계로, 반응속도 게임을 ADHD 문항 뒤 필수 단계로 각각 재배치 +
   UI 대비/줄바꿈 정리 + 반응속도 게임 시작 전 확인 모달 추가 완료
 
@@ -27,7 +31,6 @@
    ※ 게임은 테스트 하위 경로에 속해 있다(`docs/DECISIONS.md` D-4). 목록에 넣더라도 경로는 바꾸지 않는다 — id·경로 변경 금지(D-16)
    ⚠️ **반응속도 게임은 여기 넣지 않는다** — 이제 ADHD 문항을 다 풀어야만 들어갈 수 있는 필수 단계라(D-19),
    미니게임 목록에서 단독으로 열도록 노출하면 guard가 사용자를 ADHD 인트로로 되돌려버려 혼란만 준다.
-2. **광고 슬롯 자리표시자** — `.ad-slot`이 "카카오 AdFit · 320×50" 텍스트만 있는 상태. 실제 연동 또는 제거 / 관련 파일: `js/screens/home.js` · `js/tests/*/screens.js` · `styles.css` `.ad-slot`
 
 ## 배포 후 확인 필요
 > 샌드박스는 아웃바운드가 프록시로 막혀 아래를 **확인하지 못했다.** "확인됨"으로 간주하지 말 것.
@@ -35,7 +38,7 @@
 - **결과 카드 폰트** — CDN 차단으로 결과 카드가 sans-serif 폴백으로만 그려졌다
 - **`navigator.share` 공유시트** — 헤드리스엔 API가 없어 클립보드 폴백 경로만 확인됨. 실기기 확인 필요
 - **`_redirects` 실동작** — 로컬은 `serve.py`로 흉내 낸 것. 배포본에서 `/test/disc/result/lion` 직접 접속이 200인지 확인
-- **광고 슬롯** — 자리표시자 상태라 노출 확인 불가
+- **광고 슬롯** — AdFit 코드 연동 완료. 샌드박스에서 외부 스크립트(`t1.daumcdn.net`)가 막혀 실제 노출/렌더링은 배포 후 실기기로 확인 필요
 
 ## 알려진 이슈
 | 이슈 | 영향 | 우선순위 |
