@@ -139,6 +139,28 @@
     - `npm test` 34개, `scripts/verify.cjs` 27개 전부 통과.
     **확인 못 한 것**: 없음 — 이번 작업은 검증 도구 자체를 고치는 것이었어서, 그 도구가 실제로 통과/실패를 정확히 가리는지까지 확인했다.
 
+- **반응속도 게임 시작 전 확인 모달 추가 + main 재머지** (2026-07-27):
+  - 요청 배경: 사용자가 반응속도 게임 인트로 화면 스크린샷을 보여주며 "저거 클릭하면 설명 모달을 한번 띄워주는게 좋을거같애", 이어서 "머지하자" → "관련파일도 업데이트하자".
+  - 원인: (버그 아님, 일관성 누락) `test-intro`의 "테스트 시작하기" 버튼은 `showModal()`로 안내를 한 번 더 확인시키는데, `reaction-intro`의 "마지막 단계 시작하기" 버튼은 클릭하는 즉시 `reaction-play`로 넘어갔다. D-19로 반응속도 게임이 이 검사의 "마지막 문항"이나 다름없는 필수 단계가 된 마당에, 정작 그 마지막 단계로 들어가는 지점에만 확인 절차가 빠져 있었다.
+  - 구현:
+    - `renderReactionIntro`의 시작 버튼 클릭에 `showModal()`을 추가 — 초록불/주황불 규칙, 너무 일찍 누르면 재진행되지만 충동 점수엔 기록된다는 점, `${CPT_ROUNDS}`(하드코딩 아님)를 마치면 최종 결과가 나온다는 안내. `onConfirm`에서만 `go("reaction-play")`.
+    - `scripts/verify.cjs`의 ADHD 섹션에 `.modal-btn-primary` 클릭 한 단계 추가(게임 시작 버튼 클릭 후).
+    - 머지 중 main이 다시 앞서 있었다(딜레마 게임 세션의 `ce5e848`/`bc40d19`) — `git merge origin/main`은 파일 충돌 없이 자동 병합됐고(양쪽이 서로 다른 파일을 건드림), `docs/DECISIONS.md`의 D-18(딜레마)이 끼어들며 이 브랜치의 D-18/D-19가 D-19/D-20으로 자동 재번호됨을 확인.
+    - `docs/DECISIONS.md` D-19에 "후속" 항목으로 모달 추가 사실을 기록. `CURRENT_TASK.md` 현재 작업 줄 갱신.
+  - 검증: 헤드리스 브라우저로 모달이 뜨는 것을 스크린샷으로 확인(초록 테마 확인 버튼 포함). 머지 후 `npm test` 34개, `scripts/verify.cjs` 29개(DISC 딜레마 케이스 포함) 전부 통과.
+    **확인 못 한 것**: 없음.
+
+- **PC 레이아웃 카드 프레임 + 테스트 진행 중 홈 나가기 버튼** (2026-07-27):
+  - 요청 배경: 사용자가 "1.구조적으로 pc에서보기 너무 불편하고 너무 휴대폰에 맞춰져 있음. 2.테스트진행시 다시 홈으로 돌아가기가 힘듬", 이어서 "메인에 머지하고 관련파일 업데이트".
+  - 원인: (버그 아님, 설계 공백) `#app`이 480px 고정폭 모바일 레이아웃이라 넓은 화면에선 밋밋한 회색 배경(`#EDEAE3`) 한가운데 좁은 칼럼만 방치된 것처럼 보였다. 진행 화면(`test-question`·`disc-question`·게임 인트로/플레이)의 뒤로가기는 한 단계씩만 되돌아가, 홈으로 나가려면 문항 수만큼(최대 12번) 눌러야 했다 — 직접 나가는 경로가 아예 없었다.
+  - 구현:
+    - PC 레이아웃: 두 방향(폰 프레임 카드 vs 완전 반응형 와이드 레이아웃) 중 `AskUserQuestion`으로 사용자에게 선택받아 **폰 프레임 카드**로 결정 — 콘텐츠·로직 변경 없이 안전하게 적용 가능해서. `styles.css`에 `@media (min-width: 768px)` 블록 추가: `#app`에 상단 margin·둥근 위쪽 모서리·box-shadow, `body`엔 은은한 그라데이션. 아래쪽은 각지게 둬서 `.bottom-nav`(position:fixed, 뷰포트 기준)와 자연스럽게 맞물리게 했다(실제 폰 하단 탭바도 화면 끝에 붙어 있으니 오히려 사실적). `#app`에 `overflow:hidden`을 추가해도 `transform`이 없어 `position:fixed` 자식(모달·`.bottom-nav`)의 컨테이닝 블록은 계속 뷰포트라 안 갇힌다 — 확인 완료.
+    - 홈 나가기: `js/core/dom.js`에 `bindExit(root, onExit)` 추가 — `.exit-btn`(✕)을 확인 모달("지금까지 답한 내용은 저장되지 않고 사라져요")에 연결하고, 확인 시 `onExit()`(화면별 state 초기화, ADHD는 `answers`/`lastReaction`, DISC는 `startDiscTest()` 전체 재초기화) 후 `go("home")`. `back-row`·`progress-row` 양쪽에서 재사용하도록 `.exit-btn { margin-left: auto; }`로 항상 컨테이너 맨 끝에 붙임. 적용 화면 6곳: ADHD `test-question`·`reaction-intro`·`reaction-play`, DISC `disc-question`·`dilemma-intro`·`dilemma-play`.
+    - `docs/DECISIONS.md`에 D-21(PC 카드 프레임)·D-22(진행 중 홈 나가기) 추가. `CURRENT_TASK.md` 현재 작업 줄 갱신.
+    - 머지 중 main이 두 번 더 앞서 있었다: 1차(`c0ffbe9`, 반응속도 게임 시작 모달)는 `renderReactionIntro`의 시작 버튼 핸들러가 내 `bindExit` 삽입 지점과 같은 줄이라 충돌 — 안내 모달과 나가기 버튼을 모두 살리는 방향으로 수동 병합. 2차(`c4839bf`, 이전 세션의 문서 갱신)는 `CURRENT_TASK.md` 현재 작업 줄만 충돌 — 두 세션의 요약을 모두 남기고 이전 세션 항목은 "(이전 세션 작업)"로 표시해 구분.
+  - 검증: `npm test` 34개 통과. `scripts/verify.cjs` 29개(기존 회귀, 안내 모달 클릭 포함) 통과. 추가로 헤드리스 스크립트를 두 개 작성해 확인: ① 1440px/390px 뷰포트에서 `#app`의 `border-radius`·`box-shadow`·`margin-top`이 데스크톱에서만 적용되고 모바일은 그대로인지, ② ADHD·DISC 양쪽에서 `.exit-btn` 클릭 → 확인 모달 → 홈 이동 → 진행 화면 재진입 시 1번 문항부터 시작(state 리셋 확인) — 전부 통과. 병합 후 `renderReactionIntro`에서 나가기 버튼(그만둘까요 모달)과 시작 버튼(시작 전 안내 모달)이 서로 다른 모달을 올바르게 띄우는지도 별도 확인.
+    **확인 못 한 것**: 없음 (실기기 반응형 확인은 `CURRENT_TASK.md`에 이미 있는 "배포 후 확인 필요" 항목들과 별개로, 이번 변경은 헤드리스에서 뷰포트 크기를 바꿔가며 직접 확인했다).
+
 ---
 
 ## 이전 이력 (git 히스토리에서 추출, 요약)
