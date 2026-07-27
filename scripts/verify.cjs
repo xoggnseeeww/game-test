@@ -141,7 +141,8 @@ async function playCptGame(page) {
     !(await page.content()).includes("최고기록")
   );
 
-  await page.click(".cta-btn"); // 게임 시작
+  await page.click(".cta-btn"); // 게임 시작 — 방법 안내 모달이 뜬다
+  await page.click(".modal-btn-primary");
   await playCptGame(page); // 전부 정답으로 클린 플레이 (보너스 0 → 축 퍼센트가 안 흔들림)
 
   await page.waitForSelector(".result-card", { timeout: 5000 });

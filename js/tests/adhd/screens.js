@@ -329,7 +329,15 @@ export function renderReactionIntro() {
     </div>
   `));
   bindNav(app);
-  app.querySelector("#start-btn").addEventListener("click", () => go("reaction-play"));
+  app.querySelector("#start-btn").addEventListener("click", () => {
+    showModal({
+      title: "⚡ 시작 전 안내",
+      body: `초록불이 켜지면 재빨리 화면을 탭하세요.\n주황불이 켜지면 누르지 말고 참으세요.\n\n너무 일찍 누르면 그 라운드는 다시 진행되지만, 성급했던 횟수도 충동 점수에 함께 기록돼요.\n\n${CPT_ROUNDS}라운드를 마치면 이 검사의 최종 결과가 나와요.`,
+      confirmLabel: "확인했어요, 시작할게요",
+      cancelLabel: "취소",
+      onConfirm: () => go("reaction-play"),
+    });
+  });
   bindExit(app, () => {
     state.answers = [];
     state.lastReaction = null;
