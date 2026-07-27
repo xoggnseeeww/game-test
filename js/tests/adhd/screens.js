@@ -3,7 +3,7 @@ import { app, go, onLeave, parseSharedPath } from "../../core/router.js";
 import { el, bindNav, showModal } from "../../core/dom.js";
 import { shareBlockMarkup, wireShare } from "../../core/share.js";
 import { state } from "../../core/state.js";
-import { roundRect, shuffle, bestReactionTime, saveBestReactionTime } from "../../core/util.js";
+import { roundRect, shuffle } from "../../core/util.js";
 import {
   QUESTIONS,
   OPTIONS,
@@ -209,7 +209,6 @@ export function renderResult() {
           <span>에너지 ${r.energy}</span>
         </div>
         ${r.bonus.impulse > 0 || r.bonus.focus > 0 ? `<div class="result-stats" style="margin-top:8px;"><span>⚡ 위 점수엔 게임 결과도 반영돼 있어요${r.bonus.impulse > 0 ? ` · 충동 +${r.bonus.impulse}` : ""}${r.bonus.focus > 0 ? ` · 집중 +${r.bonus.focus}` : ""}</span></div>` : ""}
-        ${g && g.isBest ? '<div class="result-stats" style="margin-top:8px;"><span>🎉 반응속도 새 최고기록!</span></div>' : ""}
       </div>
 
       <div class="axis-breakdown">
@@ -300,7 +299,6 @@ export function renderTestShared() {
 }
 
 export function renderReactionIntro() {
-  const best = bestReactionTime();
   app.appendChild(el(`
     <div>
       <div class="back-row">
@@ -315,7 +313,6 @@ export function renderReactionIntro() {
       </div>
       <div class="meta-chips">
         <div class="meta-chip"><div class="value">${CPT_ROUNDS}라운드</div><div class="label">총 라운드</div></div>
-        <div class="meta-chip"><div class="value">${best !== null ? best + "ms" : "-"}</div><div class="label">내 최고기록</div></div>
         <div class="meta-chip"><div class="value">${CPT_NOGO_COUNT}회</div><div class="label">참아야 할 신호</div></div>
       </div>
       <p class="disclaimer">너무 일찍 누르면 그 라운드는 다시 진행되지만, 성급했던 횟수도\n충동 점수에 함께 기록돼요. 주황불에서는 누르지 않는 게 정답이에요!</p>
@@ -421,10 +418,7 @@ export function renderReactionPlay() {
   function finish() {
     const stats = summarizeGameResults(results);
     stats.prematureCount = prematureCount;
-    const best = bestReactionTime();
-    const isBest = stats.avgRt !== null && (best === null || stats.avgRt < best);
-    if (isBest) saveBestReactionTime(stats.avgRt);
-    state.lastReaction = { ...stats, isBest };
+    state.lastReaction = stats;
     // 게임이 이 테스트의 마지막 단계라, 끝나면 바로 최종 결과(게임 분석 포함)로 간다.
     go("test-result");
   }
