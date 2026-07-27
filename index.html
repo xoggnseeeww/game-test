@@ -4,14 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>과몰입구역</title>
-<meta name="description" content="1분이면 끝나는 성인 ADHD 성향 체크와 반응속도 미니게임. 나는 어떤 유형일까?">
-<!-- referrer 정책: 결과 페이지 경로(/test/adhd/result 등)가 광고 스크립트를 포함한
+<meta name="description" content="DISC 행동유형 검사, 성인 ADHD 성향 체크, 반응속도 게임. 나는 어떤 유형일까?">
+<!-- referrer 정책: 결과 페이지 경로(/test/disc/result 등)가 광고 스크립트를 포함한
      외부 도메인으로 그대로 새어나가지 않도록 origin까지만 보낸다. -->
 <meta name="referrer" content="strict-origin-when-cross-origin">
-<!-- 정적 사이트라 og:image·페이지별 동적 미리보기는 지원하지 않음(전체 공통 태그) -->
+<!-- 정적 사이트라 페이지별 동적 미리보기가 안 된다. 이 태그는 모든 주소에 공통으로
+     적용되므로 특정 테스트 이름을 넣으면 다른 테스트 링크가 엉뚱하게 미리보기된다.
+     결과별 미리보기가 필요하면 결과 주소마다 정적 셸을 만들어야 한다. -->
 <meta property="og:type" content="website">
-<meta property="og:title" content="과몰입구역 - 성인 ADHD 성향 체크 · 반응속도 게임">
-<meta property="og:description" content="1분이면 끝나는 성향 체크와 미니게임. 나는 어떤 유형일까?">
+<meta property="og:title" content="과몰입구역 - 심리테스트 · 미니게임">
+<meta property="og:description" content="DISC 행동유형 검사부터 반응속도 게임까지. 나는 어떤 유형일까?">
 <meta property="og:url" content="https://fun.data-pantry.com/">
 <meta name="twitter:card" content="summary">
 <link rel="preconnect" href="https://fastly.jsdelivr.net" />
@@ -20,6 +22,6 @@
 </head>
 <body>
   <div id="app"></div>
-  <script src="/app.js"></script>
+  <script type="module" src="/js/main.js"></script>
 </body>
 </html>
