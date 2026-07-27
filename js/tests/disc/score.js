@@ -82,63 +82,32 @@ export function resolveDiscType(raw, mostCount = emptyRaw()) {
   };
 }
 
-// 딜레마 게임 결과를 축 보너스로 환산한다.
-//   선택 내용   → 우선순위(과제/사람)
-//   결정 지연시간 → 속도(빠름/신중)
-// 두 신호가 겹치는 한 사분면이 곧 한 축이다. 다만 지연시간은 읽는 속도·기기 성능에
-// 쉽게 오염되므로, 응답이 일관될 때만 쓰고 축당 +1을 넘지 않게 묶었다. 문항 12개짜리
-// 검사에서 +1은 문항 하나 분량이라, 박빙일 때 조합형을 갈라놓을 수는 있어도
-// 뚜렷하게 갈린 1위를 뒤집지는 못한다.
-export function dilemmaBonus(summary) {
-  const bonus = emptyRaw();
-  if (!summary) return bonus;
-  const total = summary.taskCount + summary.peopleCount;
-  if (!total) return bonus;
-
-  const need = Math.ceil(total * 0.75); // 3/4 이상 한쪽으로 몰려야 "경향"으로 인정
-  const taskLean = summary.taskCount >= need;
-  const peopleLean = summary.peopleCount >= need;
-  if (!taskLean && !peopleLean) return bonus;
-
-  const priority = taskLean ? "task" : "people";
-  if (!summary.paceBand) {
-    // 속도 신호가 못 미더우면 우선순위만 반영한다 (해당 우선순위의 두 축에 +1씩)
-    for (const ax of AXES) if (PRIORITY[ax] === priority) bonus[ax] = 1;
-    return bonus;
-  }
-  for (const ax of AXES) {
-    if (PRIORITY[ax] === priority && PACE[ax] === summary.paceBand) bonus[ax] = 1;
-  }
-  return bonus;
+// 딜레마 게임: 문항과 같은 방식으로 상황마다 D/I/S/C 선택지 중 하나를 고른다.
+// 예전엔 라운드마다 선택지가 2개(과제/사람)뿐이라 우선순위 축 하나만 내용으로 재고,
+// 나머지(속도) 축은 클릭까지 걸린 시간으로 추론했다. 그 추론이 읽는 속도·기기 성능에
+// 쉽게 흔들려서 "이번엔 안 기울었어요"로 끝나는 경우가 잦았다. 선택지를 4개로 늘려
+// 한 축만 알아내지 않고 매 라운드가 네 축 다 직접 재게 했다 — 타이밍은 더 안 본다.
+export function summarizeDilemma(picks) {
+  const counts = emptyRaw();
+  for (const p of picks) counts[p] += 1;
+  return counts;
 }
 
-// 라운드 로그를 요약한다.
-//
-// 지연시간은 밀리초 그대로 쓰지 않고 선택지 글자 수로 나눈다. 글자가 많으면 읽는 데
-// 오래 걸리는 게 당연해서, 그대로 두면 "긴 문장이 나온 사람 = 신중한 사람"이 돼버린다.
-//
-// 처음엔 사용자 자신의 중앙값으로 빠름/느림을 나누려 했는데, 중앙값 분할은 정의상
-// 항상 절반씩 갈린다. 일관되게 빠른 사람일수록 값이 촘촘히 모여서 오히려 어느 쪽도
-// 아닌 걸로 나오는, 잡으려던 신호를 스스로 지우는 방식이었다. 그래서 글자당 시간을
-// 고정 기준과 비교하고, 8라운드 중 6라운드 이상이 같은 쪽일 때만 인정한다.
-const FAST_MS_PER_CHAR = 70; // 선택지 글자당 이 시간 미만이면 "빠른 결정"
-const PACE_CONSISTENCY = 6; // 8라운드 중 이만큼 한쪽으로 몰려야 경향으로 인정
+// 한 축에 절반 이상 몰려야 신호로 인정한다(8라운드 중 4개). 3/4 이상(6개)이면 더
+// 뚜렷한 신호로 보고 +2. 고르게 흩어지면 보너스 없음 — 게임에서 억지로 신호를
+// 만들어내지 않는다. 총점을 낮게 잡은 이유는 D-18과 같다: 박빙일 때 조합형을
+// 갈라놓을 수는 있어도, 12문항에서 이미 뚜렷하게 갈린 1위를 뒤집지는 못해야 한다.
+const LEAN_MIN = 0.5;
+const LEAN_STRONG = 0.75;
 
-export function summarizeDilemma(rounds) {
-  const answered = rounds.filter((r) => !r.timedOut);
-  const timeouts = rounds.length - answered.length;
-  const taskCount = rounds.filter((r) => r.choice === "task").length;
-  const peopleCount = rounds.filter((r) => r.choice === "people").length;
-
-  let paceBand = null;
-  // 시간초과가 잦으면 신중한 게 아니라 딴 데 정신이 팔린 것에 가깝다 — 속도 신호를 버린다.
-  if (answered.length >= PACE_CONSISTENCY && timeouts < 3) {
-    const perChar = answered.map((r) => r.ms / Math.max(1, r.length));
-    const fast = perChar.filter((v) => v < FAST_MS_PER_CHAR).length;
-    const slow = perChar.length - fast + timeouts; // 시간초과는 신중 쪽 신호로만 센다
-    if (fast >= PACE_CONSISTENCY) paceBand = "fast";
-    else if (slow >= PACE_CONSISTENCY) paceBand = "slow";
+export function dilemmaBonus(picks) {
+  const bonus = emptyRaw();
+  if (!picks || !picks.length) return bonus;
+  const counts = summarizeDilemma(picks);
+  const total = picks.length;
+  for (const ax of AXES) {
+    if (counts[ax] >= Math.ceil(total * LEAN_STRONG)) bonus[ax] = 2;
+    else if (counts[ax] >= Math.ceil(total * LEAN_MIN)) bonus[ax] = 1;
   }
-
-  return { rounds: rounds.length, answered: answered.length, timeouts, taskCount, peopleCount, paceBand };
+  return bonus;
 }

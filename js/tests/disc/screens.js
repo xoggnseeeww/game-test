@@ -12,13 +12,10 @@ import {
   toPct,
   addBonus,
   dilemmaBonus,
-  summarizeDilemma,
 } from "./score.js";
 import { radarMarkup, animateRadar, drawRadarOnCanvas } from "./radar.js";
 
 const N = TETRADS.length;
-const DILEMMA_WINDOW = 7000; // 선택지가 뜬 뒤 이 시간이 지나면 시간초과 처리
-const DILEMMA_READ_DELAY = 1200; // 상황을 읽을 시간. 이때부터 재야 읽는 속도가 안 섞인다
 
 export function startDiscTest() {
   // 선택지 순서를 시작할 때 한 번만 섞어 state에 넣어둔다. 순서를 고정하면 첫 번째
@@ -438,13 +435,13 @@ export function renderDilemmaIntro() {
       <div class="cover">
         <div class="emoji">⚖️</div>
         <div class="tag">DISC 마지막 단계</div>
-        <h2>고민할 시간,<br/>많지 않아요</h2>
-        <p>문항 ${N}개는 끝났어요.<br/>정답 없는 상황 ${DILEMMAS.length}개만 더 고르면 결과가 나와요.</p>
+        <h2>몇 가지만<br/>더 골라볼게요</h2>
+        <p>문항 ${N}개는 끝났어요.<br/>같은 방식으로 상황 ${DILEMMAS.length}개만 더 고르면 결과가 나와요.</p>
       </div>
-      <p class="disclaimer">DISC는 <b>무엇을 우선하는가</b>(과제/사람)와 <b>얼마나 빨리 움직이는가</b>로 설명하는
-      모델이에요. 문항에서 고른 것과 여기서 고르는 것을 합쳐 최종 유형이 정해져요.</p>
+      <p class="disclaimer">방금과 똑같아요 — 상황마다 <b>가장 나 같은 반응</b> 하나를 고르면 됩니다.
+      여기서 고른 것도 문항 결과와 합쳐져 한쪽으로 뚜렷하게 몰리면 결과에 살짝 더해져요.</p>
       <div class="cta">
-        <button class="cta-btn" id="dilemma-start">게임 시작하기</button>
+        <button class="cta-btn" id="dilemma-start">시작하기</button>
       </div>
     </div>
   `));
@@ -457,108 +454,66 @@ export function renderDilemmaIntro() {
 }
 
 export function renderDilemmaPlay() {
-  const order = shuffle([...DILEMMAS.keys()]);
-  const rounds = [];
+  // 상황마다 선택지 순서를 한 번만 섞는다 — 문항 화면(state.disc.order)과 같은 이유로,
+  // 고정 순서면 특정 축이 첫 자리를 독차지해 유리해진다.
+  const order = DILEMMAS.map(() => shuffle([0, 1, 2, 3]));
+  const picks = [];
   let round = 0;
-  let timer = null;
-  let rafId = null;
   let aborted = false;
-  let openedAt = 0;
-  let armed = false;
 
-  // 화면을 떠나면 예약된 타이머와 프레임을 전부 무효화한다.
   onLeave(() => {
     aborted = true;
-    clearTimeout(timer);
-    cancelAnimationFrame(rafId);
   });
 
   app.appendChild(el(`
     <div>
-      <div class="back-row">
-        <button class="back-btn" data-nav="dilemma-intro">‹</button>
-        <div class="back-title">딜레마 게임</div>
-      </div>
       <div class="progress-row">
+        <button class="back-btn" data-nav="dilemma-intro">‹</button>
         <div class="progress-track"><div class="progress-fill" id="d-fill" style="width:0%;"></div></div>
         <div class="progress-count" id="d-count">1<span class="total">/${DILEMMAS.length}</span></div>
       </div>
-      <div class="dilemma-panel">
-        <p class="dilemma-scene" id="d-scene"></p>
-        <div class="dilemma-timer"><div class="dilemma-timer-fill" id="d-timer"></div></div>
-        <div class="dilemma-choices" id="d-choices"></div>
+      <div class="question-block">
+        <div class="qno">보너스 1.</div>
+        <h2 class="disc-scene" id="d-scene"></h2>
       </div>
+      <div class="options" id="d-options"></div>
     </div>
   `));
   bindNav(app);
 
   const sceneEl = app.querySelector("#d-scene");
-  const choicesEl = app.querySelector("#d-choices");
-  const timerEl = app.querySelector("#d-timer");
+  const optionsEl = app.querySelector("#d-options");
+  const qno = app.querySelector(".qno");
   const fill = app.querySelector("#d-fill");
   const count = app.querySelector("#d-count");
 
   function finish() {
     // 문항 결과와 합쳐 최종 유형을 결정한다 — 이 게임만의 별도 결과 화면은 없다.
-    state.disc.dilemma = summarizeDilemma(rounds);
+    state.disc.dilemma = picks;
     go("disc-result");
-  }
-
-  function record(choice, ms, timedOut, length) {
-    if (!armed) return;
-    armed = false;
-    clearTimeout(timer);
-    cancelAnimationFrame(rafId);
-    rounds.push({ choice, ms, timedOut, length });
-    round++;
-    if (round >= DILEMMAS.length) {
-      finish();
-    } else {
-      timer = setTimeout(() => {
-        if (!aborted) startRound();
-      }, 350);
-    }
   }
 
   function startRound() {
     if (aborted) return;
-    const d = DILEMMAS[order[round]];
-    const length = d.task.length + d.people.length;
+    const d = DILEMMAS[round];
 
     fill.style.width = `${Math.round((round / DILEMMAS.length) * 100)}%`;
     count.innerHTML = `${round + 1}<span class="total">/${DILEMMAS.length}</span>`;
+    qno.textContent = `보너스 ${round + 1}.`;
     sceneEl.textContent = d.scene;
-    timerEl.style.width = "100%";
-    choicesEl.innerHTML = `<p class="dilemma-hint">잠시 후 선택지가 나타나요…</p>`;
+    optionsEl.innerHTML = "";
 
-    // 상황을 읽을 시간을 먼저 주고, 선택지가 뜨는 순간부터 잰다.
-    // 이걸 안 하면 측정값의 대부분이 읽는 속도가 된다.
-    timer = setTimeout(() => {
-      if (aborted) return;
-      choicesEl.innerHTML = "";
-      for (const kind of shuffle(["task", "people"])) {
-        const btn = el(`<button class="dilemma-choice">${d[kind]}</button>`);
-        btn.addEventListener("click", () => record(kind, Math.round(performance.now() - openedAt), false, length));
-        choicesEl.appendChild(btn);
-      }
-      armed = true;
-      openedAt = performance.now();
-
-      // 숫자 카운트다운 대신 조용히 줄어드는 막대. 초를 세어 보여주면 모두가
-      // 급해져서, 재려던 속도 차이 자체가 사라진다.
-      const tick = (now) => {
-        if (aborted || !armed) return;
-        const left = Math.max(0, 1 - (now - openedAt) / DILEMMA_WINDOW);
-        timerEl.style.width = `${(left * 100).toFixed(1)}%`;
-        if (left > 0) rafId = requestAnimationFrame(tick);
-      };
-      rafId = requestAnimationFrame(tick);
-
-      // 시간이 다 가도 실패로 처리하지 않는다. 못 고른 것도 하나의 응답이다.
-      timer = setTimeout(() => {
-        if (!aborted) record(null, DILEMMA_WINDOW, true, length);
-      }, DILEMMA_WINDOW);
-    }, DILEMMA_READ_DELAY);
+    for (const idx of order[round]) {
+      const opt = d.options[idx];
+      const btn = el(`<button class="option-btn"><span class="dot"></span>${opt.text}</button>`);
+      btn.addEventListener("click", () => {
+        picks.push(opt.axis);
+        round++;
+        if (round >= DILEMMAS.length) finish();
+        else startRound();
+      });
+      optionsEl.appendChild(btn);
+    }
   }
 
   startRound();

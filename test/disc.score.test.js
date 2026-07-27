@@ -156,99 +156,53 @@ test("보너스 합산: 원점수 범위를 넘지 않게 잘린다", () => {
   assert.equal(out.S, -N);
 });
 
-test("딜레마 게임: 축당 보너스는 +1을 넘지 않는다", () => {
-  const bands = [null, "fast", "slow"];
-  for (const paceBand of bands) {
-    for (let task = 0; task <= 8; task++) {
-      const summary = { taskCount: task, peopleCount: 8 - task, paceBand, timeouts: 0 };
-      const b = dilemmaBonus(summary);
-      for (const a of AXES) assert.ok(b[a] >= 0 && b[a] <= 1, `보너스가 범위를 벗어남: ${a}=${b[a]}`);
-    }
+test("딜레마 게임: 요약은 축별 선택 횟수를 센다", () => {
+  const picks = ["D", "D", "D", "D", "I", "I", "S", "C"];
+  assert.deepEqual(summarizeDilemma(picks), { D: 4, I: 2, S: 1, C: 1 });
+  assert.deepEqual(summarizeDilemma([]), { D: 0, I: 0, S: 0, C: 0 });
+});
+
+test("딜레마 게임: 축당 보너스는 +2를 넘지 않는다", () => {
+  const rand = mulberry32(11);
+  for (let i = 0; i < 300; i++) {
+    const picks = Array.from({ length: 8 }, () => AXES[Math.floor(rand() * 4)]);
+    const b = dilemmaBonus(picks);
+    for (const a of AXES) assert.ok(b[a] >= 0 && b[a] <= 2, `보너스가 범위를 벗어남: ${a}=${b[a]}`);
   }
 });
 
-test("딜레마 게임: 선택이 갈리면 아무 보너스도 주지 않는다", () => {
-  assert.deepEqual(dilemmaBonus({ taskCount: 4, peopleCount: 4, paceBand: "fast", timeouts: 0 }), {
-    D: 0, I: 0, S: 0, C: 0,
-  });
+test("딜레마 게임: 고르게 흩어지면 보너스가 없다", () => {
+  assert.deepEqual(dilemmaBonus(["D", "I", "S", "C", "D", "I", "S", "C"]), { D: 0, I: 0, S: 0, C: 0 });
   assert.deepEqual(dilemmaBonus(null), { D: 0, I: 0, S: 0, C: 0 });
+  assert.deepEqual(dilemmaBonus([]), { D: 0, I: 0, S: 0, C: 0 });
 });
 
-test("딜레마 게임: 속도 신호가 없으면 우선순위 축만 올린다", () => {
-  const b = dilemmaBonus({ taskCount: 8, peopleCount: 0, paceBand: null, timeouts: 0 });
-  // 과제 지향 두 축(D·C)에만 +1
-  assert.deepEqual(b, { D: 1, I: 0, S: 0, C: 1 });
-  const p = dilemmaBonus({ taskCount: 0, peopleCount: 8, paceBand: null, timeouts: 0 });
-  assert.deepEqual(p, { D: 0, I: 1, S: 1, C: 0 });
+test("딜레마 게임: 절반(4/8) 이상 몰리면 +1, 3/4(6/8) 이상이면 +2", () => {
+  const lean = (n, ax) => Array.from({ length: 8 }, (_, i) => (i < n ? ax : AXES.find((a) => a !== ax)));
+  assert.equal(dilemmaBonus(lean(3, "D")).D, 0, "3/8은 아직 신호가 아니다");
+  assert.equal(dilemmaBonus(lean(4, "D")).D, 1);
+  assert.equal(dilemmaBonus(lean(5, "D")).D, 1);
+  assert.equal(dilemmaBonus(lean(6, "D")).D, 2);
+  assert.equal(dilemmaBonus(lean(8, "D")).D, 2);
 });
 
-test("딜레마 게임: 속도와 우선순위가 만나는 한 축에만 +1", () => {
-  const cases = [
-    [{ taskCount: 8, peopleCount: 0, paceBand: "fast" }, "D"],
-    [{ taskCount: 0, peopleCount: 8, paceBand: "fast" }, "I"],
-    [{ taskCount: 0, peopleCount: 8, paceBand: "slow" }, "S"],
-    [{ taskCount: 8, peopleCount: 0, paceBand: "slow" }, "C"],
-  ];
-  for (const [summary, axis] of cases) {
-    const b = dilemmaBonus({ ...summary, timeouts: 0 });
-    assert.equal(b[axis], 1, `${axis}에 보너스가 안 붙었다`);
-    assert.equal(AXES.reduce((s, a) => s + b[a], 0), 1, "보너스가 한 축에만 붙어야 한다");
-    assert.equal(PACE[axis], summary.paceBand);
-    assert.equal(PRIORITY[axis], summary.taskCount > summary.peopleCount ? "task" : "people");
-  }
+test("딜레마 게임: 두 축이 정확히 절반씩 나뉘면 둘 다 보너스를 받을 수 있다", () => {
+  const picks = ["D", "D", "D", "D", "I", "I", "I", "I"];
+  const b = dilemmaBonus(picks);
+  assert.equal(b.D, 1);
+  assert.equal(b.I, 1);
+  assert.equal(b.S, 0);
+  assert.equal(b.C, 0);
 });
 
-test("딜레마 요약: 시간초과가 잦으면 속도 신호를 버린다", () => {
-  const rounds = Array.from({ length: 8 }, (_, i) =>
-    i < 3 ? { timedOut: true, choice: "task", length: 20 } : { timedOut: false, ms: 300, choice: "task", length: 20 }
-  );
-  assert.equal(summarizeDilemma(rounds).paceBand, null);
-});
-
-test("딜레마 요약: 응답이 기준선 양쪽으로 갈리면 속도 신호를 만들지 않는다", () => {
-  const rounds = Array.from({ length: 8 }, (_, i) => ({
-    timedOut: false,
-    ms: i < 4 ? 800 : 3000, // 글자당 40ms(빠름) 4개 / 150ms(느림) 4개
-    choice: "task",
-    length: 20,
-  }));
-  assert.equal(summarizeDilemma(rounds).paceBand, null);
-});
-
-test("딜레마 요약: 6라운드 이상 한쪽으로 몰리면 속도 신호를 인정한다", () => {
-  const fast = Array.from({ length: 8 }, (_, i) => ({
-    timedOut: false,
-    ms: i < 6 ? 800 : 3000,
-    choice: "people",
-    length: 20,
-  }));
-  const s = summarizeDilemma(fast);
-  assert.equal(s.paceBand, "fast");
-  assert.equal(s.taskCount, 0);
-  assert.equal(s.peopleCount, 8);
-
-  const slow = fast.map((r) => ({ ...r, ms: 3000 }));
-  assert.equal(summarizeDilemma(slow).paceBand, "slow");
-});
-
-test("딜레마 요약: 지연시간은 글자 수로 나눠 비교한다", () => {
-  // 글자 수가 두 배면 시간도 두 배여야 같은 속도. 밀리초를 그대로 썼다면
-  // 2000ms짜리 절반이 '느림'으로 분류돼 신호가 사라졌을 입력이다.
-  const rounds = Array.from({ length: 8 }, (_, i) => ({
-    timedOut: false,
-    length: i % 2 === 0 ? 20 : 40,
-    ms: i % 2 === 0 ? 800 : 1600, // 둘 다 글자당 40ms
-    choice: "task",
-  }));
-  assert.equal(summarizeDilemma(rounds).paceBand, "fast");
-});
-
-test("딜레마 데이터: 상황마다 과제/사람 선택지가 다 있다", () => {
+test("딜레마 데이터: 상황마다 D·I·S·C 선택지가 정확히 하나씩", () => {
   assert.equal(DILEMMAS.length, 8);
   for (const [i, d] of DILEMMAS.entries()) {
     assert.ok(d.scene.trim(), `${i}번 상황 문구 누락`);
-    assert.ok(d.task.trim(), `${i}번 과제 선택지 누락`);
-    assert.ok(d.people.trim(), `${i}번 사람 선택지 누락`);
+    assert.equal(d.options.length, 4, `${i}번 선택지가 4개가 아니다`);
+    const axes = d.options.map((o) => o.axis).sort();
+    assert.deepEqual(axes, ["C", "D", "I", "S"], `${i}번 축 구성이 잘못됐다`);
+    for (const o of d.options) assert.ok(o.text.trim(), `${i}번 선택지 문구가 비어 있다`);
   }
 });
 
