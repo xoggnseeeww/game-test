@@ -9,7 +9,6 @@ import {
   renderTestShared,
   renderReactionIntro,
   renderReactionPlay,
-  renderReactionResult,
 } from "./screens.js";
 
 export const adhdTest = {
@@ -52,7 +51,13 @@ export const adhdScreens = [
     path: "/test/adhd/result",
     title: "성인 ADHD 성향 체크 결과 | 과몰입구역",
     render: renderResult,
-    guard: () => (state.answers.length < QUESTIONS.length ? "test-intro" : null),
+    // 반응속도 게임이 이제 이 테스트의 마지막 문항 취급이라, 게임을 안 거치고는
+    // 결과를 볼 수 없다. 질문만 다 풀고 게임 전에 주소로 바로 들어오면 게임으로 보낸다.
+    guard: () => {
+      if (state.answers.length < QUESTIONS.length) return "test-intro";
+      if (!state.lastReaction) return "reaction-intro";
+      return null;
+    },
   },
   {
     id: "test-shared",
@@ -69,6 +74,8 @@ export const adhdScreens = [
     title: "반응속도 게임 | 과몰입구역",
     render: renderReactionIntro,
     theme: "game",
+    // 문항에 다 답하기 전에 주소로 바로 들어오면 이어질 게 없다.
+    guard: () => (state.answers.length < QUESTIONS.length ? "test-intro" : null),
   },
   {
     id: "reaction-play",
@@ -76,13 +83,6 @@ export const adhdScreens = [
     title: "반응속도 게임 - 플레이 중 | 과몰입구역",
     render: renderReactionPlay,
     theme: "game",
-  },
-  {
-    id: "reaction-result",
-    path: "/test/adhd/reaction/result",
-    title: "반응속도 게임 결과 | 과몰입구역",
-    render: renderReactionResult,
-    theme: "game",
-    guard: () => (state.lastReaction ? null : "reaction-intro"),
+    guard: () => (state.answers.length < QUESTIONS.length ? "test-intro" : null),
   },
 ];
