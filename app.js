@@ -126,7 +126,7 @@ function sharedProfileFromPath(pathname) {
   return m ? SLUG_TO_PROFILE[m[1]] || null : null;
 }
 
-// 반응·주의력 게임: Go/No-Go 과제를 단순화한 10라운드 미니게임.
+// 반응·주의력 게임: Go/No-Go 과제를 단순화한 미니게임 (라운드 수는 CPT_ROUNDS).
 // 초록불(go)엔 반응, 주황불(no-go)엔 억제 — 두 종류 오류와 반응시간 변산성을 측정한다.
 const CPT_ROUNDS = 14;
 const CPT_NOGO_COUNT = 4;
@@ -372,7 +372,7 @@ function renderPsychList() {
           <div class="icon">🎯</div>
           <div class="body">
             <div class="name">성인 ADHD 성향 체크</div>
-            <div class="desc">집중 안 되는 나, 혹시…? · 12문항</div>
+            <div class="desc">집중 안 되는 나, 혹시…? · ${QUESTIONS.length}문항</div>
           </div>
           <div class="chevron">›</div>
         </button>

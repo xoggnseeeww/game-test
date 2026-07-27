@@ -1,0 +1,13 @@
+# 조건부 로드 문서 — READ ORDER 조건(회귀 추적 / 과거 설계 배경 / 명시 요청)에
+# 해당할 때만 명시적으로 Read 한다. ignore에 있어도 명시적 Read는 가능하다.
+PROGRESS.md
+archive/
+
+# 최초 디자인 목업. 앱 동작·배포와 무관하며 크다.
+# 원래 시안을 대조해야 할 때만 명시적으로 Read.
+docs/design-draft.html
+
+# 기타
+.DS_Store
+*.png
+*.jpg
