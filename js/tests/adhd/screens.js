@@ -314,8 +314,8 @@ export function renderReactionIntro() {
         <p>문항은 다 풀었어요! 마지막으로 초록불엔 재빨리 탭, 주황불엔 참아보세요.<br/>${CPT_ROUNDS}라운드로 충동 조절과 집중력을 확인하면 최종 결과가 나와요.</p>
       </div>
       <div class="meta-chips">
-        <div class="meta-chip"><div class="value">${CPT_ROUNDS}라운드</div><div class="label">게임 방식</div></div>
-        <div class="meta-chip"><div class="value">${best !== null ? best + "ms" : "-"}</div><div class="label">내 평균 반응속도</div></div>
+        <div class="meta-chip"><div class="value">${CPT_ROUNDS}라운드</div><div class="label">총 라운드</div></div>
+        <div class="meta-chip"><div class="value">${best !== null ? best + "ms" : "-"}</div><div class="label">내 최고기록</div></div>
         <div class="meta-chip"><div class="value">${CPT_NOGO_COUNT}회</div><div class="label">참아야 할 신호</div></div>
       </div>
       <p class="disclaimer">너무 일찍 누르면 그 라운드는 다시 진행되지만, 성급했던 횟수도\n충동 점수에 함께 기록돼요. 주황불에서는 누르지 않는 게 정답이에요!</p>

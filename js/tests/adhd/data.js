@@ -121,7 +121,7 @@ export const SLUG_TO_PROFILE = {
 };
 export const PROFILE_TO_SLUG = Object.fromEntries(Object.entries(SLUG_TO_PROFILE).map(([slug, key]) => [key, slug]));
 
-// 반응·주의력 게임: Go/No-Go 과제를 단순화한 10라운드 미니게임.
+// 반응·주의력 게임: Go/No-Go 과제를 단순화한 미니게임 (라운드 수는 아래 CPT_ROUNDS 참고).
 // 초록불(go)엔 반응, 주황불(no-go)엔 억제 — 두 종류 오류와 반응시간 변산성을 측정한다.
 export const CPT_ROUNDS = 14;
 export const CPT_NOGO_COUNT = 4;
