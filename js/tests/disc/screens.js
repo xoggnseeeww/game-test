@@ -84,7 +84,7 @@ export function renderDiscIntro() {
         <div class="emoji">🎭</div>
         <div class="tag">DISC 행동유형 검사</div>
         <h2>나는 어떤<br/>행동유형일까?</h2>
-        <p>상황 12개와 짧은 게임 하나.<br/>남들이랑 확실히 다르게 나와요.</p>
+        <p>상황 ${N}개와 짧은 게임 하나.<br/>남들이랑 확실히 다르게 나와요.</p>
       </div>
       <div class="meta-chips">
         <div class="meta-chip"><div class="value">${N}상황</div><div class="label">먼저</div></div>
