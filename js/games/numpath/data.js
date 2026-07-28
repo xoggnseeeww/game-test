@@ -24,10 +24,16 @@ export function levelFor(stageIndex) {
 export const MAX_STARS = 3;
 
 // 3성: 최적 경로(solve()의 minMoves)와 이동 횟수가 같다.
-// 2성: 이동 제한 대비 20% 이상 단축(정수 내림 — 20%에 조금 못 미치는 경우까지 통과시키지 않는다).
+// 2성: 남은 여유(moveLimit - minMoves, "slack")의 절반 이하만 썼다.
 // 1성: 클리어.
+//
+// "이동 제한의 80%"처럼 moveLimit 기준 고정 비율로 재는 대신 minMoves 기준 slack의 절반으로
+// 정의한다 — LEVELS의 slack이 pathLen 대비 작게(2~3) 잡혀 있어서, moveLimit*0.8이 항상
+// minMoves 이하로 떨어져 2성 구간이 모든 레벨에서 통째로 사라지는 문제가 있었다
+// (test/numpath.generate.test.js의 회귀 테스트가 이걸 잡는다).
 export function starsFor({ movesUsed, moveLimit, minMoves }) {
   if (minMoves !== null && movesUsed <= minMoves) return 3;
-  if (movesUsed <= Math.floor(moveLimit * 0.8)) return 2;
+  const twoStarThreshold = minMoves !== null ? minMoves + Math.ceil((moveLimit - minMoves) / 2) : Math.floor(moveLimit * 0.8);
+  if (movesUsed <= twoStarThreshold) return 2;
   return 1;
 }

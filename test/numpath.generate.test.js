@@ -94,3 +94,19 @@ test("starsFor: minMoves를 모르면(null) 최적 비교를 건너뛰고 80% �
   assert.equal(starsFor({ movesUsed: 8, moveLimit: 10, minMoves: null }), 2);
   assert.equal(starsFor({ movesUsed: 9, moveLimit: 10, minMoves: null }), 1);
 });
+
+// 회귀 방지: LEVELS의 실제 slack(2~3)은 pathLen 대비 작아서, "이동 제한의 80%" 같은 moveLimit
+// 기준 고정 비율로 2성 임계값을 정하면 그 값이 minMoves 이하로 떨어져 2성 구간이 통째로
+// 사라진다(3성 아니면 바로 1성). 실제 레벨 파라미터로 3단계가 전부 실재하는지 직접 확인한다.
+for (let levelIndex = 0; levelIndex < LEVELS.length; levelIndex++) {
+  const level = LEVELS[levelIndex];
+  test(`starsFor: 레벨 ${levelIndex}(pathLen=${level.pathLen}, slack=${level.slack})에서 1·2·3성이 모두 실재한다`, () => {
+    const minMoves = level.pathLen;
+    const moveLimit = level.pathLen + level.slack;
+    const achieved = new Set();
+    for (let movesUsed = minMoves; movesUsed <= moveLimit; movesUsed++) {
+      achieved.add(starsFor({ movesUsed, moveLimit, minMoves }));
+    }
+    assert.deepEqual([...achieved].sort(), [1, 2, 3], `나온 등급: ${[...achieved].sort().join(",")}`);
+  });
+}
