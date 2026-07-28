@@ -44,7 +44,7 @@ export function renderTestIntro() {
       <div class="cta">
         <button class="cta-btn" id="start-btn">테스트 시작하기</button>
       </div>
-      ${adSlotMarkup("banner", "margin:6px 20px 22px;")}
+      ${adSlotMarkup("banner", "margin-top:6px; margin-bottom:22px;")}
     </div>
   `));
   bindNav(app);
@@ -304,6 +304,7 @@ export function renderTestShared() {
       <div class="cta" style="padding-top:10px;">
         <button class="cta-btn" data-nav="test-intro">나도 성향 체크해보기</button>
       </div>
+      ${adSlotMarkup("banner", "margin-top:6px; margin-bottom:22px;")}
     </div>
   `));
   bindNav(app);

@@ -144,7 +144,15 @@ body {
   overflow: hidden;
 }
 
-.ad-slot.banner { height: 52px; }
+/* 320px 배너 + 좌우 여백(20px×2) = 360px. 뷰포트가 그보다 좁은 기기(구형 아이폰 SE
+   1세대 등, 320px)에서는 여백부터 줄여서 광고가 위 overflow:hidden에 잘리지 않게 한다.
+   360px 이상에서는 원래대로 20px — min()이 자연스럽게 그 경계를 만든다.
+   (adSlotMarkup 호출부는 세로 여백만 인라인으로 주고, 좌우는 항상 이 규칙에 맡긴다) */
+.ad-slot.banner {
+  height: 52px;
+  margin-left: min(20px, calc((100% - 320px) / 2));
+  margin-right: min(20px, calc((100% - 320px) / 2));
+}
 .ad-slot.rect { height: 250px; margin: 16px 20px 4px; }
 
 .hero {

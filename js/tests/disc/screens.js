@@ -99,7 +99,7 @@ export function renderDiscIntro() {
       <div class="cta">
         <button class="cta-btn" id="disc-start">시작하기</button>
       </div>
-      ${adSlotMarkup("banner", "margin:6px 20px 22px;")}
+      ${adSlotMarkup("banner", "margin-top:6px; margin-bottom:22px;")}
     </div>
   `));
   bindNav(app);
@@ -356,7 +356,7 @@ export function renderDiscShared() {
       <div class="cta" style="padding-top:18px;">
         <button class="cta-btn" data-nav="disc-intro">나는 어떤 유형인지 해보기</button>
       </div>
-      ${adSlotMarkup("banner", "margin:6px 20px 22px;")}
+      ${adSlotMarkup("banner", "margin-top:6px; margin-bottom:22px;")}
     </div>
   `));
   bindNav(app);

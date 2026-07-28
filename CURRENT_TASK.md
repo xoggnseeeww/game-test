@@ -12,6 +12,12 @@
   `js/core/router.js`의 `render()` 끝에서 호출. `index.html`의 로더는 preconnect로 교체.
   `.ad-slot`의 점선 테두리(플레이스홀더 잔재)도 제거 — 실제 광고 둘레에 남아 있었다.
   `scripts/verify.cjs`에 회귀 검사 2건 추가(홈 · SPA 이동 후). → `docs/ERRORS.md` E-10
+- **광고 사이즈·배치 재점검** (같은 세션 후속): Playwright로 뷰포트별 슬롯 실폭을 직접 재서 두 가지를 발견·수정.
+  ① 320px 폭 기기(구형 아이폰 SE 1세대 등)에서 배너(320px)가 좌우 여백(20px×2) 때문에 슬롯 안에 40px이 부족해
+  `overflow:hidden`에 잘릴 수 있었다 → `.ad-slot.banner`에 `margin-left/right: min(20px, calc((100% - 320px) / 2))`
+  추가, 세로 여백은 각 화면이 인라인(`margin-top`/`margin-bottom`만)으로 계속 지정. 360px 이상에서는 원래와 동일(20px).
+  ② ADHD 공유 결과 화면(`renderTestShared`, `/test/adhd/result/<슬러그>`)에만 광고가 아예 없었다 — DISC 공유
+  결과 화면과 비대칭. CTA 버튼 아래에 banner 슬롯 추가로 통일. → `docs/ERRORS.md` E-10에 실측 표 추가
 
 - **PC 레이아웃 v2 (카드 넓히기)**: 1차로 480px 그대로 두고 카드 프레임(그림자·둥근 모서리)만 얹었더니
   사용자가 "여전히 폰 화면 보는 느낌"이라고 피드백. `@media (min-width: 768px)`에서 `#app { max-width: 640px; }`로
