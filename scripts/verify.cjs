@@ -100,12 +100,17 @@ async function playCptGame(page) {
 
   const errors = [];
   page.on("pageerror", (e) => errors.push(String(e)));
-  // 샌드박스는 아웃바운드가 프록시로 막혀 CDN 폰트가 항상 실패한다 — 앱 버그가 아니므로 제외
+  // 샌드박스는 아웃바운드가 프록시로 막혀 외부 자원(CDN 폰트 · AdFit 로더)이 항상 실패한다.
+  // 앱 버그가 아니므로 제외한다. 다만 "Failed to load resource: ... 403" 같은 메시지는 본문에
+  // 주소가 없어서 m.text()만 보면 걸러지지 않는다 — m.location().url까지 같이 본다.
+  // (AdFit 스크립트가 슬롯마다 붙었는지는 아래 "광고 슬롯" 검사가 DOM으로 따로 확인한다)
+  const EXTERNAL_NOISE = /ERR_TUNNEL_CONNECTION_FAILED|jsdelivr|pretendard|daumcdn|AdFit/i;
   page.on("console", (m) => {
     if (m.type() !== "error") return;
     const t = m.text();
-    if (/ERR_TUNNEL_CONNECTION_FAILED|jsdelivr|pretendard/i.test(t)) return;
-    errors.push(t);
+    const url = (m.location() && m.location().url) || "";
+    if (EXTERNAL_NOISE.test(t) || EXTERNAL_NOISE.test(url)) return;
+    errors.push(url ? `${t} (${url})` : t);
   });
 
   const goto = (p) => page.goto(BASE + p, { waitUntil: "networkidle" });
@@ -113,6 +118,29 @@ async function playCptGame(page) {
   // === 모듈 로딩 — <script type="module">이 실제로 떴는가 ===
   await goto("/");
   check("ES 모듈 부팅", await page.isVisible(".hero-title"), page.url());
+
+  // === 광고 슬롯에 AdFit 로더가 실제로 붙는가 ===
+  // ba.min.js는 실행 시점의 문서만 훑는다. refreshAds()가 그 <script> 태그 자체를 통째로
+  // 갈아끼워(replaceWith) 재실행시키는 방식으로 화면 전환마다 재스캔시킨다 — index.html에
+  // 한 번만 심어두는 방식으로 되돌아가면 슬롯은 그려지는데 광고만 조용히 안 나온다.
+  // (샌드박스에선 로더 자체가 차단되므로 "태그가 실제로 갈아끼워지는가"까지만 본다)
+  const adSlotCount = (root) => root.$$eval(".ad-slot ins.kakao_ad_area", (list) => list.length);
+  const loaderExists = (root) => root.$eval('script[src*="ba.min.js"]', () => true).catch(() => false);
+  // 지금 붙어있는 로더 태그에 표시를 남겨서, 다음 화면 전환 때 refreshAds()가 그 태그를
+  // 실제로 갈아끼웠는지(표시가 사라졌는지) 확인한다 — 태그 존재만으로는 "한 번도 안
+  // 갈아끼워졌다"와 구분이 안 된다.
+  const markLoader = (root, mark) =>
+    root.evaluate((m) => {
+      const s = document.querySelector('script[src*="ba.min.js"]');
+      if (s) s.dataset.verifyMark = m;
+    }, mark);
+  const loaderMark = (root) =>
+    root.evaluate(() => document.querySelector('script[src*="ba.min.js"]')?.dataset.verifyMark || null);
+
+  const homeAdCount = await adSlotCount(page);
+  check("홈 광고 슬롯 존재", homeAdCount > 0, `${homeAdCount}개`);
+  check("홈 로더 스크립트 태그 존재", await loaderExists(page));
+  await markLoader(page, "home");
 
   // === 목록 카드가 등록된 테스트에서 자동 생성되는가 (registerTest) ===
   await page.click('[data-nav="psych-list"]');
@@ -124,13 +152,72 @@ async function playCptGame(page) {
   const adhdChips = await page.$$eval(".meta-chip .value", (n) => n.map((e) => e.textContent));
   check("ADHD 인트로 주소", page.url().endsWith("/test/adhd"), page.url());
 
+  // 새로고침 없는 화면 이동에서도(홈 → 목록 → 인트로, 둘 다 광고 슬롯 있음) 로더 태그가
+  // 매번 갈아끼워져야 한다 — index.html 한 번 심기로는 절대 통과할 수 없는 검사다
+  // (표시가 그대로 남아있으면 refreshAds()가 실행되지 않았다는 뜻).
+  check(
+    "SPA 이동 후 로더 태그가 재실행됨(교체됨)",
+    (await loaderMark(page)) !== "home",
+    `mark=${await loaderMark(page)}`
+  );
+
   await page.click(".cta-btn");
   await page.click(".modal-btn-primary").catch(() => {});
+
+  // === 문항 뒤로가기: in-place 리팩터 후에도 정확히 한 단계씩만 되돌아가는가 ===
+  // (go()를 다시 안 부르고 텍스트만 바꾸는 방식으로 바뀌면서 생길 수 있는 회귀 —
+  // 다음 문항으로 진짜 넘어갔는지, 뒤로가기가 딱 한 문항만 되돌리는지 직접 확인)
+  await page.waitForSelector(".option-btn");
+  const q1Text = await page.textContent("#q-text");
+  await page.click(".options .option-btn:nth-child(1)"); // Q1 답변 → Q2로
+  await page.waitForFunction(
+    (prev) => document.querySelector("#q-text")?.textContent !== prev,
+    q1Text,
+    { timeout: 3000 }
+  );
+  const q2Text = await page.textContent("#q-text");
+  check(
+    "ADHD 답변 후 같은 화면에서 다음 문항으로(재이동 없음)",
+    q2Text !== q1Text && page.url().endsWith("/test/adhd/play"),
+    `"${q1Text}" → "${q2Text}", ${page.url()}`
+  );
+  await page.click("#q-back"); // Q2 → Q1로
+  await page.waitForFunction(
+    (prev) => document.querySelector("#q-text")?.textContent !== prev,
+    q2Text,
+    { timeout: 3000 }
+  );
+  const backText = await page.textContent("#q-text");
+  check("ADHD 뒤로가기 → 직전 문항으로 정확히 한 단계만 복귀", backText === q1Text, `"${backText}" vs "${q1Text}"`);
+  await page.click("#q-back"); // 첫 문항에서 뒤로가기 → 인트로
+  check("ADHD 첫 문항에서 뒤로가기 → 인트로", page.url().endsWith("/test/adhd"), page.url());
+
+  // 다시 시작 (state.answers는 #start-btn 핸들러가 리셋한다)
+  await page.click(".cta-btn");
+  await page.click(".modal-btn-primary").catch(() => {});
+
+  // 문항 화면은 진입 시 한 번만 그리고, 다음 문항으로 넘어갈 땐 텍스트·선택지만
+  // 갈아끼운다(go()를 다시 부르지 않는다) — 광고 슬롯이 문항마다 새로 만들어지며
+  // refreshAds()가 반복 실행되는 걸 막기 위해서다. 로더 표시가 마지막 문항 직전까지
+  // 그대로 남아있어야 이게 실제로 지켜지고 있다는 뜻이다.
+  await markLoader(page, "adhd-question");
   const adhdTotal = parseInt(adhdChips[0], 10);
-  for (let i = 0; i < adhdTotal; i++) {
+  for (let i = 0; i < adhdTotal - 1; i++) {
     await page.waitForSelector(".option-btn");
     await page.click(".options .option-btn:nth-child(1)"); // 전부 "매우 그렇다"
   }
+  check(
+    "ADHD 문항 진행 중 광고 슬롯이 한 번만 마운트됨(로더 재실행 없음)",
+    (await loaderMark(page)) === "adhd-question",
+    `mark=${await loaderMark(page)} (문항 ${adhdTotal - 1}개 통과)`
+  );
+  check(
+    "ADHD 문항 화면에 광고 슬롯 정확히 1개(중복 누적 없음)",
+    (await page.$$eval(".ad-slot", (l) => l.length)) === 1,
+    `${await page.$$eval(".ad-slot", (l) => l.length)}개`
+  );
+  await page.waitForSelector(".option-btn");
+  await page.click(".options .option-btn:nth-child(1)"); // 마지막 문항
 
   // 반응속도 게임은 보너스가 아니라 이 테스트의 마지막 단계다 — 문항이 끝나면 결과가
   // 아니라 게임으로 바로 이어진다. 결과는 게임까지 마쳐야 볼 수 있다(guard).
@@ -144,6 +231,13 @@ async function playCptGame(page) {
   await page.click(".cta-btn"); // 게임 시작 — 방법 안내 모달이 뜬다
   await page.click(".modal-btn-primary");
   await playCptGame(page); // 전부 정답으로 클린 플레이 (보너스 0 → 축 퍼센트가 안 흔들림)
+
+  // 게임이 끝나면 결과가 아니라 광고 게이트(reaction-ad)를 한 번 거친다.
+  // 카운트다운 중엔 버튼이 비활성 상태이고, 다 세면 활성화된다(js/core/dom.js bindAdGate).
+  await page.waitForSelector("#ad-gate-continue", { timeout: 5000 });
+  check("ADHD 게임 종료 → 결과가 아니라 광고 게이트로 직행", page.url().endsWith("/test/adhd/reaction/ad"), page.url());
+  await page.waitForFunction(() => !document.querySelector("#ad-gate-continue").disabled, { timeout: 6000 });
+  await page.click("#ad-gate-continue");
 
   await page.waitForSelector(".result-card", { timeout: 5000 });
 
@@ -183,7 +277,40 @@ async function playCptGame(page) {
 
   await page.click("#disc-start");
   await page.click(".modal-btn-primary").catch(() => {});
-  for (let i = 0; i < discTotal; i++) {
+
+  // === DISC 문항 뒤로가기: 2단계(most/least) 사이, 문항 사이 각각 확인 ===
+  await page.waitForSelector(".options .option-btn:not([disabled])");
+  const scene1 = await page.textContent("#disc-scene");
+  await page.click(".options .option-btn:not([disabled])"); // most 선택 → least 단계로
+  await page.waitForSelector(".disc-step-hint.least", { timeout: 3000 });
+  check(
+    "DISC most 선택 후 같은 화면에서 least 단계로(재이동 없음)",
+    page.url().endsWith("/test/disc/play"),
+    page.url()
+  );
+  await page.click("#disc-back"); // least → 같은 문항의 most 단계로
+  await page.waitForFunction(
+    () => !document.querySelector(".disc-step-hint").classList.contains("least"),
+    { timeout: 3000 }
+  );
+  const sceneAfterBack = await page.textContent("#disc-scene");
+  check(
+    "DISC least에서 뒤로가기 → 같은 문항의 most 단계로 복귀",
+    sceneAfterBack === scene1,
+    `"${sceneAfterBack}" vs "${scene1}"`
+  );
+  await page.click("#disc-back"); // 첫 문항 most에서 뒤로가기 → 인트로
+  check("DISC 첫 문항 most에서 뒤로가기 → 인트로", page.url().endsWith("/test/disc"), page.url());
+
+  // 다시 시작 (#disc-start가 startDiscTest()로 state.disc를 통째로 리셋한다)
+  await page.click("#disc-start");
+  await page.click(".modal-btn-primary").catch(() => {});
+
+  // ADHD와 같은 이유로, DISC 문항 화면도 문항·단계가 바뀔 때 go()를 다시 부르지
+  // 않고 텍스트·선택지만 갈아끼운다. 로더 표시가 마지막 문항 직전까지 그대로
+  // 남아있어야 한다(2단계짜리라 총 discTotal*2번 클릭 중 마지막 한 번만 빼고 확인).
+  await markLoader(page, "disc-question");
+  for (let i = 0; i < discTotal - 1; i++) {
     // 1단계: 가장 나 같은 것 → 첫 번째
     await page.waitForSelector(".options .option-btn:not([disabled])");
     await page.click(".options .option-btn:not([disabled])");
@@ -191,6 +318,22 @@ async function playCptGame(page) {
     await page.waitForSelector(".options .option-btn:not([disabled])");
     await page.click(".options .option-btn:not([disabled])");
   }
+  check(
+    "DISC 문항 진행 중 광고 슬롯이 한 번만 마운트됨(로더 재실행 없음)",
+    (await loaderMark(page)) === "disc-question",
+    `mark=${await loaderMark(page)} (문항 ${discTotal - 1}개 통과)`
+  );
+  check(
+    "DISC 문항 화면에 광고 슬롯 정확히 1개(중복 누적 없음)",
+    (await page.$$eval(".ad-slot", (l) => l.length)) === 1,
+    `${await page.$$eval(".ad-slot", (l) => l.length)}개`
+  );
+  // 마지막 문항 (1단계 + 2단계) — 끝나면 딜레마 게임으로 넘어간다
+  await page.waitForSelector(".options .option-btn:not([disabled])");
+  await page.click(".options .option-btn:not([disabled])");
+  await page.waitForSelector(".options .option-btn:not([disabled])");
+  await page.click(".options .option-btn:not([disabled])");
+
   // 문항이 끝나면 결과가 아니라 딜레마 게임으로 이어진다 — 게임 결과까지 반영된
   // 유형을 한 번에 보여주기 위해 disc-result 가드가 게임 완료를 요구한다.
   check("문항 완료 → 딜레마 인트로로 자동 이동", page.url().endsWith("/test/disc/dilemma"), page.url());
@@ -212,6 +355,13 @@ async function playCptGame(page) {
     if (dilemmaRounds > 20) break; // 무한루프 방지 (버그가 있으면 여기서 멎는다)
   }
   check("딜레마 매 라운드 선택지 4개(D/I/S/C)", sawFourAxisRound);
+
+  // 딜레마 게임이 끝나면 결과가 아니라 광고 게이트(dilemma-ad)를 한 번 거친다.
+  await page.waitForSelector("#ad-gate-continue", { timeout: 5000 });
+  check("딜레마 게임 종료 → 결과가 아니라 광고 게이트로 직행", page.url().endsWith("/test/disc/dilemma/ad"), page.url());
+  await page.waitForFunction(() => !document.querySelector("#ad-gate-continue").disabled, { timeout: 6000 });
+  await page.click("#ad-gate-continue");
+
   await page.waitForSelector(".result-card", { timeout: 5000 });
   check("딜레마 게임 완주 → 별도 결과 화면 없이 DISC 결과로 직행", page.url().includes("/test/disc/result"), page.url());
   check("DISC 결과에 유형 표시", (await page.textContent(".result-card")).trim().length > 20);
@@ -254,6 +404,8 @@ async function playCptGame(page) {
     ["/test/disc/dilemma", ".cover", "딜레마"],
     ["/test/adhd/reaction", ".cover", "반응속도 게임 (문항 미완료)"],
     ["/test/adhd/reaction/play", ".cover", "반응속도 게임 플레이 (문항 미완료)"],
+    ["/test/adhd/reaction/ad", ".cover", "광고 게이트 (게임 미완료, ADHD)"],
+    ["/test/disc/dilemma/ad", ".cover", "광고 게이트 (게임 미완료, DISC)"],
   ]) {
     await goto(p);
     check(`${label} 주소 직접 접속 → 인트로 폴백`, await page.isVisible(sel), page.url());

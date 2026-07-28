@@ -9,6 +9,7 @@ import {
   renderDiscShared,
   renderDilemmaIntro,
   renderDilemmaPlay,
+  renderDilemmaAd,
 } from "./screens.js";
 
 export const discTest = {
@@ -84,5 +85,18 @@ export const discScreens = [
     render: renderDilemmaPlay,
     theme: "disc",
     guard: () => (done() ? null : "disc-intro"),
+  },
+  {
+    id: "dilemma-ad",
+    path: "/test/disc/dilemma/ad",
+    title: "결과 준비 중 | 과몰입구역",
+    render: renderDilemmaAd,
+    theme: "disc",
+    // 딜레마 게임까지 끝내야 이 화면에 올 게 있다 — 게임 전에 주소로 바로 들어오면 되돌린다.
+    guard: () => {
+      if (!done()) return "disc-intro";
+      if (!state.disc.dilemma) return "dilemma-intro";
+      return null;
+    },
   },
 ];

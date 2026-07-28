@@ -2,10 +2,40 @@
 const AD_UNITS = {
   banner: { unit: "DAN-YtXY1keVu0glLXJQ", width: 320, height: 50 },
   rect: { unit: "DAN-PKr3oCfRI9IIiXwz", width: 250, height: 250 },
+  // 게임(반응속도·딜레마)이 끝나고 결과로 넘어가기 직전에 한 번 보여주는 게이트 화면 전용.
+  interstitial: { unit: "DAN-tmLP8h8cur4SzSpG", width: 300, height: 250 },
 };
 
 export function adSlotMarkup(kind, style = "") {
   const { unit, width, height } = AD_UNITS[kind];
   const styleAttr = style ? ` style="${style}"` : "";
   return `<div class="ad-slot ${kind}"${styleAttr}><ins class="kakao_ad_area" style="display:none;" data-ad-unit="${unit}" data-ad-width="${width}" data-ad-height="${height}"></ins></div>`;
+}
+
+// 게임 종료 → 결과 화면 사이에 끼우는 광고 게이트. AdFit 웹 SDK엔 몇 초 뒤 자동
+// 전환되는 진짜 전면광고 포맷이 없어서, 고정 크기 광고 단위(interstitial)를 화면
+// 하나로 채우고 짧은 카운트다운 뒤에 "계속하기" 버튼을 활성화하는 것으로 대신한다.
+// 카운트다운 진행/버튼 활성화는 core/dom.js의 bindAdGate()가 맡는다 — 여긴 마크업만.
+// 홈 버튼(.exit-btn)은 이 카운트다운과 무관하게 항상 즉시 동작한다(트래픽 이탈 방지).
+export function adGateMarkup(message) {
+  return `
+    <div class="ad-gate">
+      <p class="ad-gate-msg">${message}</p>
+      ${adSlotMarkup("interstitial", "margin-top:6px; margin-bottom:18px;")}
+      <button class="cta-btn" id="ad-gate-continue" disabled>결과 보러 가기 (<span id="ad-gate-count">3</span>)</button>
+    </div>
+  `;
+}
+
+// ba.min.js는 로드되는 시점에 DOM에 있는 .kakao_ad_area만 스캔한다. 이 앱은 SPA라
+// 화면 전환마다 광고 슬롯을 새로 그리는데, 최초 로드 이후에 생기는 슬롯은 스크립트가
+// 다시 스캔해주지 않아 광고가 비어 있는 채로 남는다(뜨다가 말다가 하는 원인).
+// 스크립트 태그를 새로 갈아끼워 재실행시키면 그 시점의 DOM을 다시 스캔한다.
+export function refreshAds() {
+  const prev = document.querySelector('script[src*="ba.min.js"]');
+  if (!prev) return;
+  const next = document.createElement("script");
+  next.src = prev.src;
+  next.async = true;
+  prev.replaceWith(next);
 }

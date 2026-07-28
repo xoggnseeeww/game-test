@@ -1,10 +1,10 @@
 // DISC 검사의 모든 화면 + 딜레마 미니게임 화면.
 import { app, go, onLeave, parseSharedPath } from "../../core/router.js";
-import { el, bindNav, bindExit } from "../../core/dom.js";
+import { el, bindNav, bindExit, bindAdGate } from "../../core/dom.js";
 import { state } from "../../core/state.js";
 import { shuffle, roundRect } from "../../core/util.js";
 import { shareBlockMarkup, wireShare } from "../../core/share.js";
-import { adSlotMarkup } from "../../core/ads.js";
+import { adSlotMarkup, adGateMarkup } from "../../core/ads.js";
 import { TETRADS, DILEMMAS, DISC_TYPES, AXIS_LABELS } from "./data.js";
 import {
   AXES,
@@ -79,6 +79,7 @@ export function renderDiscIntro() {
         <div class="back-title">심리테스트</div>
         <button class="exit-btn" data-nav="home" aria-label="홈으로 가기">🏠</button>
       </div>
+      ${adSlotMarkup("banner", "margin-top:10px; margin-bottom:4px;")}
       <div class="cover">
         <div class="emoji">🎭</div>
         <div class="tag">직장인 유형검사</div>
@@ -96,7 +97,7 @@ export function renderDiscIntro() {
       <div class="cta">
         <button class="cta-btn" id="disc-start">시작하기</button>
       </div>
-      ${adSlotMarkup("banner", "margin:6px 20px 22px;")}
+      ${adSlotMarkup("banner", "margin-top:6px; margin-bottom:22px;")}
     </div>
   `));
   bindNav(app);
@@ -108,78 +109,101 @@ export function renderDiscIntro() {
 
 // ---------------------------------------------------------------- 문항
 
+// 문항(과 단계)을 넘길 때마다 go("disc-question")으로 화면 전체를 다시 그리면, 광고
+// 슬롯도 매번 새로 만들어져 refreshAds()가 최대 N*2번 실행된다 — 로드되다 만 노출만
+// 쌓인다. 반응속도 게임(renderReactionPlay)이 라운드마다 하는 것과 같은 패턴으로,
+// 화면은 문항 진입 시 한 번만 그리고 문항·단계가 바뀔 때는 텍스트·선택지만 갈아끼운다.
 export function renderDiscQuestion() {
-  const order = ensureOrder();
-  const i = state.disc.answers.length;
-  const tetrad = TETRADS[i];
-  const pendingMost = state.disc.pending.most;
-  const step = pendingMost === null ? "most" : "least";
-
-  // 진행바는 반 칸씩 움직이지만 숫자는 12분의 몇으로 보여준다.
-  // 24문항을 푸는 기분이 들면 중간 이탈이 늘어난다.
-  const progress = Math.round(((i * 2 + (step === "least" ? 1 : 0)) / (N * 2)) * 100);
-
   app.appendChild(el(`
     <div>
       <div class="progress-row">
         <button class="back-btn" id="disc-back">‹</button>
-        <div class="progress-track"><div class="progress-fill" style="width:${progress}%;"></div></div>
-        <div class="progress-count">${i + 1}<span class="total">/${N}</span></div>
+        <div class="progress-track"><div class="progress-fill" id="disc-fill" style="width:0%;"></div></div>
+        <div class="progress-count" id="disc-count"></div>
         <button class="exit-btn" aria-label="홈으로 가기">🏠</button>
       </div>
       <div class="question-block">
-        <div class="qno">Q${i + 1}.</div>
-        <h2 class="disc-scene">${tetrad.scene}</h2>
+        <div class="qno" id="disc-qno"></div>
+        <h2 class="disc-scene" id="disc-scene"></h2>
       </div>
-      <div class="disc-step-hint ${step === "least" ? "least" : ""}">
-        ${step === "most" ? "이 중 <b>가장 나 같은 것</b> 하나" : "이번엔 <b>가장 나 같지 않은 것</b> 하나"}
-      </div>
-      <div class="options"></div>
+      <div class="disc-step-hint" id="disc-hint"></div>
+      <div class="options" id="disc-options"></div>
+      ${adSlotMarkup("banner", "margin-top:18px; margin-bottom:4px;")}
     </div>
   `));
 
-  const optionsEl = app.querySelector(".options");
-  for (const idx of order[i]) {
-    const opt = tetrad.options[idx];
-    const picked = opt.axis === pendingMost;
-    // 1단계에서 고른 선택지는 지우지 않고 잠근다. 비교할 맥락이 남아 있고,
-    // 같은 걸 두 번 고르는 상황 자체가 구조적으로 불가능해진다.
-    const btn = el(`
-      <button class="option-btn ${picked ? "picked-most" : ""}" ${picked && step === "least" ? "disabled" : ""}>
-        <span class="dot"></span>${opt.text}
-      </button>
-    `);
-    if (!(picked && step === "least")) {
-      btn.addEventListener("click", () => {
-        if (step === "most") {
-          state.disc.pending.most = opt.axis;
-          go("disc-question");
-        } else {
-          state.disc.answers.push({ most: pendingMost, least: opt.axis });
-          state.disc.pending.most = null;
-          // 문항이 끝나면 결과로 바로 가지 않고 딜레마 게임을 거친다 — 게임 결과까지
-          // 반영된 최종 유형을 한 번에 보여주기 위해서다.
-          go(state.disc.answers.length >= N ? "dilemma-intro" : "disc-question");
-        }
-      });
+  const order = ensureOrder();
+  const fill = app.querySelector("#disc-fill");
+  const count = app.querySelector("#disc-count");
+  const qno = app.querySelector("#disc-qno");
+  const sceneEl = app.querySelector("#disc-scene");
+  const hintEl = app.querySelector("#disc-hint");
+  const optionsEl = app.querySelector("#disc-options");
+  const backBtn = app.querySelector("#disc-back");
+
+  function renderCurrent() {
+    const i = state.disc.answers.length;
+    const tetrad = TETRADS[i];
+    const pendingMost = state.disc.pending.most;
+    const step = pendingMost === null ? "most" : "least";
+
+    // 진행바는 반 칸씩 움직이지만 숫자는 12분의 몇으로 보여준다.
+    // 24문항을 푸는 기분이 들면 중간 이탈이 늘어난다.
+    const progress = Math.round(((i * 2 + (step === "least" ? 1 : 0)) / (N * 2)) * 100);
+    fill.style.width = `${progress}%`;
+    count.innerHTML = `${i + 1}<span class="total">/${N}</span>`;
+    qno.textContent = `Q${i + 1}.`;
+    sceneEl.textContent = tetrad.scene;
+    hintEl.className = `disc-step-hint ${step === "least" ? "least" : ""}`;
+    hintEl.innerHTML = step === "most" ? "이 중 <b>가장 나 같은 것</b> 하나" : "이번엔 <b>가장 나 같지 않은 것</b> 하나";
+
+    optionsEl.innerHTML = "";
+    for (const idx of order[i]) {
+      const opt = tetrad.options[idx];
+      const picked = opt.axis === pendingMost;
+      // 1단계에서 고른 선택지는 지우지 않고 잠근다. 비교할 맥락이 남아 있고,
+      // 같은 걸 두 번 고르는 상황 자체가 구조적으로 불가능해진다.
+      const btn = el(`
+        <button class="option-btn ${picked ? "picked-most" : ""}" ${picked && step === "least" ? "disabled" : ""}>
+          <span class="dot"></span>${opt.text}
+        </button>
+      `);
+      if (!(picked && step === "least")) {
+        btn.addEventListener("click", () => {
+          if (step === "most") {
+            state.disc.pending.most = opt.axis;
+            renderCurrent();
+          } else {
+            state.disc.answers.push({ most: pendingMost, least: opt.axis });
+            state.disc.pending.most = null;
+            // 문항이 끝나면 결과로 바로 가지 않고 딜레마 게임을 거친다 — 게임 결과까지
+            // 반영된 최종 유형을 한 번에 보여주기 위해서다.
+            if (state.disc.answers.length >= N) go("dilemma-intro");
+            else renderCurrent();
+          }
+        });
+      }
+      optionsEl.appendChild(btn);
     }
-    optionsEl.appendChild(btn);
   }
 
   // 뒤로가기는 화면에 보이는 단계 기준으로 딱 하나씩 되돌린다.
-  app.querySelector("#disc-back").addEventListener("click", () => {
+  backBtn.addEventListener("click", () => {
+    const step = state.disc.pending.most === null ? "most" : "least";
     if (step === "least") {
       state.disc.pending.most = null;
-      go("disc-question");
+      renderCurrent();
     } else if (state.disc.answers.length > 0) {
       state.disc.pending.most = state.disc.answers.pop().most;
-      go("disc-question");
+      renderCurrent();
     } else {
       go("disc-intro");
     }
   });
 
   bindExit(app, startDiscTest);
+
+  renderCurrent();
 }
 
 // ---------------------------------------------------------------- 결과
@@ -338,6 +362,7 @@ export function renderDiscShared() {
         <button class="back-btn" data-nav="home">‹</button>
         <div class="back-title">심리테스트</div>
       </div>
+      ${adSlotMarkup("banner", "margin-top:10px; margin-bottom:4px;")}
       <div class="result-card">
         <div class="eyebrow">이 유형은</div>
         <div class="emoji">${t.emoji}</div>
@@ -353,7 +378,7 @@ export function renderDiscShared() {
       <div class="cta" style="padding-top:18px;">
         <button class="cta-btn" data-nav="disc-intro">나는 어떤 유형인지 해보기</button>
       </div>
-      ${adSlotMarkup("banner", "margin:6px 20px 22px;")}
+      ${adSlotMarkup("banner", "margin-top:6px; margin-bottom:22px;")}
     </div>
   `));
   bindNav(app);
@@ -503,7 +528,7 @@ export function renderDilemmaPlay() {
   function finish() {
     // 문항 결과와 합쳐 최종 유형을 결정한다 — 이 게임만의 별도 결과 화면은 없다.
     state.disc.dilemma = picks;
-    go("disc-result");
+    go("dilemma-ad");
   }
 
   function startRound() {
@@ -530,4 +555,19 @@ export function renderDilemmaPlay() {
   }
 
   startRound();
+}
+
+// 딜레마 게임이 끝난 직후, 결과로 넘어가기 전에 한 번 거치는 광고 게이트.
+export function renderDilemmaAd() {
+  app.appendChild(el(`
+    <div>
+      <div class="back-row">
+        <div class="back-title">결과 준비 중</div>
+        <button class="exit-btn" data-nav="home" aria-label="홈으로 가기">🏠</button>
+      </div>
+      ${adGateMarkup("게임 끝! 결과 보러 가기 전에\n광고 하나만 보고 갈게요 🙏")}
+    </div>
+  `));
+  bindNav(app);
+  bindAdGate(app, () => go("disc-result"));
 }

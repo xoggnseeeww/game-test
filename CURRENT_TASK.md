@@ -3,41 +3,13 @@
 > 이 파일은 1~2k 토큰 이하를 유지한다 — "언젠가 할 일"이 아니라 "지금 유효한 작업"만.
 
 ## 현재 작업
-없음 (DISC 검사 이름을 "직장인 유형검사"로 사용자 노출 문구 전체 변경 완료, 2026-07-28)
-
-- **DISC → "직장인 유형검사" 명칭 변경**: 목록 카드·화면 탭·인트로 태그·결과 eyebrow·공유 문구·공유 카드 이미지·
-  `index.html` 메타 태그까지 사용자에게 보이는 "DISC" 표기를 전부 "직장인 유형검사"로 교체. 화면 id(`disc-*`)·
-  경로(`/test/disc/*`)·내부 변수(`DISC_TYPES` 등)는 `CLAUDE.md` 규칙대로 유지(개명 금지). `npm test` 31/31 ·
-  `scripts/verify.cjs` 29/29(AdFit 403은 샌드박스 외부망 차단, 무관).
-- **딜레마 게임 4택(D/I/S/C) 재설계**: 2택(과업/사람)+응답속도 추론 방식을 주 문항과 동일한 4택 단일 선택으로 교체.
-  `dilemma-play` 화면도 새 `.progress-row`(진행바+홈 버튼) 구조로 병합했다. `npm test` 31/31 · `scripts/verify.cjs` 30/30. → `docs/DECISIONS.md` D-24
-- **데이터팬트리 연동** (메인 머지 완료): 데이터팬트리(`data-pantry-web-site`) 헤더에 커뮤니티↔요금제 사이 FUN 버튼을 추가해
-  `fun.data-pantry.com`(이 사이트)로 연결. 이 저장소 쪽은 그동안 없던 `og:image`/파비콘을 새로 만들어 채움:
-  - `assets/og-image.png`(1200×630, Playwright로 생성) + `assets/favicon.svg` + `assets/apple-touch-icon.png`
-  - `index.html`에 `og:image`·`og:image:width/height`·`twitter:image`(카드 타입 `summary_large_image`로 변경)·파비콘 링크 추가
-  - `renderHome()`(`js/screens/home.js`) 하단에 `data-pantry.com`으로 가는 `site-footer` 링크 추가 (`styles.css` 클래스 동반)
-  - 이 사이트는 데이터팬트리와 별도 배포·별도 저장소로 운영되며, 영속 데이터·백엔드는 여전히 없음 — 순수 정적 자산만 추가함
-- (이전 세션) PC 레이아웃 v2·전 화면 홈 버튼·하단 네비 제거 + 카카오 AdFit 실연동, 병렬 세션 머지 완료 (2026-07-27)
-
-- **PC 레이아웃 v2 (카드 넓히기)**: 1차로 480px 그대로 두고 카드 프레임(그림자·둥근 모서리)만 얹었더니
-  사용자가 "여전히 폰 화면 보는 느낌"이라고 피드백. `@media (min-width: 768px)`에서 `#app { max-width: 640px; }`로
-  카드 자체를 넓혔다 — 문항·결과·게임 화면 구조는 그대로, 콘텐츠 폭만 커짐. → `docs/DECISIONS.md` D-21
-- **전 화면 우상단 홈 버튼**: 진행 중 화면(문항·게임)에만 있던 `.exit-btn`을 인트로·결과 화면까지 확장.
-  잃을 진행 상황이 없는 화면은 `data-nav="home"`으로 바로 이동, 진행 중 화면은 기존 `bindExit()` 확인 모달 유지.
-  아이콘도 ✕ → 🏠로 통일. `test-result`/`disc-result`는 원래 헤더가 아예 없어서 홈 버튼만 든 `.back-row`를 새로 얹었다.
-  → `docs/DECISIONS.md` D-22
-- **홈 하단 네비게이션 제거**: 장식만 하던 인기·저장·내정보 탭을 완전히 삭제(`js/screens/home.js`,
-  `styles.css`의 `.bottom-nav`/`#app.has-bottom-nav`, `js/core/router.js`의 토글 로직, `scripts/verify.cjs`의
-  관련 검사까지 전부 정리). → `docs/DECISIONS.md` D-23
-- **테스트 진행 중 홈 나가기**: 문항 수만큼 뒤로가기를 눌러야 홈에 갈 수 있던 문제. `js/core/dom.js`에
-  `bindExit(root, onExit)` 추가 — `.exit-btn`(🏠) 클릭 시 확인 모달 → 확인하면 상태 초기화 후 `go("home")`.
-  적용 화면: ADHD `test-question`·`reaction-intro`·`reaction-play`, DISC `disc-question`·`dilemma-intro`·`dilemma-play`.
-- (병렬 세션 작업) **카카오 AdFit 실연동**: `js/core/ads.js`(단위 코드 단일 소스, `adSlotMarkup(kind, style)`) 추가,
-  `index.html`에 로더 스크립트, `.ad-slot` 플레이스홀더 7곳을 실제 `<ins class="kakao_ad_area">`로 교체.
-  배너 `DAN-YtXY1keVu0glLXJQ`(320×50) · 사각 `DAN-PKr3oCfRI9IIiXwz`(250×250). `.ad-slot.rect` 높이도
-  120px(플레이스홀더 시절 값)에서 실제 250px로 수정.
-- (이전 세션 작업) 딜레마 게임을 DISC 문항 뒤 강제 단계로, 반응속도 게임을 ADHD 문항 뒤 필수 단계로 각각 재배치 +
-  UI 대비/줄바꿈 정리 + 반응속도 게임 시작 전 확인 모달 추가 완료
+없음. 2026-07-28: 광고 수익화 작업 3건(광고 게이트 추가·AdFit SPA 재스캔 수정·슬롯 밀도 확대+문항 화면
+in-place 렌더 전환) + DISC 검사 사용자 노출 명칭을 "직장인 유형검사"로 변경 + 병렬 세션 작업(딜레마 4택
+재설계·데이터팬트리 연동) 전부 메인 머지 완료.
+상세 이력은 `PROGRESS.md` 2026-07-28 항목 참고 — 특히 광고 게이트 화면 2개(`reaction-ad`/`dilemma-ad`),
+광고 로더 메커니즘(`refreshAds()`), 문항 화면 in-place 렌더 전환의 배경은 거기 있다.
+관련 결정: `docs/DECISIONS.md` D-24(딜레마 4택)·D-25(광고 게이트)·D-26(슬롯 밀도+in-place 렌더)·
+D-27(DISC → "직장인 유형검사" 명칭).
 
 ## 다음 작업 우선순위
 1. **미니게임 목록이 비어 있음** — `/game`이 "준비 중" 빈 화면인데, 딜레마 게임은 이미 동작한다.
@@ -52,7 +24,12 @@
 - **결과 카드 폰트** — CDN 차단으로 결과 카드가 sans-serif 폴백으로만 그려졌다
 - **`navigator.share` 공유시트** — 헤드리스엔 API가 없어 클립보드 폴백 경로만 확인됨. 실기기 확인 필요
 - **`_redirects` 실동작** — 로컬은 `serve.py`로 흉내 낸 것. 배포본에서 `/test/disc/result/lion` 직접 접속이 200인지 확인
-- **광고 슬롯** — AdFit 코드 연동 완료. 샌드박스에서 외부 스크립트(`t1.daumcdn.net`)가 막혀 실제 노출/렌더링은 배포 후 실기기로 확인 필요
+- **광고 슬롯(배너·rect·interstitial)** — 코드 연동 + SPA 재스캔 버그 수정(`refreshAds()`) 완료. 로더 태그가
+  화면 전환마다 실제로 갈아끼워지는지는 `scripts/verify.cjs`가 확인하지만, 샌드박스는 `t1.daumcdn.net`이 막혀
+  **실제 광고가 그려지는지는 확인하지 못했다.** 배포 후 실기기 확인 필요 — 특히 홈→테스트 화면 등 여러 번
+  이동하며 매번 광고가 뜨는지, 광고 게이트(`reaction-ad`/`dilemma-ad`)의 300×250도 포함해서.
+  안 나오면 다음 순서로 본다: ① 로더 `<script>`가 화면 전환마다 새 엘리먼트로 갈아끼워지는가(DevTools Elements)
+  ② 그 요청이 200인가(Network) ③ 둘 다 정상이면 코드가 아니라 **AdFit 쪽 노출 유예/미충족**이다(승인 직후 몇 시간~1일, 트래픽 부족 시 미충족)
 - **OG 이미지 실제 미리보기** — 카카오톡/트위터/페이스북 디버거로 `https://fun.data-pantry.com/assets/og-image.png`가 실제로 불러와지는지, 카드가 `summary_large_image`로 정상 렌더되는지 배포 후 확인 필요 (샌드박스는 절대경로 이미지 요청을 외부에서 검증 못 함)
 - **데이터팬트리 헤더 FUN 버튼** — `data-pantry-web-site` 저장소의 헤더에 새 링크를 추가했음. 두 사이트가 각각 배포된 뒤 실제로 FUN 버튼 → `fun.data-pantry.com` 이동이 되는지, 이 사이트 하단 `by 데이터팬트리` 링크 → `data-pantry.com` 이동이 되는지 상호 확인 필요
 

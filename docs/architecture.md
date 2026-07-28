@@ -23,12 +23,12 @@
 ```
 js/main.js              부팅. registerScreens / registerTest 호출 후 start()
 js/core/
-  router.js             화면 레지스트리 · 경로 해석 · guard · teardown · 테마 · history
+  router.js             화면 레지스트리 · 경로 해석 · guard · teardown · 테마 · history · 렌더 후 refreshAds()
   state.js              단일 상태 객체 (테스트별 네임스페이스)
-  dom.js                el() · bindNav() · showModal()
+  dom.js                el() · bindNav() · showModal() · bindAdGate()(광고 게이트 카운트다운)
   share.js              공유 URL · navigator.share · 결과 카드 캔버스
   util.js               shuffle · normalizePath · roundRect · localStorage 방어 래퍼
-  ads.js                카카오 AdFit 광고 단위 마크업 (단위 코드 단일 소스)
+  ads.js                카카오 AdFit — adSlotMarkup()(단위 코드 단일 소스) · adGateMarkup()(전면 게이트 마크업) · refreshAds()(로더 태그 재실행)
 js/screens/home.js      홈 · 심리테스트 목록 · 미니게임 목록 + commonScreens
 js/tests/<id>/
   data.js               문항·결과 유형·슬러그·게임 상수 (단일 소스)
@@ -79,29 +79,38 @@ js/tests/<id>/
 | `/test/adhd/result/<slug>` | `test-shared` | — | 슬러그 안 풀리면 → `home` |
 | `/test/adhd/reaction` | `reaction-intro` | game | 답 부족 → `test-intro` |
 | `/test/adhd/reaction/play` | `reaction-play` | game | 답 부족 → `test-intro` |
+| `/test/adhd/reaction/ad` | `reaction-ad` | game | 답 부족 → `test-intro`, 게임 미완료 → `reaction-intro` |
 | `/test/disc` | `disc-intro` | disc | — |
 | `/test/disc/play` | `disc-question` | disc | 순서 미생성 → `disc-intro` |
 | `/test/disc/result` | `disc-result` | disc | 문항 미완료 → `disc-intro` · 문항은 끝났지만 게임 미완료 → `dilemma-intro` |
 | `/test/disc/result/<slug>` | `disc-shared` | disc | 슬러그 안 풀리면 → `home` |
 | `/test/disc/dilemma` | `dilemma-intro` | disc | 문항 미완료 → `disc-intro` |
 | `/test/disc/dilemma/play` | `dilemma-play` | disc | 문항 미완료 → `disc-intro` |
+| `/test/disc/dilemma/ad` | `dilemma-ad` | disc | 문항 미완료 → `disc-intro`, 게임 미완료 → `dilemma-intro` |
 
 > ADHD 화면 id가 `test-*`인 것은 DISC보다 먼저 만들어졌기 때문이다. **이름을 바꾸지 않는다**(위 §2).
 
 **두 테스트 모두 딸린 게임이 결과 화면 뒤의 선택 보너스가 아니라, 마지막 문항 직후 반드시
 거쳐야 하는 필수 단계로 통합돼 있다.** 게임 없이는(직접 URL 접속 포함) 결과를 볼 수 없고,
-별도의 "게임 결과" 화면도 없다 — 게임이 끝나면 곧장 검사 결과로 이동해 하나의 결과로 합쳐 보여준다.
+별도의 "게임 결과" 화면도 없다 — 게임이 끝나면 광고 게이트를 한 번 거쳐 검사 결과로 이동해
+하나의 결과로 합쳐 보여준다.
 
-- **DISC**: 문항(12) → 딜레마 게임(8라운드) → 결과. 12번째 문항을 답하면 `dilemma-intro`로
-  넘어가고, `disc-result`의 guard가 게임 완료를 요구한다. `dilemma-play`의 `finish()`가
-  `state.disc.dilemma`를 채운 뒤 바로 `disc-result`로 이동하며, 게임이 실제로 유형에 영향을
-  줬을 때만 "⚡ 딜레마 게임 결과 반영됨" 줄이 붙는다(`docs/DECISIONS.md` D-18).
-  뒤로가기는 두 지점: `dilemma-intro`→`disc-question`(그 guard가 이미 "답이 다 차 있으면
-  마지막 문항으로 되돌림"을 하므로 별도 상태 없이 재사용), `dilemma-play`→`dilemma-intro`
-  (문항 답변은 유지한 채 게임만 재시작).
-- **ADHD**: 문항(12) → 반응속도 게임 → 결과. `test-question`이 마지막 문항 응답 직후
-  `reaction-intro`로 넘어가고, `test-result`의 guard가 `state.lastReaction` 없이는 결과를
-  보여주지 않는다. 게임 통계는 `test-result`에 병합돼 하나의 결과로 나온다(`docs/DECISIONS.md` D-19).
+- **DISC**: 문항(12) → 딜레마 게임(8라운드) → 광고 게이트(`dilemma-ad`) → 결과. 12번째
+  문항을 답하면 `dilemma-intro`로 넘어가고, `disc-result`의 guard가 게임 완료를 요구한다.
+  `dilemma-play`의 `finish()`가 `state.disc.dilemma`를 채운 뒤 `dilemma-ad`로 이동하며,
+  게임이 실제로 유형에 영향을 줬을 때만 "⚡ 딜레마 게임 결과 반영됨" 줄이 붙는다
+  (`docs/DECISIONS.md` D-18). 뒤로가기는 두 지점: `dilemma-intro`→`disc-question`(그 guard가
+  이미 "답이 다 차 있으면 마지막 문항으로 되돌림"을 하므로 별도 상태 없이 재사용),
+  `dilemma-play`→`dilemma-intro`(문항 답변은 유지한 채 게임만 재시작).
+- **ADHD**: 문항(12) → 반응속도 게임 → 광고 게이트(`reaction-ad`) → 결과. `test-question`이
+  마지막 문항 응답 직후 `reaction-intro`로 넘어가고, `test-result`의 guard가
+  `state.lastReaction` 없이는 결과를 보여주지 않는다. 게임 통계는 `test-result`에 병합돼
+  하나의 결과로 나온다(`docs/DECISIONS.md` D-19).
+- **광고 게이트(`reaction-ad`/`dilemma-ad`)**: `core/ads.js`의 `adGateMarkup()` + `core/dom.js`의
+  `bindAdGate()`로 구성. 300×250 AdFit 광고 단위(`interstitial`)를 3초 카운트다운 뒤 "결과
+  보러 가기" 버튼이 활성화되는 방식으로, AdFit 웹 SDK에 없는 자동 전환 전면광고를 대신한다.
+  `.exit-btn`(홈)은 카운트다운과 무관하게 항상 즉시 동작 — 강제 시청이 아니라 잠깐 보게
+  하는 정도로, 이탈률을 올리지 않는 선에서 노출 기회를 하나 늘리는 게 목적이다.
 
 ## 4. 상태(state) 모양
 
@@ -153,7 +162,7 @@ state = {
 - 동점이면 결정론적으로 같은 답을 준다
 - 딜레마 게임: 문항과 같은 형식(상황 8개 × D/I/S/C 4지선다, most만 — least 단계는 없음).
   8라운드 중 한 축이 절반(4개) 이상이면 +1, 3/4(6개) 이상이면 +2. 고르게 흩어지면 보너스 없음.
-  클릭 타이밍은 더 이상 안 본다(`docs/DECISIONS.md` D-21 — 예전엔 2택 선택지 + 지연시간
+  클릭 타이밍은 더 이상 안 본다(`docs/DECISIONS.md` D-24 — 예전엔 2택 선택지 + 지연시간
   추론이었는데 지연시간 신호가 잘 흔들려서 4택으로 바꿨다)
 
 ## 7. 공유 · 결과 카드 (`js/core/share.js`)
