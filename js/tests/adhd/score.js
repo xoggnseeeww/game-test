@@ -1,6 +1,6 @@
 // ADHD 테스트 채점 로직: 게임 보너스 환산 → 축별 퍼센트 → 유형 판정 → 강도 문장.
 import { state } from "../../core/state.js";
-import { profileKey, RESULT_TYPES } from "./data.js";
+import { profileKey, RESULT_TYPES, AXIS_LABELS, AXIS_HIGH_THRESHOLD, AXIS_BORDERLINE_BAND } from "./data.js";
 
 export function summarizeGameResults(results) {
   const goResults = results.filter((r) => r.type === "go");
@@ -104,7 +104,16 @@ export function computeResult() {
     impulse: pct.impulse,
     energy: pct.energy,
     bonus: visibleBonus,
+    borderline: borderlineAxes(pct),
   };
+}
+
+// 임계선에서 AXIS_BORDERLINE_BAND 안쪽에 있는 축의 이름을 돌려준다.
+// 유형 판정은 건드리지 않는다 — 결과 화면에 덧붙일 안내를 고르는 데만 쓴다.
+export function borderlineAxes(pct) {
+  return AXIS_LABELS.filter(
+    ({ key }) => Math.abs(pct[key] - AXIS_HIGH_THRESHOLD) <= AXIS_BORDERLINE_BAND
+  ).map(({ label }) => label);
 }
 
 // 유형은 "고/저" 2단계 조합 8가지로 고정하되(문항이 축당 4개뿐이라 3단계로
@@ -121,11 +130,11 @@ export function axisIntensityText(pct) {
 }
 
 export function axisBreakdown(r) {
-  return [
-    { label: "집중력", pct: r.focus },
-    { label: "충동성", pct: r.impulse },
-    { label: "에너지", pct: r.energy },
-  ].map((a) => ({ ...a, text: axisIntensityText(a.pct) }));
+  return AXIS_LABELS.map(({ key, label }) => ({
+    label,
+    pct: r[key],
+    text: axisIntensityText(r[key]),
+  }));
 }
 
 // 억제 실패(commissionErrors)와 누락(omissionErrors)을 각각 따로만 보지 않고

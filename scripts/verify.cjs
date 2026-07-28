@@ -47,7 +47,7 @@ const check = (name, cond, detail = "") =>
   (cond ? ok : fails).push(`${name}${detail ? " — " + detail : ""}`);
 
 // Go/No-Go 게임을 실수 없이 끝까지 플레이한다(모든 go에 반응, 모든 no-go는 무시) —
-// 그래야 gameBonuses()가 0을 반환해서 이 파일의 축 퍼센트 회귀 확인값(75%)이 안 흔들린다.
+// 그래야 gameBonuses()가 0을 반환해서 이 파일의 축 퍼센트 회귀 확인값(50%)이 안 흔들린다.
 // 라운드 수는 데이터 상수를 들고 오지 않고 진행률 표시("1/14")에서 읽는다 — 이 파일도
 // docs/DECISIONS.md D-17(개수 하드코딩 금지)과 같은 원칙을 따른다.
 async function playCptGame(page) {
@@ -147,14 +147,21 @@ async function playCptGame(page) {
 
   await page.waitForSelector(".result-card", { timeout: 5000 });
 
-  // 전부 "매우 그렇다"(4점) → 축마다 역채점 1문항이 0점이 되어 (4+4+4+0)/16 = 75%
-  // 75 >= AXIS_HIGH_THRESHOLD(60) 이므로 3축 모두 high → "111" 태풍형
+  // 축마다 정방향 2문항 + 역채점 2문항이라, 전 문항에 같은 답("매우 그렇다")을 하면
+  // (4+4) + (0+0) = 8/16 = 50%가 나온다. 묵종 편향이 산술적으로 막힌 상태를 확인하는
+  // 회귀 검사다 — 예전엔 3:1이라 같은 조작이 75% 태풍형을 만들었다(docs/DECISIONS.md D-27).
   // 게임을 클린 플레이했으므로 gameBonuses()는 0을 반환해 이 퍼센트를 흔들지 않는다.
   const pcts = await page.$$eval(".axis-row", (rows) =>
     rows.map((r) => r.textContent.replace(/\s+/g, " ").trim())
   );
-  check("ADHD 전부 최고점 → 3축 75% (역채점 반영)", pcts.every((t) => /75%/.test(t)), pcts.join(" | "));
-  check("ADHD 전부 최고점 → 111 태풍형", /태풍/.test(await page.textContent(".result-card")));
+  check("ADHD 전 문항 같은 답 → 3축 모두 50% (묵종 방어)", pcts.every((t) => /50%/.test(t)), pcts.join(" | "));
+  check(
+    "ADHD 전 문항 같은 답 → 태풍형이 아니라 올빼미형",
+    /올빼미/.test(await page.textContent(".result-card")),
+    (await page.textContent(".result-card")).slice(0, 60).replace(/\s+/g, " ")
+  );
+  // 50%는 임계선 60에서 10%p 안이 아니므로(밴드 7) 경계선 안내는 뜨지 않아야 한다
+  check("ADHD 경계선 안내가 필요 없을 땐 안 뜬다", (await page.$$(".result-note")).length === 0);
   check("ADHD 결과 주소", page.url().includes("/test/adhd/result"), page.url());
   check(
     "최종 결과에 게임 분석이 같은 결과로 병합됨 (별도 결과 화면 없음)",

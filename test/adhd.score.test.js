@@ -107,6 +107,47 @@ test("게임 보너스: 사람의 정상 반응 편차 범위에서는 집중 �
   assert.equal(gameBonuses().focus, 2);
 });
 
+// 이 균형이 깨지면 묵종 방어가 산술적으로 무너진다 → `docs/DECISIONS.md` D-27
+test("문항: 축마다 정방향과 역채점이 정확히 반씩이다", () => {
+  const byAxis = {};
+  for (const q of QUESTIONS) {
+    byAxis[q.group] ??= { forward: 0, reverse: 0 };
+    byAxis[q.group][q.reverse ? "reverse" : "forward"] += 1;
+  }
+  for (const [axis, n] of Object.entries(byAxis)) {
+    assert.equal(n.forward, n.reverse, `${axis} 축의 정방향(${n.forward})과 역채점(${n.reverse})이 다르다`);
+  }
+});
+
+// 화면(screens.js)이 역채점을 4-v로 뒤집어 state.answers에 넣는 걸 그대로 재현한다.
+const answerAll = (raw) => QUESTIONS.map((q) => ({ group: q.group, value: q.reverse ? 4 - raw : raw }));
+
+test("묵종 방어: 모든 문항에 같은 답을 하면 응답값이 무엇이든 전 축이 정확히 50%다", () => {
+  state.lastReaction = null;
+  for (const v of OPTIONS.map((o) => o.value)) {
+    state.answers = answerAll(v);
+    const r = computeResult();
+    assert.equal(r.focus, 50, `전 문항 ${v}점 → 집중 ${r.focus}%`);
+    assert.equal(r.impulse, 50, `전 문항 ${v}점 → 충동 ${r.impulse}%`);
+    assert.equal(r.energy, 50, `전 문항 ${v}점 → 에너지 ${r.energy}%`);
+    assert.equal(r.key, "000", `전 문항 ${v}점인데 유형이 ${r.key}`);
+  }
+});
+
+test("경계선 안내: 임계선 근처 축만 짚고, 뚜렷한 결과엔 붙지 않는다", () => {
+  state.lastReaction = null;
+  // 전부 같은 답 → 50%, 임계선 60과 10%p 차이라 밴드(7) 밖
+  state.answers = answerAll(2);
+  assert.deepEqual(computeResult().borderline, []);
+  // 전부 최고점(역채점은 0점) → 축당 raw 8이 아니라 16 → 100%, 경계선 아님
+  state.answers = QUESTIONS.map((q) => ({ group: q.group, value: 4 }));
+  assert.deepEqual(computeResult().borderline, []);
+  // 축당 raw 10 → 63%. 임계선 60에서 3%p라 밴드 안 → 세 축 모두 경계선
+  state.answers = QUESTIONS.flatMap((q, i) => [{ group: q.group, value: i % 4 < 2 ? 3 : 2 }]);
+  const r = computeResult();
+  assert.deepEqual(r.borderline, ["집중력", "충동성", "에너지"], `실제 축 퍼센트: ${r.focus}/${r.impulse}/${r.energy}`);
+});
+
 test("최종 결과: 설문 축이 이미 100%면 게임 보너스가 눈에 보이는 반영으로 잡히지 않는다", () => {
   // state.answers엔 화면 쪽에서 역채점을 이미 반영한 값이 들어오므로(reverse 문항도
   // "가장 산만함"이면 value:4), reverse 여부와 상관없이 전부 4로 채우면 만점이 된다.

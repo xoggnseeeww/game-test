@@ -92,6 +92,24 @@ test("유형 판정: 한쪽으로만 몰아 답하면 조합형이 아니라 순
   assert.equal(r.secondary, null);
 });
 
+// GAP을 3에서 5로 완화한 결과 → `docs/DECISIONS.md` D-29.
+// 1·2위가 5점 차이면 조합형, 6점부터는 순수형. 두 경계를 다 못 박아둔다.
+test("유형 판정: 1·2위 차이가 5점까지는 조합형, 6점부터는 순수형", () => {
+  // 2위(I)는 최저선보다 넉넉히 위에 고정하고 1위만 밀어올려, GAP만 단독으로 시험한다
+  const at = (gap) => resolveDiscType({ D: 3 + gap, I: 3, S: -(3 + gap), C: -3 });
+  assert.equal(at(5).key, "DI", "5점 차이는 조합형이어야 한다");
+  assert.equal(at(5).secondary, "I");
+  assert.equal(at(6).key, "D", "6점 차이는 순수형이어야 한다");
+  assert.equal(at(6).secondary, null);
+});
+
+// 최저선이 사라지면 평평한 사람까지 전부 조합형이 된다 — GAP을 넓힐 때 같이 무너지기 쉬운 쪽이다
+test("유형 판정: 2위가 최저선(2점)에 못 미치면 차이가 작아도 순수형이다", () => {
+  const r = resolveDiscType({ D: 3, I: 1, S: -3, C: -1 });
+  assert.equal(r.key, "D");
+  assert.equal(r.secondary, null);
+});
+
 test("유형 판정: 전부 0점이어도 터지지 않고 실재하는 유형을 준다", () => {
   const r = resolveDiscType({ D: 0, I: 0, S: 0, C: 0 });
   assert.ok(r.key in DISC_TYPES);

@@ -1,21 +1,26 @@
 // 성인 ADHD 성향 체크의 문항·선택지·결과 유형 데이터. 로직은 score.js, 화면은 screens.js.
 
 // 문항은 특정 임상 척도(ASRS 등)를 그대로 옮긴 게 아니라, DSM-5가 다루는 증상
-// 영역(부주의/충동성/과잉행동)을 참고해 자체적으로 재구성한 것이다. 축마다
-// 3문항은 정방향, 1문항은 역채점(reverse)으로 넣어서 "다 그렇다"로 답해도
-// 점수가 한쪽으로만 쏠리지 않게 했다 — 역채점 문항은 응답값을 4에서 뺀 값으로 집계한다.
+// 영역(부주의/충동성/과잉행동)을 참고해 자체적으로 재구성한 것이다.
+//
+// **축마다 정방향 2문항 + 역채점 2문항으로 정확히 반씩 나눈다.** 역채점 문항은
+// 응답값을 4에서 뺀 값으로 집계하므로, 반씩 맞춰두면 모든 문항에 같은 답을 한
+// 사람은 응답값이 무엇이든 정확히 50%가 나온다 — 묵종 편향(다 "그렇다"로 밀기)이
+// 산술적으로 불가능해진다. 예전엔 3:1이라 전 문항 "그렇다"가 63%를 만들어
+// 임계선(60)을 넘겼고, 가장 흔한 무성의 응답이 가장 심각한 유형(태풍형)을 냈다.
+// → `docs/DECISIONS.md` D-27
 export const QUESTIONS = [
-  { text: "해야 할 일을 자꾸 마지막 순간까지\n미루다가 늘 벼락치기로 끝낸다.", group: "focus" },
+  { text: "해야 할 일은 마감에 쫓기기 전에\n미리 끝내두는 편이다.", group: "focus", reverse: true },
   { text: "지갑, 열쇠, 휴대폰을 어디 뒀는지\n매번 찾아 헤맨다.", group: "focus" },
   { text: "대화 중에 다른 생각에 빠져서\n방금 들은 말을 놓칠 때가 있다.", group: "focus" },
   { text: "중요한 서류나 일정은 특별히 신경 쓰지\n않아도 잘 챙기는 편이다.", group: "focus", reverse: true },
-  { text: "줄을 서거나 신호를 기다리는 상황을\n유독 못 참는다.", group: "impulse" },
+  { text: "줄을 서거나 신호를 기다리는 시간도\n크게 개의치 않는 편이다.", group: "impulse", reverse: true },
   { text: "좋은 생각이 떠오르면 앞뒤 재지 않고\n바로 저질러 버린다.", group: "impulse" },
   { text: "상대방 말이 끝나기도 전에\n끼어들어 말할 때가 많다.", group: "impulse" },
   { text: "결정을 내리기 전엔 여러 선택지를\n신중하게 따져보는 편이다.", group: "impulse", reverse: true },
   { text: "가만히 앉아있는 것보다\n몸을 움직이는 게 훨씬 편하다.", group: "energy" },
   { text: "회의나 수업 중에도 다리를 떨거나\n손을 계속 움직인다.", group: "energy" },
-  { text: "새로운 자극이 없으면 금방 지루해하고\n딴짓을 찾는다.", group: "energy" },
+  { text: "특별한 자극이 없는 상황에서도\n지루해하지 않고 잘 지낸다.", group: "energy", reverse: true },
   { text: "가만히 앉아서 오랫동안 차분하게\n있는 게 크게 어렵지 않다.", group: "energy", reverse: true },
 ];
 
@@ -32,6 +37,19 @@ export const OPTIONS = [
 // 한 축만 극단적으로 높아도 나머지 두 축에 묻혀 총점으로는 평범하게 나와버리는 문제를
 // 이렇게 축별 프로필로 바꿔서 근본적으로 없앴다.
 export const AXIS_HIGH_THRESHOLD = 60; // 4문항 평균 응답이 "그렇다"(3점) 이상일 때 대략 나오는 퍼센트
+
+// 축당 4문항뿐이라 원점수 한 칸이 6.25%p다. 임계선에서 이 정도 안쪽이면 문항 하나에서
+// "보통이다"↔"그렇다"가 갈린 것만으로 유형 이름이 통째로 바뀐 셈이라, 유형은 그대로 두되
+// 결과 화면에 "경계선에 가까움"을 밝힌다. DISC의 flat/nearTie와 같은 역할이다.
+// → `docs/DECISIONS.md` D-28
+export const AXIS_BORDERLINE_BAND = 7;
+
+// 축의 표시 이름. 화면과 채점이 같은 순서·같은 문구를 쓰도록 여기 한 곳에만 둔다.
+export const AXIS_LABELS = [
+  { key: "focus", label: "집중력" },
+  { key: "impulse", label: "충동성" },
+  { key: "energy", label: "에너지" },
+];
 
 export function profileKey({ focus, impulse, energy }) {
   const f = focus >= AXIS_HIGH_THRESHOLD ? 1 : 0;

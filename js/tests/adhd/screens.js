@@ -198,6 +198,15 @@ async function drawResultCard(r) {
   return canvas;
 }
 
+// 축당 4문항뿐이라 임계선 근처에서는 문항 하나가 유형 이름을 통째로 바꾼다.
+// 유형은 그대로 보여주되 그 사실을 숨기지 않는다 — DISC의 noteMarkup과 같은 역할.
+function borderlineNoteMarkup(r) {
+  if (!r.borderline.length) return "";
+  const axes = r.borderline.join("·");
+  return `<p class="result-note">${axes} 점수가 높음과 낮음의 경계에 가까워요.
+    문항 하나만 다르게 답해도 유형이 바뀔 수 있으니 참고로만 봐주세요.</p>`;
+}
+
 export function renderResult() {
   const r = computeResult();
   const g = state.lastReaction;
@@ -221,6 +230,8 @@ export function renderResult() {
         </div>
         ${r.bonus.impulse > 0 || r.bonus.focus > 0 ? `<div class="result-stats" style="margin-top:8px;"><span>⚡ 위 점수엔 게임 결과도 반영돼 있어요${r.bonus.impulse > 0 ? ` · 충동 +${r.bonus.impulse}` : ""}${r.bonus.focus > 0 ? ` · 집중 +${r.bonus.focus}` : ""}</span></div>` : ""}
       </div>
+
+      ${borderlineNoteMarkup(r)}
 
       <div class="axis-breakdown">
         ${axisBreakdown(r).map((a) => `

@@ -71,6 +71,8 @@ docs/design-draft.html  최초 디자인 목업. 배포·동작과 무관 (.clau
 - 새 테스트 추가 → `js/main.js`에 `registerTest` + `registerScreens` **둘 다**. 하나만 하면 목록 카드나 공유 URL 한쪽이 조용히 빠진다
 - 결과 유형 추가/삭제 → 같은 `data.js`의 슬러그 맵도 갱신 (없으면 공유 URL이 조용히 홈으로 폴백) — DISC는 `slug` 필드가 단일 소스라 자동
 - 문항 수 변경 → 해당 `score.js`의 만점 분모가 문항 수에서 파생되는지 확인 (ADHD `toPct` 분모 `16` = 축당 4문항 × 4점)
+- ADHD 문항 추가/삭제/`reverse` 변경 → **축마다 정방향과 역채점이 반씩**이어야 한다. 깨지면 묵종 편향 방어가
+  산술적으로 무너진다(전 문항 같은 답 → 50%가 아니게 됨). `npm test`가 막는다 → `docs/DECISIONS.md` D-27
 - `AXIS_HIGH_THRESHOLD` 변경 → `axisIntensityText()`의 구간 경계(`60`)도 같이 조정
 - `CPT_ROUNDS` / `CPT_NOGO_COUNT` 변경 → `gameBonuses()`의 오류율 구간이 여전히 의미 있는지 확인
 - 새 `theme` 값 추가 → `js/core/router.js`의 `THEME_CLASSES` 배열 + `styles.css`의 `theme-*` 변수 블록
