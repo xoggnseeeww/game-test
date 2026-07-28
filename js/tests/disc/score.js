@@ -13,6 +13,33 @@ export const OPPOSITE = { D: "S", S: "D", I: "C", C: "I" };
 export const PACE = { D: "fast", I: "fast", S: "slow", C: "slow" };
 export const PRIORITY = { D: "task", C: "task", I: "people", S: "people" };
 
+// 우선순위는 같은데 속도가 다른 축 = 부딪히는 축 (D↔C, I↔S).
+// 표로 따로 두지 않고 PACE·PRIORITY에서 끌어낸다 — 진실의 출처를 하나로 유지한다.
+export function clashAxis(ax) {
+  return AXES.find((o) => o !== ax && PRIORITY[o] === PRIORITY[ax] && PACE[o] !== PACE[ax]);
+}
+
+// 유형 키(D·DI·DC…)에서 궁합을 끌어낸다. data.js에 손으로 적어두면 조합형에서
+// 반드시 어긋난다 — 실제로 어긋나 있었다(`docs/DECISIONS.md` D-24).
+//
+//   잘 맞음  = 주축의 대척점 (속도·우선순위 둘 다 반대)
+//   부딪힘   = 주축과 우선순위는 같고 속도가 다른 축
+//
+// 문제는 DC·CD·IS·SI다. 이 넷은 **서로 부딪히는 두 축으로 이루어진 유형**이라
+// (D의 부딪힘이 C, I의 부딪힘이 S) 위 규칙이 자기 보유축을 가리킨다. 그대로 두면
+// "냉철한 전략가(D+C)는 현미경 관찰자(C)와 부딪힙니다" 같은 안내가 나간다.
+// 이때는 보유하지 않은 두 축 중 대척점이 아닌 쪽을 부딪히는 유형으로 쓴다.
+export function resolveMatch(key) {
+  const own = key.split("");
+  const primary = own[0];
+  const best = OPPOSITE[primary];
+  let worst = clashAxis(primary);
+  if (own.includes(worst)) {
+    worst = AXES.find((ax) => !own.includes(ax) && ax !== best);
+  }
+  return { best, worst };
+}
+
 // 응답 하나당 한 축이 +1, 다른 한 축이 -1이라 축별 원점수는 [-문항수, +문항수],
 // 네 축의 합은 항상 0이다(ipsative). 무작위로 답하면 축별 표준편차가 √(문항수/2)라
 // 12문항이면 약 2.45 — 아래 두 기준값은 이 분포를 기준으로 잡았다.

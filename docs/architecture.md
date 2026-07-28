@@ -33,6 +33,7 @@ js/screens/home.js      홈 · 심리테스트 목록 · 미니게임 목록 + c
 js/tests/<id>/
   data.js               문항·결과 유형·슬러그·게임 상수 (단일 소스)
   score.js              채점 (DOM을 모른다 → node --test로 직접 검증 가능)
+                        DISC는 data.js가 score.js를 import 한다 (궁합 파생, D-24) — 이 방향 하나뿐
   screens.js            렌더 함수
   index.js              디스크립터: <id>Test(메타) + <id>Screens(화면 배열)
 ```
@@ -146,12 +147,14 @@ state = {
 ```
 - `energy` 축에는 게임 보너스가 없다(근거 부재 — `docs/DECISIONS.md` D-6)
 - 이미 100%인 축에는 보너스가 실제로 반영되지 않으므로 `visibleBonus`로 표시를 거른다
+- 게임 보너스는 **축당 최대 `GAME_BONUS_MAX`(=2)** — 문항 하나 만점(4)보다 가볍게 묶어둔다(D-25). rtSD 구간은 `RT_SD_UNSTABLE`/`RT_SD_VERY_UNSTABLE`(D-26)
 
 ### DISC (`js/tests/disc/score.js`)
 - **ipsative(강제선택)**: 상황마다 4개 선택지 중 "가장 나 같은 것"과 "아닌 것"을 고른다 → 축별 원점수 합은 **항상 0**
 - 유형은 12종 (순수형 4 + 조합형 8). **대척점 조합(DS·SD·IC·CI)은 어떤 입력에도 나오지 않는다**
 - 동점이면 결정론적으로 같은 답을 준다
 - 딜레마 게임 보너스: 축당 최대 +1. 선택이 갈리거나 시간초과가 잦으면 신호를 버린다
+- **궁합(`match`)은 데이터에 적지 않는다.** `resolveMatch(key)`가 유형 키에서 파생한다 — 손으로 적었을 땐 조합형 4개가 자기 보유축을 "부딪히는 유형"으로 가리켰다(D-24)
 
 ## 7. 공유 · 결과 카드 (`js/core/share.js`)
 

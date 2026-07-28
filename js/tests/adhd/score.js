@@ -34,6 +34,20 @@ export function summarizeGameResults(results) {
 //  - 누락 반응(omission error, go를 놓침) + 반응시간 변산성(RT variability) = 부주의(focus) 지표
 // "빨리 누를수록 충동적"이라는 예전 규칙은 반사신경과 충동성을 혼동한 것이라 폐기했다.
 // 에너지(과잉행동) 성향은 이 방식으로 측정할 근거가 없어 의도적으로 반영하지 않는다.
+// 축당 만점이 16점(4문항 × 4점)이라 보너스 상한이 곧 게임의 발언권이다.
+// 예전엔 상한이 4였다 = 25%p = 문항 하나가 아니라 **문항 한 축의 4분의 1**.
+// no-go 시행이 CPT_NOGO_COUNT회뿐이라 실수 한 번에 6.25%p가 움직였고, 그 결과
+// 게임이 최종 유형을 절반 가까이 뒤집었다. 2로 낮춰 "박빙을 가르는 표"로 되돌린다.
+// → `docs/DECISIONS.md` D-25
+export const GAME_BONUS_MAX = 2;
+
+// 반응시간 변산성(RT SD) 구간. 예전 기준(40 / 80ms)은 사람의 단순반응 표준편차가
+// 대체로 60~120ms라는 걸 감안하면 부주의가 아니라 "사람이라는 사실"과 기기 지연·
+// 프레임 편차를 잡아내고 있었다 — 거의 전원에게 집중 보너스가 붙었다.
+// → `docs/DECISIONS.md` D-26
+export const RT_SD_UNSTABLE = 90;
+export const RT_SD_VERY_UNSTABLE = 130;
+
 export function gameBonuses() {
   const g = state.lastReaction;
   if (!g) return { impulse: 0, focus: 0 };
@@ -41,14 +55,12 @@ export function gameBonuses() {
   let impulse = 0;
   if (g.noGoCount > 0) {
     const rate = g.commissionErrors / g.noGoCount;
-    if (rate >= 1) impulse = 4;
-    else if (rate >= 0.75) impulse = 3;
-    else if (rate >= 0.5) impulse = 2;
+    if (rate >= 0.75) impulse = 2;
     else if (rate > 0) impulse = 1;
   }
-  if (g.prematureCount >= 3) impulse = Math.max(impulse, 3);
+  if (g.prematureCount >= 3) impulse = Math.max(impulse, 2);
   else if (g.prematureCount >= 1) impulse = Math.max(impulse, 1);
-  impulse = Math.min(4, impulse);
+  impulse = Math.min(GAME_BONUS_MAX, impulse);
 
   let focus = 0;
   if (g.goCount > 0) {
@@ -56,9 +68,9 @@ export function gameBonuses() {
     if (omissionRate >= 0.4) focus += 2;
     else if (omissionRate > 0) focus += 1;
   }
-  if (g.rtSD > 80) focus += 2;
-  else if (g.rtSD > 40) focus += 1;
-  focus = Math.min(4, focus);
+  if (g.rtSD > RT_SD_VERY_UNSTABLE) focus += 2;
+  else if (g.rtSD > RT_SD_UNSTABLE) focus += 1;
+  focus = Math.min(GAME_BONUS_MAX, focus);
 
   return { impulse, focus };
 }

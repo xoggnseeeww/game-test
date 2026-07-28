@@ -6,6 +6,8 @@ import {
   OPPOSITE,
   PACE,
   PRIORITY,
+  clashAxis,
+  resolveMatch,
   scoreTetrads,
   resolveDiscType,
   toPct,
@@ -273,14 +275,50 @@ test("유형 데이터: 12개 유형에 필요한 내용이 전부 있다", () =
   }
 });
 
+// 유형 키가 곧 보유축이다 ("D" → [D], "DC" → [D, C])
+const own = (key) => key.split("");
+
+test("궁합 규칙: 부딪히는 축이 자기 보유축이면 남은 축으로 넘어간다", () => {
+  // 순수형 4개는 예전 규칙 그대로여야 한다 (되돌리기 방지)
+  assert.deepEqual(resolveMatch("D"), { best: "S", worst: "C" });
+  assert.deepEqual(resolveMatch("I"), { best: "C", worst: "S" });
+  assert.deepEqual(resolveMatch("S"), { best: "D", worst: "I" });
+  assert.deepEqual(resolveMatch("C"), { best: "I", worst: "D" });
+  // 부딪히지 않는 두 축으로 만들어진 조합형도 그대로다
+  assert.deepEqual(resolveMatch("DI"), { best: "S", worst: "C" });
+  assert.deepEqual(resolveMatch("SC"), { best: "D", worst: "I" });
+  // 부딪히는 두 축으로 만들어진 조합형 4개만 대체 규칙을 탄다
+  assert.deepEqual(resolveMatch("DC"), { best: "S", worst: "I" });
+  assert.deepEqual(resolveMatch("CD"), { best: "I", worst: "S" });
+  assert.deepEqual(resolveMatch("IS"), { best: "C", worst: "D" });
+  assert.deepEqual(resolveMatch("SI"), { best: "D", worst: "C" });
+});
+
 test("유형 데이터: 궁합이 두 기저 축의 규칙과 맞는다", () => {
   for (const [key, t] of Object.entries(DISC_TYPES)) {
     const primary = key[0];
     // 잘 맞음 = 속도·우선순위 둘 다 반대 (대척점)
     assert.equal(t.match.best, OPPOSITE[primary], `${key}의 잘 맞는 유형이 규칙과 다르다`);
-    // 부딪힘 = 우선순위는 같고 속도가 다름
-    assert.equal(PRIORITY[t.match.worst], PRIORITY[primary], `${key}의 부딪히는 유형 우선순위 불일치`);
-    assert.notEqual(PACE[t.match.worst], PACE[primary], `${key}의 부딪히는 유형 속도 불일치`);
+
+    // 부딪힘 = 우선순위는 같고 속도가 다름.
+    // 단 DC·CD·IS·SI는 그 축이 자기 보유축이라(부딪히는 두 축으로 만들어진 유형)
+    // 규칙을 그대로 쓸 수 없다 → 보유하지 않은 두 축 중 대척점이 아닌 쪽으로 간다.
+    if (own(key).includes(clashAxis(primary))) {
+      assert.ok(!own(key).includes(t.match.worst), `${key}가 자기 보유축과 부딪힌다고 나온다`);
+      assert.notEqual(t.match.worst, t.match.best, `${key}의 부딪힘이 대척점과 같다`);
+    } else {
+      assert.equal(PRIORITY[t.match.worst], PRIORITY[primary], `${key}의 부딪히는 유형 우선순위 불일치`);
+      assert.notEqual(PACE[t.match.worst], PACE[primary], `${key}의 부딪히는 유형 속도 불일치`);
+    }
+  }
+});
+
+// 이게 실제로 터졌던 버그다: 조합형 4개가 "당신은 당신 같은 사람과 부딪힙니다"를
+// 결과 화면과 공유 화면 양쪽에 띄우고 있었다 → `docs/DECISIONS.md` D-24
+test("유형 데이터: 어떤 유형도 자기 보유축을 궁합 상대로 가리키지 않는다", () => {
+  for (const [key, t] of Object.entries(DISC_TYPES)) {
+    assert.ok(!own(key).includes(t.match.best), `${key}의 잘 맞는 유형(${t.match.best})이 자기 보유축`);
+    assert.ok(!own(key).includes(t.match.worst), `${key}의 부딪히는 유형(${t.match.worst})이 자기 보유축`);
   }
 });
 

@@ -10,6 +10,8 @@
 // 순서도 화면에서 매번 섞는다(state.disc.order) — 고정하면 첫 번째 자리에 놓인 축이
 // 체계적으로 유리해진다.
 
+import { resolveMatch } from "./score.js";
+
 export const TETRADS = [
   {
     scene: "팀 프로젝트 첫 회의.\n아직 아무도 말을 안 꺼내고 있다.",
@@ -126,8 +128,11 @@ export const TETRADS = [
 //             역할이 겹치지 않아 서로의 빈자리를 그대로 메운다.
 //   부딪힘   = 우선순위는 같은데 속도가 다른 쌍 (D↔C, I↔S)
 //             같은 걸 중요하게 여기니 같은 자리를 두고 붙는데, 속도가 안 맞아 매번 부딪힌다.
-// 조합형은 주축의 궁합을 따른다.
-export const DISC_TYPES = {
+//
+// 예전엔 유형마다 match를 손으로 적었는데, 조합형 12개 중 4개(DC·CD·IS·SI)가
+// **자기 보유축을 "부딪히는 유형"으로 가리키고 있었다.** 이제는 적지 않고
+// score.js의 resolveMatch()가 유형 키에서 끌어낸다 → `docs/DECISIONS.md` D-24
+const TYPE_DEFS = {
   D: {
     slug: "lion",
     emoji: "🦁",
@@ -142,7 +147,6 @@ export const DISC_TYPES = {
       stress: "스트레스를 받으면 말이 짧아지고 톤이 세져요.\n감정을 들여다보는 대신 일을 더 벌이는 쪽으로 풀어서, 주변에서는 \"화났다\"로 읽혀요.",
       manual: "결론부터 말해주세요. 서론이 길면 이미 딴생각 중이에요.\n선택지를 주되 최종 결정은 넘겨주는 게 가장 잘 통합니다.",
     },
-    match: { best: "S", worst: "C" },
   },
   DI: {
     slug: "rocket",
@@ -158,7 +162,6 @@ export const DISC_TYPES = {
       stress: "스트레스를 받으면 더 크게 벌이고 더 많이 말해요.\n혼자 조용히 있는 시간을 못 견뎌서, 정작 필요한 정리가 계속 밀립니다.",
       manual: "속도를 꺾지 말고, 대신 \"그거 언제까지?\"를 구체적으로 물어봐 주세요.\n사람들 앞에서 인정해주면 두 배로 움직입니다.",
     },
-    match: { best: "S", worst: "C" },
   },
   DC: {
     slug: "chess",
@@ -174,7 +177,6 @@ export const DISC_TYPES = {
       stress: "스트레스를 받으면 말수가 줄고 혼자 처리하려 들어요.\n주변에서는 차가워졌다고 느끼지만, 본인은 그저 집중하고 있는 겁니다.",
       manual: "감정보다 근거로 설득해주세요. \"그냥\"이라는 답을 제일 싫어해요.\n반대할 거면 대안을 같이 들고 오면 훨씬 잘 받아들입니다.",
     },
-    match: { best: "S", worst: "C" },
   },
   I: {
     slug: "mic",
@@ -190,7 +192,6 @@ export const DISC_TYPES = {
       stress: "스트레스를 받으면 오히려 더 밝게 굴고 더 많이 웃어요.\n괜찮은 척이 길어지면 어느 순간 한꺼번에 무너집니다.",
       manual: "결과만 짚지 말고 과정에서 잘한 걸 말로 해주세요.\n혼내야 할 때도 사람들 앞이 아니라 따로 불러서 해주세요. 효과가 완전히 달라요.",
     },
-    match: { best: "C", worst: "S" },
   },
   ID: {
     slug: "firework",
@@ -206,7 +207,6 @@ export const DISC_TYPES = {
       stress: "스트레스를 받으면 판을 더 크게 벌이고 사람을 더 많이 만나요.\n혼자 있는 시간을 회피하다가 정작 문제는 그대로 남습니다.",
       manual: "재미와 명분을 같이 주세요. 둘 중 하나만으론 안 움직여요.\n마감은 반드시 날짜로 못 박아주세요. \"곧\"은 통하지 않습니다.",
     },
-    match: { best: "C", worst: "S" },
   },
   IS: {
     slug: "honey",
@@ -222,7 +222,6 @@ export const DISC_TYPES = {
       stress: "스트레스를 받으면 티를 안 내고 더 웃어요.\n혼자 삭이다가 관계 자체를 조용히 정리해버리는 방식으로 터집니다.",
       manual: "\"괜찮아?\"보다 \"뭐가 제일 힘들어?\"라고 물어봐 주세요.\n부탁할 땐 거절할 여지를 명확히 남겨주세요. 안 그러면 무조건 받습니다.",
     },
-    match: { best: "C", worst: "S" },
   },
   S: {
     slug: "tree",
@@ -238,7 +237,6 @@ export const DISC_TYPES = {
       stress: "스트레스를 받으면 조용해지고 혼자 감당하려 해요.\n한계까지 참다가 어느 날 갑자기 손을 놓는 방식으로 드러납니다.",
       manual: "재촉하지 말고 시간을 주세요. 대신 언제까지인지는 분명히 알려주세요.\n의견을 물으면 잠깐 기다려주세요. 생각이 없는 게 아니라 정리 중이에요.",
     },
-    match: { best: "D", worst: "I" },
   },
   SI: {
     slug: "bear",
@@ -254,7 +252,6 @@ export const DISC_TYPES = {
       stress: "스트레스를 받으면 사람은 만나되 속 얘기는 안 해요.\n괜찮아 보이는 시간이 길어질수록 실제로는 더 지쳐 있는 상태예요.",
       manual: "직접 물어봐 주세요. 먼저 말하는 법이 거의 없어요.\n의견이 다를 땐 \"틀렸다\"가 아니라 \"나는 이렇게 봤어\"로 시작해주세요.",
     },
-    match: { best: "D", worst: "I" },
   },
   SC: {
     slug: "plant",
@@ -270,7 +267,6 @@ export const DISC_TYPES = {
       stress: "스트레스를 받으면 더 꼼꼼해지고 더 느려져요.\n확인을 반복하다가 정작 마감을 놓치는 방식으로 나타납니다.",
       manual: "바뀔 일이 있으면 최대한 일찍 알려주세요. 늦은 통보가 제일 힘들어요.\n\"대충\"이라는 말 대신 어느 정도면 충분한지 기준을 알려주세요.",
     },
-    match: { best: "D", worst: "I" },
   },
   C: {
     slug: "scope",
@@ -286,7 +282,6 @@ export const DISC_TYPES = {
       stress: "스트레스를 받으면 확인을 더 늘리고 결정을 더 미뤄요.\n완벽하게 못 할 바엔 시작을 안 하는 쪽으로 굳어집니다.",
       manual: "근거와 자료를 같이 주세요. 결론만 던지면 신뢰를 잃어요.\n생각할 시간을 주면 훨씬 나은 답을 들고 옵니다. 즉답을 요구하지 마세요.",
     },
-    match: { best: "I", worst: "D" },
   },
   CD: {
     slug: "compass",
@@ -302,7 +297,6 @@ export const DISC_TYPES = {
       stress: "스트레스를 받으면 기준이 더 엄격해지고 말이 더 직설적으로 나가요.\n본인은 문제를 해결하는 중인데 주변은 공격받았다고 느낍니다.",
       manual: "논리로 설득하되 사람에 대한 판단은 빼고 얘기해주세요.\n규칙을 바꿔야 한다면 왜 바꾸는지부터 설명해주세요. 그러면 가장 먼저 따라옵니다.",
     },
-    match: { best: "I", worst: "D" },
   },
   CS: {
     slug: "ruler",
@@ -318,9 +312,13 @@ export const DISC_TYPES = {
       stress: "스트레스를 받으면 조용해지고 확인을 반복해요.\n혼자 감당하면서 완벽까지 지키려다 소진되는 게 전형적인 패턴이에요.",
       manual: "미리 알려주고 기다려주세요. 이 두 가지면 대부분 해결돼요.\n결과만 보지 말고 과정에서 지켜낸 것들을 짚어주면 크게 힘이 납니다.",
     },
-    match: { best: "I", worst: "D" },
   },
 };
+
+// 유형 키에서 궁합을 끌어내 붙인다. 화면은 예전처럼 `type.match.best/worst`를 읽는다.
+export const DISC_TYPES = Object.fromEntries(
+  Object.entries(TYPE_DEFS).map(([key, t]) => [key, { ...t, match: resolveMatch(key) }])
+);
 
 export const AXIS_LABELS = {
   D: "주도",

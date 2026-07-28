@@ -2,8 +2,15 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { state } from "../js/core/state.js";
-import { gameBonuses, computeResult, reactionComment } from "../js/tests/adhd/score.js";
-import { QUESTIONS } from "../js/tests/adhd/data.js";
+import {
+  gameBonuses,
+  computeResult,
+  reactionComment,
+  GAME_BONUS_MAX,
+  RT_SD_UNSTABLE,
+  RT_SD_VERY_UNSTABLE,
+} from "../js/tests/adhd/score.js";
+import { QUESTIONS, OPTIONS } from "../js/tests/adhd/data.js";
 
 function reactionStats(overrides) {
   return {
@@ -55,9 +62,49 @@ test("게임 보너스: 게임을 안 했으면 보너스가 없다", () => {
 
 test("게임 보너스: no-go 억제 실패율이 높을수록 충동 보너스가 커진다", () => {
   state.lastReaction = reactionStats({ noGoCount: 4, commissionErrors: 4 }); // 100%
-  assert.equal(gameBonuses().impulse, 4);
+  assert.equal(gameBonuses().impulse, GAME_BONUS_MAX);
   state.lastReaction = reactionStats({ noGoCount: 4, commissionErrors: 1 }); // 25%
   assert.equal(gameBonuses().impulse, 1);
+});
+
+// 상한이 곧 게임의 발언권이다. no-go 시행이 CPT_NOGO_COUNT회뿐인 미니게임이
+// 문항 하나보다 무거워지면 안 된다 — 상한을 다시 올리면 여기서 걸린다.
+// → `docs/DECISIONS.md` D-25
+test("게임 보너스: 게임 한 판의 무게가 설문 문항 하나보다 가볍다", () => {
+  const maxPerQuestion = Math.max(...OPTIONS.map((o) => o.value));
+  assert.ok(
+    GAME_BONUS_MAX < maxPerQuestion,
+    `게임 보너스 상한(${GAME_BONUS_MAX})이 문항 하나 만점(${maxPerQuestion}) 이상이다`
+  );
+});
+
+// 이 검사가 없으면 구간을 손보다가 상한이 조용히 새어나가도 아무도 모른다
+test("게임 보너스: 무엇을 어떻게 틀려도 축당 상한을 넘지 않는다", () => {
+  for (const commissionErrors of [0, 1, 2, 3, 4]) {
+    for (const omissionErrors of [0, 1, 5, 10]) {
+      for (const prematureCount of [0, 1, 3, 9]) {
+        for (const rtSD of [0, 50, 95, 140, 900]) {
+          state.lastReaction = reactionStats({ commissionErrors, omissionErrors, prematureCount, rtSD });
+          const b = gameBonuses();
+          assert.ok(b.impulse >= 0 && b.impulse <= GAME_BONUS_MAX, `충동 보너스 범위 이탈: ${b.impulse}`);
+          assert.ok(b.focus >= 0 && b.focus <= GAME_BONUS_MAX, `집중 보너스 범위 이탈: ${b.focus}`);
+        }
+      }
+    }
+  }
+});
+
+// 사람의 단순반응 표준편차는 대체로 60~120ms다. 이 구간에서 보너스가 붙으면
+// 부주의가 아니라 기기 지연과 "사람이라는 사실"을 재게 된다 → `docs/DECISIONS.md` D-26
+test("게임 보너스: 사람의 정상 반응 편차 범위에서는 집중 보너스가 붙지 않는다", () => {
+  for (const rtSD of [40, 60, 80, RT_SD_UNSTABLE]) {
+    state.lastReaction = reactionStats({ rtSD });
+    assert.equal(gameBonuses().focus, 0, `rtSD ${rtSD}ms에 집중 보너스가 붙었다`);
+  }
+  state.lastReaction = reactionStats({ rtSD: RT_SD_UNSTABLE + 1 });
+  assert.equal(gameBonuses().focus, 1);
+  state.lastReaction = reactionStats({ rtSD: RT_SD_VERY_UNSTABLE + 1 });
+  assert.equal(gameBonuses().focus, 2);
 });
 
 test("최종 결과: 설문 축이 이미 100%면 게임 보너스가 눈에 보이는 반영으로 잡히지 않는다", () => {
