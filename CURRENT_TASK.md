@@ -3,8 +3,37 @@
 > 이 파일은 1~2k 토큰 이하를 유지한다 — "언젠가 할 일"이 아니라 "지금 유효한 작업"만.
 
 ## 현재 작업
-없음 (딜레마 게임 선택지를 2택+타이밍 추론에서 4택(D/I/S/C) 단일 선택으로 재설계 완료,
-`npm test` 31/31 · `scripts/verify.cjs` 30/30, 2026-07-27)
+없음 (딜레마 게임 4택(D/I/S/C) 재설계를 데이터팬트리 연동 등 병렬 세션 작업과 병합 + 메인 머지 완료, 2026-07-28)
+
+- **딜레마 게임 4택(D/I/S/C) 재설계**: 2택(과업/사람)+응답속도 추론 방식을 주 문항과 동일한 4택 단일 선택으로 교체.
+  `dilemma-play` 화면도 새 `.progress-row`(진행바+홈 버튼) 구조로 병합했다. `npm test` 31/31 · `scripts/verify.cjs` 30/30. → `docs/DECISIONS.md` D-21
+- **데이터팬트리 연동** (메인 머지 완료): 데이터팬트리(`data-pantry-web-site`) 헤더에 커뮤니티↔요금제 사이 FUN 버튼을 추가해
+  `fun.data-pantry.com`(이 사이트)로 연결. 이 저장소 쪽은 그동안 없던 `og:image`/파비콘을 새로 만들어 채움:
+  - `assets/og-image.png`(1200×630, Playwright로 생성) + `assets/favicon.svg` + `assets/apple-touch-icon.png`
+  - `index.html`에 `og:image`·`og:image:width/height`·`twitter:image`(카드 타입 `summary_large_image`로 변경)·파비콘 링크 추가
+  - `renderHome()`(`js/screens/home.js`) 하단에 `data-pantry.com`으로 가는 `site-footer` 링크 추가 (`styles.css` 클래스 동반)
+  - 이 사이트는 데이터팬트리와 별도 배포·별도 저장소로 운영되며, 영속 데이터·백엔드는 여전히 없음 — 순수 정적 자산만 추가함
+- (이전 세션) PC 레이아웃 v2·전 화면 홈 버튼·하단 네비 제거 + 카카오 AdFit 실연동, 병렬 세션 머지 완료 (2026-07-27)
+
+- **PC 레이아웃 v2 (카드 넓히기)**: 1차로 480px 그대로 두고 카드 프레임(그림자·둥근 모서리)만 얹었더니
+  사용자가 "여전히 폰 화면 보는 느낌"이라고 피드백. `@media (min-width: 768px)`에서 `#app { max-width: 640px; }`로
+  카드 자체를 넓혔다 — 문항·결과·게임 화면 구조는 그대로, 콘텐츠 폭만 커짐. → `docs/DECISIONS.md` D-21
+- **전 화면 우상단 홈 버튼**: 진행 중 화면(문항·게임)에만 있던 `.exit-btn`을 인트로·결과 화면까지 확장.
+  잃을 진행 상황이 없는 화면은 `data-nav="home"`으로 바로 이동, 진행 중 화면은 기존 `bindExit()` 확인 모달 유지.
+  아이콘도 ✕ → 🏠로 통일. `test-result`/`disc-result`는 원래 헤더가 아예 없어서 홈 버튼만 든 `.back-row`를 새로 얹었다.
+  → `docs/DECISIONS.md` D-22
+- **홈 하단 네비게이션 제거**: 장식만 하던 인기·저장·내정보 탭을 완전히 삭제(`js/screens/home.js`,
+  `styles.css`의 `.bottom-nav`/`#app.has-bottom-nav`, `js/core/router.js`의 토글 로직, `scripts/verify.cjs`의
+  관련 검사까지 전부 정리). → `docs/DECISIONS.md` D-23
+- **테스트 진행 중 홈 나가기**: 문항 수만큼 뒤로가기를 눌러야 홈에 갈 수 있던 문제. `js/core/dom.js`에
+  `bindExit(root, onExit)` 추가 — `.exit-btn`(🏠) 클릭 시 확인 모달 → 확인하면 상태 초기화 후 `go("home")`.
+  적용 화면: ADHD `test-question`·`reaction-intro`·`reaction-play`, DISC `disc-question`·`dilemma-intro`·`dilemma-play`.
+- (병렬 세션 작업) **카카오 AdFit 실연동**: `js/core/ads.js`(단위 코드 단일 소스, `adSlotMarkup(kind, style)`) 추가,
+  `index.html`에 로더 스크립트, `.ad-slot` 플레이스홀더 7곳을 실제 `<ins class="kakao_ad_area">`로 교체.
+  배너 `DAN-YtXY1keVu0glLXJQ`(320×50) · 사각 `DAN-PKr3oCfRI9IIiXwz`(250×250). `.ad-slot.rect` 높이도
+  120px(플레이스홀더 시절 값)에서 실제 250px로 수정.
+- (이전 세션 작업) 딜레마 게임을 DISC 문항 뒤 강제 단계로, 반응속도 게임을 ADHD 문항 뒤 필수 단계로 각각 재배치 +
+  UI 대비/줄바꿈 정리 + 반응속도 게임 시작 전 확인 모달 추가 완료
 
 ## 다음 작업 우선순위
 1. **미니게임 목록이 비어 있음** — `/game`이 "준비 중" 빈 화면인데, 딜레마 게임은 이미 동작한다.
@@ -12,8 +41,6 @@
    ※ 게임은 테스트 하위 경로에 속해 있다(`docs/DECISIONS.md` D-4). 목록에 넣더라도 경로는 바꾸지 않는다 — id·경로 변경 금지(D-16)
    ⚠️ **반응속도 게임은 여기 넣지 않는다** — 이제 ADHD 문항을 다 풀어야만 들어갈 수 있는 필수 단계라(D-19),
    미니게임 목록에서 단독으로 열도록 노출하면 guard가 사용자를 ADHD 인트로로 되돌려버려 혼란만 준다.
-2. **홈 하단 네비게이션이 장식** — 인기·저장·내정보 탭이 클릭해도 아무 동작 없음. 동작 부여 또는 제거 / 관련 파일: `js/screens/home.js` · `styles.css` `.bottom-nav`
-3. **광고 슬롯 자리표시자** — `.ad-slot`이 "카카오 AdFit · 320×50" 텍스트만 있는 상태. 실제 연동 또는 제거 / 관련 파일: `js/screens/home.js` · `js/tests/*/screens.js` · `styles.css` `.ad-slot`
 
 ## 배포 후 확인 필요
 > 샌드박스는 아웃바운드가 프록시로 막혀 아래를 **확인하지 못했다.** "확인됨"으로 간주하지 말 것.
@@ -21,12 +48,14 @@
 - **결과 카드 폰트** — CDN 차단으로 결과 카드가 sans-serif 폴백으로만 그려졌다
 - **`navigator.share` 공유시트** — 헤드리스엔 API가 없어 클립보드 폴백 경로만 확인됨. 실기기 확인 필요
 - **`_redirects` 실동작** — 로컬은 `serve.py`로 흉내 낸 것. 배포본에서 `/test/disc/result/lion` 직접 접속이 200인지 확인
-- **광고 슬롯** — 자리표시자 상태라 노출 확인 불가
+- **광고 슬롯** — AdFit 코드 연동 완료. 샌드박스에서 외부 스크립트(`t1.daumcdn.net`)가 막혀 실제 노출/렌더링은 배포 후 실기기로 확인 필요
+- **OG 이미지 실제 미리보기** — 카카오톡/트위터/페이스북 디버거로 `https://fun.data-pantry.com/assets/og-image.png`가 실제로 불러와지는지, 카드가 `summary_large_image`로 정상 렌더되는지 배포 후 확인 필요 (샌드박스는 절대경로 이미지 요청을 외부에서 검증 못 함)
+- **데이터팬트리 헤더 FUN 버튼** — `data-pantry-web-site` 저장소의 헤더에 새 링크를 추가했음. 두 사이트가 각각 배포된 뒤 실제로 FUN 버튼 → `fun.data-pantry.com` 이동이 되는지, 이 사이트 하단 `by 데이터팬트리` 링크 → `data-pantry.com` 이동이 되는지 상호 확인 필요
 
 ## 알려진 이슈
 | 이슈 | 영향 | 우선순위 |
 |------|------|----------|
-| 페이지별 OG 메타·`og:image` 없음 | 중 — 공유 미리보기가 전부 동일, 썸네일 없음. 테스트가 둘이 되며 체감 커짐 | 중 |
+| 페이지별(테스트별) OG 메타는 여전히 공통 | 낮음 — `og:image`는 2026-07-28에 채웠으나, 정적 SPA라 테스트별 미리보기 문구·썸네일 분기는 안 됨(결과 주소마다 정적 셸이 있어야 가능) | 하 |
 | `THEME_CLASSES`의 `theme-adhd`에 대응하는 CSS 블록이 없음 | 낮음 — 아무 화면도 `theme: "adhd"`를 쓰지 않아 무해. 쓰려면 `styles.css`에 변수 블록부터 | 하 |
 | 헤더 ☰ 버튼이 동작 없음 | 낮음 — 고장으로 보임 | 하 |
 | 진행 중 새로고침하면 답변 소실 (`state`가 메모리 전용) | 낮음 | 하 |

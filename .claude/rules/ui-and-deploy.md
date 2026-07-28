@@ -16,7 +16,7 @@ paths:
 
 ## 최신 CSS 셀렉터로 상태를 추론하지 않는다
 `:has()` 같은 셀렉터는 구형 브라우저에서 규칙 전체가 무시돼 레이아웃이 깨진다.
-**조건부 스타일은 JS가 클래스를 붙인다** (`app.classList.toggle("has-bottom-nav", ...)` 패턴)
+**조건부 스타일은 JS가 클래스를 붙인다** (`classList.toggle("어떤-클래스", 조건)` 패턴 — CSS는 그 클래스만 본다)
 → `docs/ERRORS.md` E-6 · `docs/DECISIONS.md` D-11
 
 ## 클래스명을 바꾸면 `js/`도 같이 본다

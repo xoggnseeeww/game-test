@@ -61,10 +61,6 @@ body {
   background: #F6F4EF;
 }
 
-#app.has-bottom-nav {
-  padding-bottom: 78px;
-}
-
 .header {
   padding: 18px 20px 8px;
   display: flex;
@@ -115,6 +111,22 @@ body {
   line-height: 1;
 }
 
+/* 모든 화면 우상단의 홈 버튼. back-row·progress-row 양쪽에서 재사용하므로
+   margin-left:auto로 컨테이너 오른쪽 끝에 붙인다 — 두 컨테이너의 다른 자식 구성
+   (뒤로가기+제목 / 뒤로가기+진행바+카운트)을 신경 쓰지 않고 항상 맨 끝에 자리잡는다.
+   잃을 진행 상황이 없는 화면(인트로·결과)은 data-nav="home"으로 바로 이동하고,
+   문항·게임 진행 화면은 data-nav 없이 bindExit()의 확인 모달을 거쳐 이동한다. */
+.exit-btn {
+  margin-left: auto;
+  font-size: 19px;
+  color: #B4B0A8;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+}
+
 .back-title {
   font-size: 14px;
   font-weight: 700;
@@ -137,7 +149,7 @@ body {
 }
 
 .ad-slot.banner { height: 52px; }
-.ad-slot.rect { height: 120px; margin: 16px 20px 4px; }
+.ad-slot.rect { height: 250px; margin: 16px 20px 4px; }
 
 .hero {
   padding: 16px 20px 6px;
@@ -198,38 +210,19 @@ body {
   margin-top: 2px;
 }
 
-.bottom-nav {
-  position: fixed;
-  left: 50%;
-  bottom: 0;
-  transform: translateX(-50%);
-  width: 100%;
-  max-width: 480px;
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  padding: 14px 20px calc(14px + env(safe-area-inset-bottom, 0px));
-  border-top: 1px solid #EAE6DE;
-  background: #fff;
-}
-
-.bottom-nav .nav-item {
+.site-footer {
+  padding: 22px 20px 28px;
   text-align: center;
+}
+
+.site-footer a {
+  font-size: 12px;
   color: #B4B0A8;
+  text-decoration: none;
 }
 
-.bottom-nav .nav-item.active {
-  color: var(--accent);
-}
-
-.bottom-nav .nav-item .nav-icon {
-  font-size: 19px;
-}
-
-.bottom-nav .nav-item .nav-label {
-  font-size: 10px;
-  font-weight: 700;
-  margin-top: 2px;
+.site-footer a:hover {
+  color: #8A8790;
 }
 
 .section-title {
@@ -1033,5 +1026,26 @@ body {
   .result-card,
   .result-card .emoji {
     animation: none;
+  }
+}
+
+/* ---------------------------------------------------------------- 데스크톱
+   화면·로직 구조는 그대로다(레이아웃 재설계 아님) — #app의 max-width만 넓혀서
+   480px 폰 폭 그대로일 때보다 카드 자체가 커 보이게 한다. 그림자·둥근 모서리는
+   그 위에 얹은 "카드"라는 인상을 준다. */
+@media (min-width: 768px) {
+  body {
+    background: linear-gradient(180deg, #F4F2EC 0%, #E3DFD4 100%);
+  }
+
+  #app {
+    max-width: 640px;
+    margin: 28px auto;
+    min-height: calc(100vh - 56px);
+    border-radius: 28px;
+    box-shadow: 0 36px 90px -24px rgba(23, 23, 26, .35), 0 0 0 1px rgba(23, 23, 26, .04);
+    /* transform이 없어 position:fixed 자식(모달)의 컨테이닝 블록은 계속 뷰포트다
+       — overflow만으로는 그걸 가두지 않는다. */
+    overflow: hidden;
   }
 }

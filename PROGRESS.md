@@ -154,6 +154,61 @@
     - `npm test` 34개, `scripts/verify.cjs` 27개 전부 통과.
     **확인 못 한 것**: 없음 — 이번 작업은 검증 도구 자체를 고치는 것이었어서, 그 도구가 실제로 통과/실패를 정확히 가리는지까지 확인했다.
 
+- **반응속도 게임 시작 전 확인 모달 추가 + main 재머지** (2026-07-27):
+  - 요청 배경: 사용자가 반응속도 게임 인트로 화면 스크린샷을 보여주며 "저거 클릭하면 설명 모달을 한번 띄워주는게 좋을거같애", 이어서 "머지하자" → "관련파일도 업데이트하자".
+  - 원인: (버그 아님, 일관성 누락) `test-intro`의 "테스트 시작하기" 버튼은 `showModal()`로 안내를 한 번 더 확인시키는데, `reaction-intro`의 "마지막 단계 시작하기" 버튼은 클릭하는 즉시 `reaction-play`로 넘어갔다. D-19로 반응속도 게임이 이 검사의 "마지막 문항"이나 다름없는 필수 단계가 된 마당에, 정작 그 마지막 단계로 들어가는 지점에만 확인 절차가 빠져 있었다.
+  - 구현:
+    - `renderReactionIntro`의 시작 버튼 클릭에 `showModal()`을 추가 — 초록불/주황불 규칙, 너무 일찍 누르면 재진행되지만 충동 점수엔 기록된다는 점, `${CPT_ROUNDS}`(하드코딩 아님)를 마치면 최종 결과가 나온다는 안내. `onConfirm`에서만 `go("reaction-play")`.
+    - `scripts/verify.cjs`의 ADHD 섹션에 `.modal-btn-primary` 클릭 한 단계 추가(게임 시작 버튼 클릭 후).
+    - 머지 중 main이 다시 앞서 있었다(딜레마 게임 세션의 `ce5e848`/`bc40d19`) — `git merge origin/main`은 파일 충돌 없이 자동 병합됐고(양쪽이 서로 다른 파일을 건드림), `docs/DECISIONS.md`의 D-18(딜레마)이 끼어들며 이 브랜치의 D-18/D-19가 D-19/D-20으로 자동 재번호됨을 확인.
+    - `docs/DECISIONS.md` D-19에 "후속" 항목으로 모달 추가 사실을 기록. `CURRENT_TASK.md` 현재 작업 줄 갱신.
+  - 검증: 헤드리스 브라우저로 모달이 뜨는 것을 스크린샷으로 확인(초록 테마 확인 버튼 포함). 머지 후 `npm test` 34개, `scripts/verify.cjs` 29개(DISC 딜레마 케이스 포함) 전부 통과.
+    **확인 못 한 것**: 없음.
+
+- **PC 레이아웃 카드 프레임 + 테스트 진행 중 홈 나가기 버튼** (2026-07-27):
+  - 요청 배경: 사용자가 "1.구조적으로 pc에서보기 너무 불편하고 너무 휴대폰에 맞춰져 있음. 2.테스트진행시 다시 홈으로 돌아가기가 힘듬", 이어서 "메인에 머지하고 관련파일 업데이트".
+  - 원인: (버그 아님, 설계 공백) `#app`이 480px 고정폭 모바일 레이아웃이라 넓은 화면에선 밋밋한 회색 배경(`#EDEAE3`) 한가운데 좁은 칼럼만 방치된 것처럼 보였다. 진행 화면(`test-question`·`disc-question`·게임 인트로/플레이)의 뒤로가기는 한 단계씩만 되돌아가, 홈으로 나가려면 문항 수만큼(최대 12번) 눌러야 했다 — 직접 나가는 경로가 아예 없었다.
+  - 구현:
+    - PC 레이아웃: 두 방향(폰 프레임 카드 vs 완전 반응형 와이드 레이아웃) 중 `AskUserQuestion`으로 사용자에게 선택받아 **폰 프레임 카드**로 결정 — 콘텐츠·로직 변경 없이 안전하게 적용 가능해서. `styles.css`에 `@media (min-width: 768px)` 블록 추가: `#app`에 상단 margin·둥근 위쪽 모서리·box-shadow, `body`엔 은은한 그라데이션. 아래쪽은 각지게 둬서 `.bottom-nav`(position:fixed, 뷰포트 기준)와 자연스럽게 맞물리게 했다(실제 폰 하단 탭바도 화면 끝에 붙어 있으니 오히려 사실적). `#app`에 `overflow:hidden`을 추가해도 `transform`이 없어 `position:fixed` 자식(모달·`.bottom-nav`)의 컨테이닝 블록은 계속 뷰포트라 안 갇힌다 — 확인 완료.
+    - 홈 나가기: `js/core/dom.js`에 `bindExit(root, onExit)` 추가 — `.exit-btn`(✕)을 확인 모달("지금까지 답한 내용은 저장되지 않고 사라져요")에 연결하고, 확인 시 `onExit()`(화면별 state 초기화, ADHD는 `answers`/`lastReaction`, DISC는 `startDiscTest()` 전체 재초기화) 후 `go("home")`. `back-row`·`progress-row` 양쪽에서 재사용하도록 `.exit-btn { margin-left: auto; }`로 항상 컨테이너 맨 끝에 붙임. 적용 화면 6곳: ADHD `test-question`·`reaction-intro`·`reaction-play`, DISC `disc-question`·`dilemma-intro`·`dilemma-play`.
+    - `docs/DECISIONS.md`에 D-21(PC 카드 프레임)·D-22(진행 중 홈 나가기) 추가. `CURRENT_TASK.md` 현재 작업 줄 갱신.
+    - 머지 중 main이 두 번 더 앞서 있었다: 1차(`c0ffbe9`, 반응속도 게임 시작 모달)는 `renderReactionIntro`의 시작 버튼 핸들러가 내 `bindExit` 삽입 지점과 같은 줄이라 충돌 — 안내 모달과 나가기 버튼을 모두 살리는 방향으로 수동 병합. 2차(`c4839bf`, 이전 세션의 문서 갱신)는 `CURRENT_TASK.md` 현재 작업 줄만 충돌 — 두 세션의 요약을 모두 남기고 이전 세션 항목은 "(이전 세션 작업)"로 표시해 구분.
+  - 검증: `npm test` 34개 통과. `scripts/verify.cjs` 29개(기존 회귀, 안내 모달 클릭 포함) 통과. 추가로 헤드리스 스크립트를 두 개 작성해 확인: ① 1440px/390px 뷰포트에서 `#app`의 `border-radius`·`box-shadow`·`margin-top`이 데스크톱에서만 적용되고 모바일은 그대로인지, ② ADHD·DISC 양쪽에서 `.exit-btn` 클릭 → 확인 모달 → 홈 이동 → 진행 화면 재진입 시 1번 문항부터 시작(state 리셋 확인) — 전부 통과. 병합 후 `renderReactionIntro`에서 나가기 버튼(그만둘까요 모달)과 시작 버튼(시작 전 안내 모달)이 서로 다른 모달을 올바르게 띄우는지도 별도 확인.
+    **확인 못 한 것**: 없음 (실기기 반응형 확인은 `CURRENT_TASK.md`에 이미 있는 "배포 후 확인 필요" 항목들과 별개로, 이번 변경은 헤드리스에서 뷰포트 크기를 바꿔가며 직접 확인했다).
+
+- **전 화면 홈 버튼 · 카드 폭 640px 확장 · 하단 네비 완전 제거** (2026-07-27):
+  - 요청 배경: 배포된 화면 스크린샷(ADHD 인트로)의 우상단을 동그라미로 표시하며 "우상단에 홈 버튼 다 넣는게 좋지않을까? 그리고 홈화면에 하단 바는 전혀 필요없는거같은데? 그리고 PC에서 폰으로 보는 화면처럼 보이니까 너무 불편하네.. PC에도 최적화 해야될거같다."
+  - 원인: (버그 아님, 직전 세션 작업에 대한 실사용 피드백 3건)
+    ① 홈 버튼을 진행 화면(문항·게임) 6곳에만 넣어서, 진행 상황을 잃을 게 없는 인트로·결과 화면엔 여전히 홈으로 가는 직접 경로가 없었다 — 특히 결과 화면은 애초에 상단 헤더 자체가 없었다.
+    ② 홈 하단 인기·저장·내정보 탭은 `CURRENT_TASK.md`에 이미 "장식"으로 기록돼 있던 known issue였다.
+    ③ 직전 세션의 "폰 프레임 카드"(D-21 1차)는 480px 폭 자체는 그대로 두고 그림자·둥근 모서리만 얹은 것이라, 카드 프레임이 생겼어도 여전히 좁아서 "폰 화면 보는 느낌"이라는 근본 불편함은 안 풀렸다.
+  - 구현:
+    - 홈 버튼 확장: `test-intro`·`disc-intro`(뒤로가기가 목록으로 가지 홈이 아님)와 `test-result`·`disc-result`(헤더가 없던 화면 — `.back-row`를 새로 얹음)에 `data-nav="home"` 버튼 추가. 이미 `back-btn`이 `data-nav="home"`인 화면(`psych-list`·`game-list`·`test-shared`·`disc-shared`)은 중복이라 넣지 않았다. 기존 6개 진행 화면의 `.exit-btn` 아이콘도 ✕ → 🏠로 통일(사용자가 "홈 버튼"이라고 불러서). **주의**: `data-nav`와 `bindExit()`를 같은 버튼에 같이 걸면 둘 다 클릭 리스너가 붙어 확인 모달이 무의미해진다 — 진행 화면 버튼엔 `data-nav`를 안 넣었다.
+    - 하단 네비 제거: `js/screens/home.js`의 `.bottom-nav` 마크업 삭제. 유일한 소비자가 사라져 죽은 코드가 된 `styles.css`의 `.bottom-nav`/`#app.has-bottom-nav`, `js/core/router.js`의 `classList.toggle("has-bottom-nav", ...)`, `scripts/verify.cjs`의 관련 검사(하단 네비 고정 확인)까지 전부 같이 지웠다. `.claude/rules/ui-and-deploy.md`가 이 토글을 `:has()` 대안의 구체 예시로 인용하고 있어서, 죽은 예시를 가리키지 않도록 일반적인 `classList.toggle()` 설명으로 바꿨다.
+    - PC 레이아웃 재조정: `AskUserQuestion`으로 세 방향(카드만 넓히기 / 홈·목록만 데스크톱 레이아웃 / 전 화면 완전 반응형)을 다시 제시, "카드를 넓히기"를 선택받았다. `@media (min-width: 768px)`의 `#app`에 `max-width: 640px` 추가(480 → 640). 하단 네비가 없어져 각지게 둘 이유가 사라졌으므로, 상하 margin을 대칭으로 주고 모서리를 네 곳 다 둥글게 바꿨다(기존엔 탭바와 맞물리도록 아래만 각짐).
+    - `docs/decisions/2026-h2.md`의 D-21에 "갱신(2차)"로 640px 확장을 추가, D-22 제목·본문을 "전 화면으로 확장"에 맞게 갱신, D-23(하단 네비 제거)을 새로 추가. `docs/DECISIONS.md` 인덱스와 `CURRENT_TASK.md`(현재 작업 줄, 다음 작업 우선순위에서 "홈 하단 네비게이션이 장식" 항목 제거)도 갱신.
+  - 검증: `npm test` 34개, `scripts/verify.cjs` 29개(하단 네비 부재 확인으로 교체된 항목 포함) 모두 통과. 별도 헤드리스 스크립트로 확인: test-intro/disc-intro 홈 버튼 클릭 시 확인 없이 즉시 홈 이동, ADHD 전체 플로우(문항 12개 + CPT 게임 완주)를 실제로 플레이해 결과 화면의 홈 버튼도 확인 없이 즉시 이동하는지, 진행 중 화면(`test-question`)의 홈 버튼은 여전히 확인 모달을 거치는지. 스크린샷으로 사용자가 동그라미 친 위치와 실제 버튼 위치가 일치하는지, 1440px에서 카드 폭이 640px로 넓어졌는지, 홈 화면에 하단 바가 없는지 육안 확인.
+    **확인 못 한 것**: 없음.
+
+- **카카오 AdFit 실연동 + 메인 머지** (2026-07-27):
+  - 요청 배경: 사용자가 카카오 AdFit 광고 코드를 발급받아 Cloudflare Pages의 "Variables and secrets"에 `ADFIT_KEY`(320×50)·`ADFIT_MINI_KEY`(250×250) 이름으로 등록해두고 "이 키를 쓰는 걸로 코드를 적으면 되잖아"라고 요청, 이어서 "메인머지하고 관련파일 업데이트해줘".
+  - 원인: (버그 아님, 오해 정정) 이 레포는 빌드 스텝도 Pages Functions도 없어 Cloudflare의 환경변수/시크릿은 브라우저에 배달되는 정적 파일 안에서 애초에 읽을 방법이 없다 — 변수명 문자열이 치환 없이 그대로 나갈 뿐이었다. 게다가 AdFit 단위 코드(`DAN-...`)는 렌더링되는 순간 모든 방문자에게 노출되는 값이라 Secret으로 감출 실익도 없다. 사용자가 Cloudflare 대시보드에서 실제 값(320×50: `DAN-YtXY1keVu0glLXJQ`, 250×250: `DAN-PKr3oCfRI9IIiXwz`)을 확인해 전달했다.
+  - 구현: `js/core/ads.js`를 새로 만들어 두 단위 코드를 한 곳에서만 관리(`adSlotMarkup(kind, style)`). `index.html` head에 AdFit 로더 스크립트(`t1.daumcdn.net/kas/static/ba.min.js`) 1회 추가. `.ad-slot` 플레이스홀더 텍스트 7곳(`home.js` 1 · `disc/screens.js` 3 · `adhd/screens.js` 2, 위치별 배너 5/사각 2)을 전부 실제 `<ins class="kakao_ad_area">` 태그로 교체. 부수 발견: `.ad-slot.rect`가 자리표시자 시절엔 안 드러났지만 실제 250px 높이 광고에 비해 CSS `height`가 120px로 짧았다 — 250px로 수정. 이후 사용자가 요청한 대로 `origin/main`(그 사이 5커밋 앞서 있었음 — PC 레이아웃 카드 프레임, `bindExit` 등)을 현재 브랜치로 병합, 충돌 없이 자동 병합됨.
+  - 검증: `npm test` 34개 통과. `scripts/verify.cjs` 29개 통과, 1건은 원래도 실패하던 항목(외부 도메인 아웃바운드가 프록시로 막힌 샌드박스 제약 — 폰트 CDN과 동일한 원인, AdFit 스크립트 403). `CURRENT_TASK.md`의 광고 슬롯 항목을 완료로 표시하고 "배포 후 확인 필요"에 AdFit 노출 확인을 남겼다.
+    **확인 못 한 것**: 실제 배포본에서 광고가 렌더링되는지(샌드박스 네트워크 제약으로 원천 불가) — 실기기 확인 필요.
+
+- **데이터팬트리 연동 — OG 이미지·파비콘 신규 + 메인 머지** (2026-07-28):
+  - 요청 배경: 사용자가 "별도운영할거긴한데 연결을 시킬거야. 데이터팬트리 사이트 상단에 FUN 버튼 커뮤니티랑 요금제 사이에 넣어주고 fun.data-pantry.com 사이트로 연결시켜줘. og이미지랑 과몰입구역 페이지에 필요한것들 데이터팬트리에서 가져갈수있는것들은 가져가자", 이어서 "각 레포에 메인에 머지해주고 관련파일 업데이트해줘".
+  - 원인: (버그 아님, 자산 공백) 이 레포는 `og:image`도 파비콘도 아예 없었다(`CURRENT_TASK.md` 알려진 이슈에 이미 기록돼 있던 공백). 두 사이트는 서로 다른 저장소·배포라 정적 파일을 직접 공유할 방법이 없어, 데이터팬트리 쪽 디자인 패턴(외부 링크 스타일·OG 이미지 규격 1200×630·favicon 구성)만 참고해 이 레포 자체 브랜드 색(보라 `#5B44F2`)으로 새로 만들어야 했다.
+  - 구현:
+    - `assets/og-image.png`(1200×630) — 레포에 이미지 편집 도구가 없어 HTML/CSS 템플릿을 Playwright(레포 밖 `/tmp/pw`에 설치, D-9 의존성 0 원칙 유지)로 스크린샷해 생성. `assets/favicon.svg`(손으로 작성한 벡터, `.logo-badge`와 동일한 배지 디자인)·`assets/apple-touch-icon.png`(180×180, 같은 방식으로 생성)도 추가.
+    - `index.html`에 `og:image`/`og:image:width`/`og:image:height`/`og:image:alt`/`twitter:image` 추가, `twitter:card`를 `summary`→`summary_large_image`로 변경, 파비콘 `<link>` 2개 추가.
+    - `renderHome()`(`js/screens/home.js`) 하단에 `data-pantry.com`으로 가는 `site-footer` 링크 추가(새 클래스는 `styles.css`에도 추가해 그 파일 규칙의 `grep -rn '<클래스명>' js/ styles.css` 양쪽 확인을 통과시킴). 데이터팬트리 쪽(`data-pantry-web-site` 저장소) 헤더에도 같은 세션에서 커뮤니티↔요금제 사이 FUN 버튼을 추가해 양방향으로 연결.
+    - `CLAUDE.md` 구조 트리에 `assets/` 항목 추가, `CURRENT_TASK.md`의 "페이지별 OG 메타·`og:image` 없음" 알려진 이슈를 "og:image는 채웠으나 테스트별 미리보기 분기는 여전히 안 됨"으로 갱신하고 "배포 후 확인 필요"에 OG 미리보기·FUN 버튼 상호 연결 확인 항목을 남겼다.
+    - 사용자 요청대로 `main`에 병합(그 사이 `origin/main`이 앞서 있지 않아 충돌 없이 병합됨).
+  - 검증: `npm test` 34개, `scripts/verify.cjs` 28개 통과 — 유일한 실패는 폰트 CDN·AdFit 스크립트와 동일한 원인(샌드박스 아웃바운드 차단)의 403이라 내 변경과 무관함을 커밋 전에 확인. 새로 만든 `assets/*` 3개 파일은 로컬 서버(`serve.py`)로 각각 200 응답 확인. 병합 후 `main`에서 `npm test` 34개 재실행해 통과 재확인.
+    **확인 못 한 것**: 카카오톡/트위터 등 실제 소셜 디버거로 OG 카드 렌더링 확인, 데이터팬트리 FUN 버튼과 이 사이트 하단 링크의 실배포 상호 이동 확인 — 둘 다 샌드박스가 외부에서 배포본을 열어볼 수 없어 `CURRENT_TASK.md`의 "배포 후 확인 필요"로 이관.
+
 ---
 
 ## 이전 이력 (git 히스토리에서 추출, 요약)
