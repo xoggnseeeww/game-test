@@ -100,12 +100,17 @@ async function playCptGame(page) {
 
   const errors = [];
   page.on("pageerror", (e) => errors.push(String(e)));
-  // 샌드박스는 아웃바운드가 프록시로 막혀 CDN 폰트가 항상 실패한다 — 앱 버그가 아니므로 제외
+  // 샌드박스는 아웃바운드가 프록시로 막혀 외부 자원(CDN 폰트 · AdFit 로더)이 항상 실패한다.
+  // 앱 버그가 아니므로 제외한다. 다만 "Failed to load resource: ... 403" 같은 메시지는 본문에
+  // 주소가 없어서 m.text()만 보면 걸러지지 않는다 — m.location().url까지 같이 본다.
+  // (AdFit 스크립트가 슬롯마다 붙었는지는 아래 "광고 슬롯" 검사가 DOM으로 따로 확인한다)
+  const EXTERNAL_NOISE = /ERR_TUNNEL_CONNECTION_FAILED|jsdelivr|pretendard|daumcdn|AdFit/i;
   page.on("console", (m) => {
     if (m.type() !== "error") return;
     const t = m.text();
-    if (/ERR_TUNNEL_CONNECTION_FAILED|jsdelivr|pretendard/i.test(t)) return;
-    errors.push(t);
+    const url = (m.location() && m.location().url) || "";
+    if (EXTERNAL_NOISE.test(t) || EXTERNAL_NOISE.test(url)) return;
+    errors.push(url ? `${t} (${url})` : t);
   });
 
   const goto = (p) => page.goto(BASE + p, { waitUntil: "networkidle" });
@@ -113,6 +118,29 @@ async function playCptGame(page) {
   // === 모듈 로딩 — <script type="module">이 실제로 떴는가 ===
   await goto("/");
   check("ES 모듈 부팅", await page.isVisible(".hero-title"), page.url());
+
+  // === 광고 슬롯에 AdFit 로더가 실제로 붙는가 ===
+  // AdFit 로더는 실행 시점의 문서만 훑는다. index.html에 한 번 심는 방식으로 되돌아가면
+  // 슬롯은 그려지는데 광고만 조용히 안 나온다 — 눈으로는 "빈 자리"라 발견이 늦다.
+  // (샌드박스에선 로더 자체가 차단되므로 "스크립트가 붙었는가"까지만 본다)
+  const adLoaders = (root) =>
+    root.$$eval(".ad-slot ins.kakao_ad_area", (list) =>
+      list.map((ins) => {
+        const next = ins.nextElementSibling;
+        return {
+          unit: ins.dataset.adUnit || "",
+          loaded: !!next && next.tagName === "SCRIPT" && next.src.includes("ba.min.js"),
+        };
+      })
+    );
+
+  const homeAds = await adLoaders(page);
+  check("홈 광고 슬롯 존재", homeAds.length > 0, `${homeAds.length}개`);
+  check(
+    "홈 광고 슬롯마다 AdFit 로더가 붙음",
+    homeAds.length > 0 && homeAds.every((a) => a.loaded),
+    JSON.stringify(homeAds)
+  );
 
   // === 목록 카드가 등록된 테스트에서 자동 생성되는가 (registerTest) ===
   await page.click('[data-nav="psych-list"]');
@@ -123,6 +151,15 @@ async function playCptGame(page) {
   await page.click('[data-nav="test-intro"]');
   const adhdChips = await page.$$eval(".meta-chip .value", (n) => n.map((e) => e.textContent));
   check("ADHD 인트로 주소", page.url().endsWith("/test/adhd"), page.url());
+
+  // 새로고침 없는 화면 이동에서도 새 슬롯에 로더가 붙어야 한다 — index.html 한 번 심기로는
+  // 절대 통과할 수 없는 검사다(로더가 이미 실행을 끝낸 뒤 만들어진 <ins>이므로).
+  const introAds = await adLoaders(page);
+  check(
+    "SPA 이동 후 새 광고 슬롯에도 로더가 붙음",
+    introAds.length > 0 && introAds.every((a) => a.loaded),
+    JSON.stringify(introAds)
+  );
 
   await page.click(".cta-btn");
   await page.click(".modal-btn-primary").catch(() => {});

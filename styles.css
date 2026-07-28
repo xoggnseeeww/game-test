@@ -133,19 +133,15 @@ body {
   color: #17171A;
 }
 
+/* 실제 광고가 들어오기 전 자리만 잡던 시절엔 점선 테두리와 안내 문구가 있었다.
+   지금은 AdFit이 이 안에 진짜 배너를 그리므로 테두리를 빼고 자리(height)만 잡는다.
+   높이를 고정해 두는 건 광고가 늦게 붙을 때 아래 콘텐츠가 밀리지 않게 하기 위한 것이다. */
 .ad-slot {
   margin: 10px 20px 4px;
-  border: 1.5px dashed #C9C5BC;
-  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #A7A29A;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .03em;
-  text-align: center;
-  line-height: 1.5;
+  overflow: hidden;
 }
 
 .ad-slot.banner { height: 52px; }
