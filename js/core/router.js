@@ -7,6 +7,7 @@
 //  - dynamicPath   : 주소가 화면마다 하나로 안 정해지는 화면(공유 결과처럼 슬러그가 붙는 경우)
 import { normalizePath } from "./util.js";
 import { state } from "./state.js";
+import { refreshAds } from "./ads.js";
 
 // 브라우저 밖(node --test)에서도 화면 디스크립터만 읽어볼 수 있게, 모듈을 불러오는
 // 것만으로 document를 건드리지 않는다. 실제 렌더는 브라우저에서만 일어난다.
@@ -91,6 +92,7 @@ function runTeardowns() {
 function render() {
   app.innerHTML = "";
   screens.get(state.screen).render();
+  if (app.querySelector(".kakao_ad_area")) refreshAds();
 }
 
 // 뒤로/앞으로가기로 URL만 바뀌었을 때 화면-상태 불일치를 막기 위한 보정.
