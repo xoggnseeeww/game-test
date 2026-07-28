@@ -10,7 +10,7 @@ import {
   RT_SD_UNSTABLE,
   RT_SD_VERY_UNSTABLE,
 } from "../js/tests/adhd/score.js";
-import { QUESTIONS, OPTIONS } from "../js/tests/adhd/data.js";
+import { QUESTIONS, OPTIONS, RESULT_TYPES } from "../js/tests/adhd/data.js";
 
 function reactionStats(overrides) {
   return {
@@ -146,6 +146,20 @@ test("경계선 안내: 임계선 근처 축만 짚고, 뚜렷한 결과엔 붙�
   state.answers = QUESTIONS.flatMap((q, i) => [{ group: q.group, value: i % 4 < 2 ? 3 : 2 }]);
   const r = computeResult();
   assert.deepEqual(r.borderline, ["집중력", "충동성", "에너지"], `실제 축 퍼센트: ${r.focus}/${r.impulse}/${r.energy}`);
+});
+
+// axisIntensityText()는 60~74%를 "약간 높게", 75%+를 "뚜렷하게 높게"/"매우 두드러지게"로
+// 나눠 부른다. RESULT_TYPES의 유형 desc가 이 상위 등급 어휘를 재사용하면, 임계선을 막
+// 넘긴 60%대 사용자에게도 같은 화면에서 "뚜렷한 특징"이라고 말하게 된다 — 축 문구는
+// "약간 높게"인데 유형 문구는 "뚜렷"이라고 우기는 모순이 실제로 있었다.
+// 낮은 쪽도 대칭이다: "000"(전 축 미달)은 0~59% 전체를 아우르는데 "낮게 나왔어요"라고
+// 단정하면, 59%(axisIntensityText로는 "평범한 수준")인 사람에게도 낮다고 말하게 된다.
+// → `docs/DECISIONS.md` D-30
+test("유형 설명: axisIntensityText가 상위 등급 전용으로 쓰는 어휘를 재사용하지 않는다", () => {
+  const reserved = /뚜렷|두드러지|낮게 나왔|낮게 나타났/;
+  for (const [key, type] of Object.entries(RESULT_TYPES)) {
+    assert.ok(!reserved.test(type.desc), `${key}(${type.name})의 desc가 상위 등급 전용 어휘를 쓴다: "${type.desc}"`);
+  }
 });
 
 test("최종 결과: 설문 축이 이미 100%면 게임 보너스가 눈에 보이는 반영으로 잡히지 않는다", () => {

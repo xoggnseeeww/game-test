@@ -140,7 +140,7 @@ state = {
 ### ADHD (`js/tests/adhd/score.js`)
 ```
 답변 수집   → 역채점 문항은 (4 - value)로 저장
-게임 보너스 → gameBonuses(state.lastReaction) → { impulse: 0~4, focus: 0~4 }
+게임 보너스 → gameBonuses(state.lastReaction) → { impulse: 0~GAME_BONUS_MAX, focus: 0~GAME_BONUS_MAX }
 퍼센트      → toPct(raw + bonus), 분모 16 (= 축당 4문항 × 4점)
 프로필 키   → 축별 >= AXIS_HIGH_THRESHOLD(60) → "010" 같은 3비트
 유형        → RESULT_TYPES[key] (8종)
@@ -150,6 +150,9 @@ state = {
 - 이미 100%인 축에는 보너스가 실제로 반영되지 않으므로 `visibleBonus`로 표시를 거른다
 - `borderline`: 임계선에서 `AXIS_BORDERLINE_BAND`(7%p) 안쪽인 축 이름. 유형은 안 바꾸고 결과 화면 안내만 고른다(D-28)
 - 게임 보너스는 **축당 최대 `GAME_BONUS_MAX`(=2)** — 문항 하나 만점(4)보다 가볍게 묶어둔다(D-25). rtSD 구간은 `RT_SD_UNSTABLE`/`RT_SD_VERY_UNSTABLE`(D-26)
+- **`RESULT_TYPES[key].desc`에 강도를 직접 단정하지 않는다** — "뚜렷한", "낮게 나왔어요" 같은 표현은
+  `axisIntensityText()`가 특정 퍼센트 구간 전용으로 예약해뒀는데, 유형 하나가 넓은 퍼센트 구간을
+  아우르다 보니 그 예약을 침범했다. 강도는 축 문구와 경계선 안내(D-28)의 몫으로 남긴다(D-30)
 
 ### DISC (`js/tests/disc/score.js`)
 - **ipsative(강제선택)**: 상황마다 4개 선택지 중 "가장 나 같은 것"과 "아닌 것"을 고른다 → 축별 원점수 합은 **항상 0**
