@@ -3,9 +3,9 @@
 > 이 파일은 1~2k 토큰 이하를 유지한다 — "언젠가 할 일"이 아니라 "지금 유효한 작업"만.
 
 ## 현재 작업
-없음 (데이터팬트리 사이트 연동 — OG 이미지·파비콘 추가 + 홈 화면 하단에 데이터팬트리 링크, 2026-07-28)
+없음 (데이터팬트리 사이트 연동 — OG 이미지·파비콘 추가 + 홈 화면 하단에 데이터팬트리 링크 + 메인 머지 완료, 2026-07-28)
 
-- **데이터팬트리 연동**: 데이터팬트리(`data-pantry-web-site`) 헤더에 커뮤니티↔요금제 사이 FUN 버튼을 추가해
+- **데이터팬트리 연동** (메인 머지 완료): 데이터팬트리(`data-pantry-web-site`) 헤더에 커뮤니티↔요금제 사이 FUN 버튼을 추가해
   `fun.data-pantry.com`(이 사이트)로 연결. 이 저장소 쪽은 그동안 없던 `og:image`/파비콘을 새로 만들어 채움:
   - `assets/og-image.png`(1200×630, Playwright로 생성) + `assets/favicon.svg` + `assets/apple-touch-icon.png`
   - `index.html`에 `og:image`·`og:image:width/height`·`twitter:image`(카드 타입 `summary_large_image`로 변경)·파비콘 링크 추가
