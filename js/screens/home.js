@@ -30,6 +30,9 @@ export function renderHome() {
           <div class="sub">반응속도·기억력</div>
         </button>
       </div>
+      <div class="footer-links">
+        <button data-nav="privacy">개인정보처리방침</button>
+      </div>
     </div>
   `));
   bindNav(app);

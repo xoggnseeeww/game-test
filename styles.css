@@ -351,6 +351,50 @@ body {
   margin: 0;
 }
 
+.legal-doc {
+  padding: 6px 20px 20px;
+}
+
+.legal-updated {
+  font-size: 12px;
+  color: #8A8790;
+  margin: 0 0 18px;
+}
+
+.legal-doc h3 {
+  font-size: 14px;
+  font-weight: 800;
+  color: #17171A;
+  margin: 20px 0 6px;
+}
+
+.legal-doc h3:first-of-type {
+  margin-top: 0;
+}
+
+.legal-doc p {
+  font-size: 13px;
+  color: #45424B;
+  line-height: 1.7;
+  margin: 0 0 6px;
+}
+
+.footer-links {
+  display: flex;
+  justify-content: center;
+  padding: 4px 20px 20px;
+}
+
+.footer-links button {
+  font-size: 12px;
+  color: #8A8790;
+  text-decoration: underline;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+}
+
 .cta {
   padding: 18px 20px 10px;
 }

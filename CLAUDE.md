@@ -13,12 +13,14 @@
 | 빌드 | **없음** (ES 모듈을 브라우저가 직접 로드) |
 | 테스트 | `npm test` (= `node --test`, 의존성 0) — 채점 로직·모듈 정합성 |
 | 브라우저 회귀 | `mkdir -p /tmp/pw && cd /tmp/pw && npm i playwright` → `NODE_PATH=/tmp/pw/node_modules node scripts/verify.cjs` (서버 먼저) |
+| 공유 셸 재생성 | `npm run generate:share-shells` — `share/`와 `_redirects`를 `data.js`에서 다시 만든다. 결과 유형 추가/변경/삭제 후 필수, 안 하면 `npm test`가 빨간불 (D-32) |
 | 배포 | `main` push → Cloudflare Pages 자동 배포 |
 
 ## 식별자
 - 도메인 `https://fun.data-pantry.com` / 저장소 `xoggnseeeww/game-test`
 - 호스팅: Cloudflare Pages — 빌드 명령 없음, 출력 디렉터리 = 레포 루트
-- SPA 폴백: `_redirects` (`/*  /index.html  200`) — 없으면 하위 경로 직접 접속이 404
+- SPA 폴백: `_redirects` 마지막 줄(`/*  /index.html  200`) — 없으면 하위 경로 직접 접속이 404.
+  그 위 줄들은 결과 공유 주소 20개를 `share/`의 정적 셸로 돌리는 명시적 규칙(자동 생성, D-32) — 손으로 고치지 말 것
 - 영속 데이터: **없음** (예전엔 `localStorage["gt_reaction_best"]`로 반응속도 최고기록을 저장했으나 D-20에서 제거) / 시크릿·환경변수·백엔드 **없음**
 
 ## 기술 스택
@@ -28,16 +30,21 @@
 
 ## 구조 개요
 ```
-index.html            진입점 (메타·OG·referrer 정책은 전 주소 공통 — 페이지별 미리보기 불가)
+index.html            진입점. 메타·OG·referrer 정책은 SPA 화면 전부에 공통(페이지별 미리보기 불가) —
+                      단, 결과 공유 주소만 share/의 정적 셸이 별도 메타를 준다 (D-32)
 js/main.js            부팅: 화면·테스트를 라우터에 등록
 js/core/              router(레지스트리·guard·teardown) · state · dom · share · util · ads
 js/screens/home.js    홈 · 심리테스트 목록(등록된 테스트에서 자동 생성) · 미니게임 목록
+js/screens/legal.js   개인정보처리방침 (D-31)
 js/tests/<id>/        테스트 1개 = 폴더 1개: data · score · screens · index(디스크립터)
                       현재 adhd(+반응속도 게임), disc(+딜레마 게임)
-test/                 node --test 스위트 (채점 로직 · 모듈 import/export 정합성)
+test/                 node --test 스위트 (채점 로직 · 모듈 import/export 정합성 · 공유 셸 드리프트)
+share/<test>/<slug>.html  결과 공유 정적 셸 (자동 생성 산출물 — 직접 고치지 말 것, D-32)
+scripts/lib/share-shell.mjs  공유 셸 생성 로직 (순수 함수). 생성 스크립트와 드리프트 검사가 같이 씀
+scripts/generate-share-shells.mjs  위 로직으로 share/와 _redirects를 다시 만드는 개발자 도구
 styles.css            전체 스타일. 브랜드 색은 CSS custom properties + theme-* 클래스
-_redirects            Cloudflare Pages SPA 폴백
-serve.py              로컬 개발 서버 (SPA 폴백 포함, 개발 전용)
+_redirects            Cloudflare Pages SPA 폴백 + 결과 공유 주소별 명시적 규칙 (자동 생성, D-32)
+serve.py              로컬 개발 서버 (SPA 폴백 + `_redirects` 명시 규칙 반영, 개발 전용)
 scripts/verify.cjs     헤드리스 브라우저 회귀 스위트 (레포 의존성 아님 — 파일 헤더 참고)
 docs/design-draft.html  최초 디자인 목업. 배포·동작과 무관 (.claudeignore)
 ```
@@ -70,6 +77,8 @@ docs/design-draft.html  최초 디자인 목업. 배포·동작과 무관 (.clau
 
 - 새 테스트 추가 → `js/main.js`에 `registerTest` + `registerScreens` **둘 다**. 하나만 하면 목록 카드나 공유 URL 한쪽이 조용히 빠진다
 - 결과 유형 추가/삭제 → 같은 `data.js`의 슬러그 맵도 갱신 (없으면 공유 URL이 조용히 홈으로 폴백) — DISC는 `slug` 필드가 단일 소스라 자동
+- 결과 유형 추가/변경/삭제(이름·소제목·태그·슬러그) → `npm run generate:share-shells` 재실행 + `share/`·`_redirects` 커밋.
+  안 하면 카카오톡 등 링크 미리보기가 옛 이름을 계속 보여준다. 잊어도 `npm test`(`test/share-shells.test.js`)가 잡는다 (D-32)
 - 문항 수 변경 → 해당 `score.js`의 만점 분모가 문항 수에서 파생되는지 확인 (ADHD `toPct` 분모 `16` = 축당 4문항 × 4점)
 - ADHD 문항 추가/삭제/`reverse` 변경 → **축마다 정방향과 역채점이 반씩**이어야 한다. 깨지면 묵종 편향 방어가
   산술적으로 무너진다(전 문항 같은 답 → 50%가 아니게 됨). `npm test`가 막는다 → `docs/DECISIONS.md` D-27

@@ -291,6 +291,39 @@ async function playCptGame(page) {
 
   check("콘솔/페이지 에러 없음", errors.length === 0, errors.join(" ; "));
 
+  // === 공유 셸: 크롤러는 JS를 실행하지 않는다 — page.goto가 아니라 날것 fetch로 확인 ===
+  // (npm test의 test/share-shells.test.js는 파일 내용이 data.js와 일치하는지만 본다.
+  //  여기서는 serve.py의 _redirects 처리를 거쳐 그 파일이 실제로 이 주소에서 나오는지 본다.)
+  async function rawTitle(urlPath) {
+    const res = await fetch(BASE + urlPath);
+    const html = await res.text();
+    const m = /<title>([^<]*)<\/title>/.exec(html);
+    return { status: res.status, title: m ? m[1] : null, ogUrl: (/<meta property="og:url" content="([^"]*)"/.exec(html) || [])[1] };
+  }
+  const owlShell = await rawTitle("/test/adhd/result/owl");
+  check(
+    "공유 셸(ADHD): /test/adhd/result/owl이 JS 없이도 유형별 <title>을 준다",
+    owlShell.status === 200 && owlShell.title === "차분한 올빼미형(안정형) - 과몰입구역",
+    JSON.stringify(owlShell)
+  );
+  const lionShell = await rawTitle("/test/disc/result/lion");
+  check(
+    "공유 셸(DISC): /test/disc/result/lion이 JS 없이도 유형별 <title>을 준다",
+    lionShell.status === 200 && lionShell.title === "돌진하는 사자(주도형 · Dominance) - 과몰입구역",
+    JSON.stringify(lionShell)
+  );
+  check(
+    "공유 셸끼리 og:url이 서로 다르다 (전부 같은 파일을 가리키는 사고 방지)",
+    owlShell.ogUrl !== lionShell.ogUrl && owlShell.ogUrl.endsWith("/test/adhd/result/owl") && lionShell.ogUrl.endsWith("/test/disc/result/lion"),
+    `${owlShell.ogUrl} vs ${lionShell.ogUrl}`
+  );
+  const homeShell = await rawTitle("/");
+  check(
+    "홈은 공유 셸 규칙의 영향을 안 받는다 (그대로 과몰입구역)",
+    homeShell.title === "과몰입구역",
+    JSON.stringify(homeShell)
+  );
+
   await browser.close();
 
   console.log("PASS (" + ok.length + ")\n  " + ok.join("\n  "));

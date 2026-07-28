@@ -4,6 +4,7 @@
   "type": "module",
   "description": "정적 사이트라 빌드 단계는 없다. 채점 로직 검증용 테스트 러너만 쓴다.",
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "generate:share-shells": "node scripts/generate-share-shells.mjs"
   }
 }

@@ -13,6 +13,7 @@
 - 채점 파이프라인 (ADHD / DISC) → §6
 - 공유 · 결과 카드 → §7
 - 테스트 스위트 → §8
+- 결과 공유 정적 셸 (`share/`) → §9
 
 ---
 
@@ -30,6 +31,7 @@ js/core/
   util.js               shuffle · normalizePath · roundRect · localStorage 방어 래퍼
   ads.js                카카오 AdFit 광고 단위 마크업 (단위 코드 단일 소스)
 js/screens/home.js      홈 · 심리테스트 목록 · 미니게임 목록 + commonScreens
+js/screens/legal.js     개인정보처리방침 (D-31) + legalScreens
 js/tests/<id>/
   data.js               문항·결과 유형·슬러그·게임 상수 (단일 소스)
   score.js              채점 (DOM을 모른다 → node --test로 직접 검증 가능)
@@ -74,6 +76,7 @@ js/tests/<id>/
 | `/` | `home` | — | — |
 | `/test` | `psych-list` | — | — |
 | `/game` | `game-list` | — | — |
+| `/privacy` | `privacy` | — | — |
 | `/test/adhd` | `test-intro` | — | — |
 | `/test/adhd/play` | `test-question` | — | 답이 다 차 있으면 마지막 문항으로 되돌림 |
 | `/test/adhd/result` | `test-result` | — | 답 부족 → `test-intro`, 게임 미완료 → `reaction-intro` |
@@ -179,5 +182,33 @@ state = {
 | `test/disc.score.test.js` | DISC 채점 불변식 (합 0, 순서 무관, 결정론, 대척점 배제, 12유형 도달, 슬러그 왕복) |
 | `test/adhd.score.test.js` | 반응 코멘트가 억제 실패×누락 9개 조합 모두 다른 문장을 주는가 / 게임 보너스 임계값 / 이미 100%인 축엔 보너스가 안 보이는가 |
 | `test/copy.test.js` | 화면 문구의 개수가 데이터에서 파생되는가 (`docs/ERRORS.md` E-1) |
+| `test/share-shells.test.js` | `share/`·`_redirects`가 지금 `data.js`로 다시 만든 내용과 바이트 단위로 같은가 (D-32) |
 
 **여기서 안 잡히는 것**: 라우팅·이벤트 바인딩·타이머·레이아웃 → `scripts/verify.cjs`(헤드리스 브라우저)의 몫이다.
+
+## 9. 결과 공유 정적 셸 (`share/`, D-32)
+
+이 사이트는 빌드도 서버도 없어서 `index.html` 하나가 모든 화면의 `<head>`를 담당한다. 카카오톡·
+트위터 같은 링크 미리보기 크롤러는 JS를 실행하지 않고 `<head>`만 읽으므로, 결과별로 다른 미리보기를
+주려면 결과 주소마다 실제로 다른 `<head>`를 가진 정적 파일이 있어야 한다.
+
+```
+scripts/lib/share-shell.mjs        buildShareShell() · adhdEntry() · discEntry() · buildRedirects()
+                                    (순수 함수 — index.html 템플릿 + 유형 데이터 → 셸 HTML 문자열)
+scripts/generate-share-shells.mjs  위 함수로 share/와 _redirects를 다시 쓰는 개발자 도구 (빌드 아님)
+share/<testId>/<slug>.html         산출물. index.html과 <body>는 완전히 같고 <head>만 다르다
+_redirects                         /test/<testId>/result/<slug> → /share/<testId>/<slug>.html (200, 자동 생성)
+                                    + 마지막 줄 /* → /index.html (SPA 폴백, D-9 이전부터 있던 것)
+```
+
+**`<body>`를 안 건드리는 이유**: JS가 뜨면 평소와 똑같은 SPA가 부팅되고, 그 안의
+`parseSharedPath()`가 슬러그를 읽어 실제 결과 화면을 그린다. 크롤러(HTML만 읽음)와
+실사용자(JS 실행) 둘 다 같은 파일 하나로 맞는 걸 본다 — 화면 렌더링 로직이 두 곳에 있지 않다.
+
+**드리프트 방지**: 생성 스크립트와 `test/share-shells.test.js`가 같은 `share-shell.mjs`를 불러
+쓴다. 유형을 고치고 `npm run generate:share-shells`를 안 돌리면 커밋된 파일과 지금 `data.js`가
+어긋나고, 그 어긋남을 저 테스트가 바이트 비교로 잡는다 — 로직을 두 곳에 베끼면 반드시
+어긋난다는 게 이 프로젝트에서 이미 한 번 실증됐다(DISC 궁합, D-24).
+
+**로컬 검증**: `serve.py`가 `_redirects`의 명시적 규칙(마지막 줄 `/*` 제외)을 그대로 읽어 반영한다.
+`_redirects`를 고치면 **서버를 재시작해야** 반영된다 — 로드는 프로세스 시작 시 한 번뿐이다.
