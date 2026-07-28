@@ -20,7 +20,7 @@ export const discTest = {
     screen: "disc-intro",
     emoji: "🎭",
     color: "#E8642E",
-    name: "DISC 행동유형 검사",
+    name: "직장인 유형검사",
     desc: `나는 어떤 유형일까? · 상황 ${TETRADS.length}개 + 게임`,
   },
 };
@@ -31,14 +31,14 @@ export const discScreens = [
   {
     id: "disc-intro",
     path: "/test/disc",
-    title: "DISC 행동유형 검사 | 과몰입구역",
+    title: "직장인 유형검사 | 과몰입구역",
     render: renderDiscIntro,
     theme: "disc",
   },
   {
     id: "disc-question",
     path: "/test/disc/play",
-    title: "DISC 행동유형 검사 - 진행 중 | 과몰입구역",
+    title: "직장인 유형검사 - 진행 중 | 과몰입구역",
     render: renderDiscQuestion,
     theme: "disc",
     // 주소로 바로 들어오면 반쯤 채워진 상태가 없으니 인트로부터 시작하게 한다.
@@ -51,7 +51,7 @@ export const discScreens = [
   {
     id: "disc-result",
     path: "/test/disc/result",
-    title: "DISC 행동유형 검사 결과 | 과몰입구역",
+    title: "직장인 유형검사 결과 | 과몰입구역",
     render: renderDiscResult,
     theme: "disc",
     // 문항과 딜레마 게임을 둘 다 마쳐야 결과를 볼 수 있다. 게임 결과까지 반영된
@@ -64,7 +64,7 @@ export const discScreens = [
   },
   {
     id: "disc-shared",
-    title: "친구의 DISC 유형 | 과몰입구역",
+    title: "친구의 직장인 유형 | 과몰입구역",
     render: renderDiscShared,
     theme: "disc",
     dynamicPath: true,
