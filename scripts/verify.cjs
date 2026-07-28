@@ -241,17 +241,21 @@ async function playCptGame(page) {
 
   await page.click("#dilemma-start");
   let dilemmaRounds = 0;
-  while (await page.isVisible(".dilemma-panel")) {
-    await page.waitForSelector(".dilemma-choice", { timeout: 3000 });
-    await page.click(".dilemma-choice >> nth=0");
-    // 클릭 직후엔 armed=false라 같은 버튼이 아직 DOM에 남아있어도 재클릭이 씹힌다.
-    // 다음 라운드로 넘어가며 선택지가 갈아끼워지거나(잠깐 사라짐) 결과로 이동해
-    // .dilemma-choice가 통째로 없어질 때까지 기다린 뒤에야 다시 확인해야 한다 —
-    // 안 그러면 같은 라운드를 반복 클릭하며 헛도는데 겉으로는 진행되는 것처럼 보인다.
-    await page.waitForSelector(".dilemma-choice", { state: "detached", timeout: 3000 }).catch(() => {});
+  let sawFourAxisRound = true;
+  // 딜레마 라운드는 이제 문항과 같은 .options/.option-btn을 그대로 쓴다(카드형 타이머
+  // 패널이 아니라 D/I/S/C 4지선다 한 번씩). URL이 dilemma/play인 동안만 진행 중으로 본다.
+  while (page.url().includes("/test/disc/dilemma/play")) {
+    await page.waitForSelector(".options .option-btn", { timeout: 3000 });
+    const optCount = (await page.$$(".options .option-btn")).length;
+    if (optCount !== 4) sawFourAxisRound = false;
+    await page.click(".options .option-btn >> nth=0");
+    // 다음 라운드로 넘어가며 선택지가 갈아끼워지거나 결과로 이동해 옛 버튼이 전부
+    // 사라질 때까지 기다린 뒤에야 다시 확인해야, 같은 라운드를 헛클릭하며 도는 걸 피한다.
+    await page.waitForSelector(".options .option-btn", { state: "detached", timeout: 3000 }).catch(() => {});
     dilemmaRounds++;
     if (dilemmaRounds > 20) break; // 무한루프 방지 (버그가 있으면 여기서 멎는다)
   }
+  check("딜레마 매 라운드 선택지 4개(D/I/S/C)", sawFourAxisRound);
 
   // 딜레마 게임이 끝나면 결과가 아니라 광고 게이트(dilemma-ad)를 한 번 거친다.
   await page.waitForSelector("#ad-gate-continue", { timeout: 5000 });

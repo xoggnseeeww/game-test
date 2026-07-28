@@ -11,6 +11,21 @@
 
 ## 2026-07
 
+- **딜레마 게임: 2택+타이밍 추론 → 4택(D/I/S/C) 단일 선택** (2026-07-27):
+  - 요청 배경: 딜레마 게임을 문항 뒤 필수 단계로 붙인 뒤, 사용자가 "더 구체적인 결과값을 뽑아내려면
+    선택지를 다양화하는 게 좋을까?" 질문 → 4택(주 문항과 동일 형식)으로 바꾸는 안을 제시했고 "1번하자"로 확정.
+  - 원인: (버그 아님, 정밀도 개선) 기존 방식은 2택(과업/사람)에 응답 속도를 얹어 축을 추론했는데,
+    속도는 기기·연결 상태·손 떨림 등 노이즈에 취약하고 4축 중 2축(과업↔사람군)만 직접 신호였다.
+  - 구현: `js/tests/disc/data.js`의 `DILEMMAS`를 `{scene, task, people}`에서 `{scene, options:[{axis,text}×4]}`로 재작성(8개 시나리오,
+    D/I/S/C 선택지 각 1개씩). `score.js`의 `summarizeDilemma`는 축별 선택 횟수 카운트로, `dilemmaBonus`는 절반(4/8) 이상 쏠리면 +1,
+    3/4(6/8) 이상이면 +2로 단순화 — `PACE`/`PRIORITY` 타이밍 상수·밴딩 로직 전부 제거. `screens.js`의 `renderDilemmaPlay()`는
+    타이머·rAF 없이 주 문항과 동일한 `.question-block`/`.options`/`.option-btn` 마크업 재사용, 라운드마다 옵션 4개를 섞어 표시.
+    `styles.css`에서 이제 안 쓰는 `.dilemma-*` 전용 블록 제거.
+  - 검증: `test/disc.score.test.js` 딜레마 관련 테스트 전면 재작성(요약 카운트·보너스 경계 4/8·6/8·동률 케이스·시나리오당 D/I/S/C 정확히 1개씩) →
+    `npm test` 31/31 통과. `scripts/verify.cjs`도 `.dilemma-panel`/`.dilemma-choice` 셀렉터를 `.options .option-btn`으로,
+    완료 판정을 URL 기반으로 갱신 + "라운드당 선택지 4개" 체크 추가 → 30/30 통과. Playwright로 라운드 화면이 주 문항과
+    시각적으로 동일한지, 보너스가 실제로 붙는지(예: 특정 축 쏠림 시 "+2") 수동 확인. `docs/DECISIONS.md` D-21로 기록.
+
 - **AI 협업용 컨텍스트 문서 체계 도입** (2026-07-27):
   - 요청 배경: 사용자가 "AI 협업 개발 — 컨텍스트 파일 관리 가이드 (v2)"를 전달하며 "이거 적용해서 관리해보자".
   - 원인: (버그 아님) 레포에 `CLAUDE.md`가 없어 매 세션 구조·규칙·과거 결정을 처음부터 재파악해야 했다.
@@ -181,6 +196,18 @@
   - 구현: `js/core/ads.js`를 새로 만들어 두 단위 코드를 한 곳에서만 관리(`adSlotMarkup(kind, style)`). `index.html` head에 AdFit 로더 스크립트(`t1.daumcdn.net/kas/static/ba.min.js`) 1회 추가. `.ad-slot` 플레이스홀더 텍스트 7곳(`home.js` 1 · `disc/screens.js` 3 · `adhd/screens.js` 2, 위치별 배너 5/사각 2)을 전부 실제 `<ins class="kakao_ad_area">` 태그로 교체. 부수 발견: `.ad-slot.rect`가 자리표시자 시절엔 안 드러났지만 실제 250px 높이 광고에 비해 CSS `height`가 120px로 짧았다 — 250px로 수정. 이후 사용자가 요청한 대로 `origin/main`(그 사이 5커밋 앞서 있었음 — PC 레이아웃 카드 프레임, `bindExit` 등)을 현재 브랜치로 병합, 충돌 없이 자동 병합됨.
   - 검증: `npm test` 34개 통과. `scripts/verify.cjs` 29개 통과, 1건은 원래도 실패하던 항목(외부 도메인 아웃바운드가 프록시로 막힌 샌드박스 제약 — 폰트 CDN과 동일한 원인, AdFit 스크립트 403). `CURRENT_TASK.md`의 광고 슬롯 항목을 완료로 표시하고 "배포 후 확인 필요"에 AdFit 노출 확인을 남겼다.
     **확인 못 한 것**: 실제 배포본에서 광고가 렌더링되는지(샌드박스 네트워크 제약으로 원천 불가) — 실기기 확인 필요.
+
+- **데이터팬트리 연동 — OG 이미지·파비콘 신규 + 메인 머지** (2026-07-28):
+  - 요청 배경: 사용자가 "별도운영할거긴한데 연결을 시킬거야. 데이터팬트리 사이트 상단에 FUN 버튼 커뮤니티랑 요금제 사이에 넣어주고 fun.data-pantry.com 사이트로 연결시켜줘. og이미지랑 과몰입구역 페이지에 필요한것들 데이터팬트리에서 가져갈수있는것들은 가져가자", 이어서 "각 레포에 메인에 머지해주고 관련파일 업데이트해줘".
+  - 원인: (버그 아님, 자산 공백) 이 레포는 `og:image`도 파비콘도 아예 없었다(`CURRENT_TASK.md` 알려진 이슈에 이미 기록돼 있던 공백). 두 사이트는 서로 다른 저장소·배포라 정적 파일을 직접 공유할 방법이 없어, 데이터팬트리 쪽 디자인 패턴(외부 링크 스타일·OG 이미지 규격 1200×630·favicon 구성)만 참고해 이 레포 자체 브랜드 색(보라 `#5B44F2`)으로 새로 만들어야 했다.
+  - 구현:
+    - `assets/og-image.png`(1200×630) — 레포에 이미지 편집 도구가 없어 HTML/CSS 템플릿을 Playwright(레포 밖 `/tmp/pw`에 설치, D-9 의존성 0 원칙 유지)로 스크린샷해 생성. `assets/favicon.svg`(손으로 작성한 벡터, `.logo-badge`와 동일한 배지 디자인)·`assets/apple-touch-icon.png`(180×180, 같은 방식으로 생성)도 추가.
+    - `index.html`에 `og:image`/`og:image:width`/`og:image:height`/`og:image:alt`/`twitter:image` 추가, `twitter:card`를 `summary`→`summary_large_image`로 변경, 파비콘 `<link>` 2개 추가.
+    - `renderHome()`(`js/screens/home.js`) 하단에 `data-pantry.com`으로 가는 `site-footer` 링크 추가(새 클래스는 `styles.css`에도 추가해 그 파일 규칙의 `grep -rn '<클래스명>' js/ styles.css` 양쪽 확인을 통과시킴). 데이터팬트리 쪽(`data-pantry-web-site` 저장소) 헤더에도 같은 세션에서 커뮤니티↔요금제 사이 FUN 버튼을 추가해 양방향으로 연결.
+    - `CLAUDE.md` 구조 트리에 `assets/` 항목 추가, `CURRENT_TASK.md`의 "페이지별 OG 메타·`og:image` 없음" 알려진 이슈를 "og:image는 채웠으나 테스트별 미리보기 분기는 여전히 안 됨"으로 갱신하고 "배포 후 확인 필요"에 OG 미리보기·FUN 버튼 상호 연결 확인 항목을 남겼다.
+    - 사용자 요청대로 `main`에 병합(그 사이 `origin/main`이 앞서 있지 않아 충돌 없이 병합됨).
+  - 검증: `npm test` 34개, `scripts/verify.cjs` 28개 통과 — 유일한 실패는 폰트 CDN·AdFit 스크립트와 동일한 원인(샌드박스 아웃바운드 차단)의 403이라 내 변경과 무관함을 커밋 전에 확인. 새로 만든 `assets/*` 3개 파일은 로컬 서버(`serve.py`)로 각각 200 응답 확인. 병합 후 `main`에서 `npm test` 34개 재실행해 통과 재확인.
+    **확인 못 한 것**: 카카오톡/트위터 등 실제 소셜 디버거로 OG 카드 렌더링 확인, 데이터팬트리 FUN 버튼과 이 사이트 하단 링크의 실배포 상호 이동 확인 — 둘 다 샌드박스가 외부에서 배포본을 열어볼 수 없어 `CURRENT_TASK.md`의 "배포 후 확인 필요"로 이관.
 
 ---
 
