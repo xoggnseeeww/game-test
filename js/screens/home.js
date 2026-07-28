@@ -30,6 +30,7 @@ export function renderHome() {
           <div class="sub">반응속도·기억력</div>
         </button>
       </div>
+      ${adSlotMarkup("banner", "margin-top:18px; margin-bottom:4px;")}
       <div class="site-footer">
         <a href="https://data-pantry.com" target="_blank" rel="noopener">by 데이터팬트리</a>
       </div>
