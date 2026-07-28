@@ -1,5 +1,5 @@
 // 홈 · 심리테스트 목록 · 미니게임 목록.
-import { app, listTests } from "../core/router.js";
+import { app, listTests, listGames } from "../core/router.js";
 import { el, bindNav } from "../core/dom.js";
 import { adSlotMarkup } from "../core/ads.js";
 
@@ -27,7 +27,7 @@ export function renderHome() {
         <button class="category-card" style="background:#E4F5EC;" data-nav="game-list">
           <div class="icon" style="background:#1FAE6A;">⚡</div>
           <div class="title">미니게임</div>
-          <div class="sub">반응속도·기억력</div>
+          <div class="sub">머리 쓰는 잠깐의 퍼즐</div>
         </button>
       </div>
       ${adSlotMarkup("banner", "margin-top:18px; margin-bottom:4px;")}
@@ -65,17 +65,39 @@ export function renderPsychList() {
   bindNav(app);
 }
 
+// 목록 카드는 등록된 게임에서 뽑아 쓴다(renderPsychList와 같은 패턴) — 게임을 추가할 때
+// 이 파일을 고칠 필요가 없다. 반응속도·딜레마 게임은 테스트 점수에 반영되는 하위 단계라
+// 여기 넣지 않는다(guard가 테스트 인트로로 되돌려버린다) — registerGame()된 것만 나온다.
 export function renderGameList() {
+  const games = listGames();
   app.appendChild(el(`
     <div>
       <div class="back-row">
         <button class="back-btn" data-nav="home">‹</button>
         <div class="back-title">미니게임</div>
       </div>
+      ${
+        games.length === 0
+          ? `
       <div class="empty-state">
         <div class="emoji">🛠️</div>
         <div class="msg">준비 중인 게임이 있어요<br/>조금만 기다려주세요!</div>
-      </div>
+      </div>`
+          : `
+      <div class="section-title">🔥 지금 인기</div>
+      <div class="test-list">
+        ${games.map((g) => `
+          <button class="test-card" data-nav="${g.card.screen}">
+            <div class="icon" style="background:${g.card.color};">${g.card.emoji}</div>
+            <div class="body">
+              <div class="name">${g.card.name}</div>
+              <div class="desc">${g.card.desc}</div>
+            </div>
+            <div class="chevron">›</div>
+          </button>
+        `).join("")}
+      </div>`
+      }
     </div>
   `));
   bindNav(app);

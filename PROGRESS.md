@@ -11,6 +11,30 @@
 
 ## 2026-07
 
+- **독립 미니게임 "NumPath: Stack & Clear"(숫자 경로 퍼즐) 추가** (2026-07-28):
+  - 요청 배경: 사용자가 수학·경로 최적화 퍼즐 콘셉트(타일 스태킹) 기획서를 주고 "구체화해서 계획을
+    완성해보자"고 요청. 코드베이스 컨벤션에 맞춘 구현 계획으로 발전시켜 승인받은 뒤 구현까지 진행.
+  - 원인: (버그 아님, 신규 기능) `CURRENT_TASK.md`의 "미니게임 목록이 비어 있음" 항목과 맞물림 —
+    반응속도·딜레마 게임은 테스트 하위 단계라(D-4) `/game` 목록에 넣을 수 없었는데, NumPath는 어떤
+    테스트에도 속하지 않는 첫 독립 게임이라 이 목록을 실제로 채울 수 있었다.
+  - 구현: `js/games/numpath/`(data·engine·generate·solve·audio·play·screens·index) 신설.
+    타일은 기획서의 NUM/OP 분리 대신 `{op, operand}` 한 몸으로 설계(D-30) — 경로가 연산자→숫자
+    교대를 강제받아 막다른 길이 되는 문제를 피했다. 역산 생성기(경로 → 수식 배치 → 더미/기믹
+    채우기 → DFS 솔버로 검증)와 솔버는 DOM을 몰라 순수 함수로 검증 가능. `js/core/router.js`에
+    `registerGame`/`listGames`를 `registerTest`/`listTests`와 대칭으로 신규 도입하고
+    `js/screens/home.js`의 `renderGameList()`가 이걸로 카드를 자동 생성하게 바꿈. 1차 범위는
+    기획서보다 의도적으로 좁혔다(코어 루프 1개 런·Block+Multiplier 2종 기믹·양의 정수만·힌트
+    없음, D-31) — Lock/Warp·데일리/블리츠 모드·음수/소수는 후속.
+  - 검증: `npm test` 56/56(신규 `test/numpath.engine.test.js`·`test/numpath.generate.test.js`
+    포함, 레벨 5종 × 시드 10개씩 생성기×솔버 교차 검증). `scripts/verify.cjs`에 8개 케이스 추가,
+    로컬에서 여러 차례 재현해 64/64 통과(별도 DFS로 보드를 읽어 자동 클리어, Undo/Reset 왕복,
+    in-place 스테이지 전환 시 광고 로더 유지, 클리어 직후 이탈 시 onLeave 정리 확인) — 다만
+    이 샌드박스의 headless Chromium은 간헐적으로 멈추는데, 이 변경 이전 원본 `verify.cjs`로도
+    재현돼 NumPath 때문이 아님을 확인했다. **확인 못 한 것**: Web Audio 실기기 동작(헤드리스엔
+    오디오 출력 없음), 광고 슬롯 실제 노출(`t1.daumcdn.net` 차단), 5×5 보드 터치 히트 영역 —
+    `CURRENT_TASK.md` "배포 후 확인 필요"로 옮겨둠. 이 작업은 아직 main에 병합되지 않았다(브랜치
+    `claude/numpath-stack-clear-design-yk5lyt`).
+
 - **DISC 검사 사용자 노출 명칭을 "직장인 유형검사"로 변경** (2026-07-28):
   - 요청 배경: 사용자가 "DISC 성격 유형검사 이름이 테스트 내용에 직관적인 이름이 들어가야될거같다. 어떤 검사 이런거 보다.
     지금 직장인의 유형검사인거같은데, '직장인 유형검사' 이렇게 바꾸는게 좋을듯"이라고 요청.
