@@ -9,6 +9,7 @@ import {
   renderTestShared,
   renderReactionIntro,
   renderReactionPlay,
+  renderReactionAd,
 } from "./screens.js";
 
 export const adhdTest = {
@@ -84,5 +85,18 @@ export const adhdScreens = [
     render: renderReactionPlay,
     theme: "game",
     guard: () => (state.answers.length < QUESTIONS.length ? "test-intro" : null),
+  },
+  {
+    id: "reaction-ad",
+    path: "/test/adhd/reaction/ad",
+    title: "결과 준비 중 | 과몰입구역",
+    render: renderReactionAd,
+    theme: "game",
+    // 게임까지 끝내야 이 화면에 올 게 있다 — 게임 전에 주소로 바로 들어오면 되돌린다.
+    guard: () => {
+      if (state.answers.length < QUESTIONS.length) return "test-intro";
+      if (!state.lastReaction) return "reaction-intro";
+      return null;
+    },
   },
 ];

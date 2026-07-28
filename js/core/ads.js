@@ -2,6 +2,8 @@
 const AD_UNITS = {
   banner: { unit: "DAN-YtXY1keVu0glLXJQ", width: 320, height: 50 },
   rect: { unit: "DAN-PKr3oCfRI9IIiXwz", width: 250, height: 250 },
+  // 게임(반응속도·딜레마)이 끝나고 결과로 넘어가기 직전에 한 번 보여주는 게이트 화면 전용.
+  interstitial: { unit: "DAN-tmLP8h8cur4SzSpG", width: 300, height: 250 },
 };
 
 const LOADER_SRC = "//t1.daumcdn.net/kas/static/ba.min.js";
@@ -10,6 +12,21 @@ export function adSlotMarkup(kind, style = "") {
   const { unit, width, height } = AD_UNITS[kind];
   const styleAttr = style ? ` style="${style}"` : "";
   return `<div class="ad-slot ${kind}"${styleAttr}><ins class="kakao_ad_area" style="display:none;" data-ad-unit="${unit}" data-ad-width="${width}" data-ad-height="${height}"></ins></div>`;
+}
+
+// 게임 종료 → 결과 화면 사이에 끼우는 광고 게이트. AdFit 웹 SDK엔 몇 초 뒤 자동
+// 전환되는 진짜 전면광고 포맷이 없어서, 고정 크기 광고 단위(interstitial)를 화면
+// 하나로 채우고 짧은 카운트다운 뒤에 "계속하기" 버튼을 활성화하는 것으로 대신한다.
+// 카운트다운 진행/버튼 활성화는 core/dom.js의 bindAdGate()가 맡는다 — 여긴 마크업만.
+// 홈 버튼(.exit-btn)은 이 카운트다운과 무관하게 항상 즉시 동작한다(트래픽 이탈 방지).
+export function adGateMarkup(message) {
+  return `
+    <div class="ad-gate">
+      <p class="ad-gate-msg">${message}</p>
+      ${adSlotMarkup("interstitial", "margin-top:6px; margin-bottom:18px;")}
+      <button class="cta-btn" id="ad-gate-continue" disabled>결과 보러 가기 (<span id="ad-gate-count">3</span>)</button>
+    </div>
+  `;
 }
 
 // AdFit 로더는 "자기가 실행되는 순간 문서에 있던" <ins>만 훑고 끝난다. 이 앱은 화면을 바꿀 때마다

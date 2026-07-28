@@ -1,10 +1,10 @@
 // DISC 검사의 모든 화면 + 딜레마 미니게임 화면.
 import { app, go, onLeave, parseSharedPath } from "../../core/router.js";
-import { el, bindNav, bindExit } from "../../core/dom.js";
+import { el, bindNav, bindExit, bindAdGate } from "../../core/dom.js";
 import { state } from "../../core/state.js";
 import { shuffle, roundRect } from "../../core/util.js";
 import { shareBlockMarkup, wireShare } from "../../core/share.js";
-import { adSlotMarkup } from "../../core/ads.js";
+import { adSlotMarkup, adGateMarkup } from "../../core/ads.js";
 import { TETRADS, DILEMMAS, DISC_TYPES, AXIS_LABELS } from "./data.js";
 import {
   AXES,
@@ -514,7 +514,7 @@ export function renderDilemmaPlay() {
   function finish() {
     // 문항 결과와 합쳐 최종 유형을 결정한다 — 이 게임만의 별도 결과 화면은 없다.
     state.disc.dilemma = summarizeDilemma(rounds);
-    go("disc-result");
+    go("dilemma-ad");
   }
 
   function record(choice, ms, timedOut, length) {
@@ -575,4 +575,19 @@ export function renderDilemmaPlay() {
   }
 
   startRound();
+}
+
+// 딜레마 게임이 끝난 직후, 결과로 넘어가기 전에 한 번 거치는 광고 게이트.
+export function renderDilemmaAd() {
+  app.appendChild(el(`
+    <div>
+      <div class="back-row">
+        <div class="back-title">결과 준비 중</div>
+        <button class="exit-btn" data-nav="home" aria-label="홈으로 가기">🏠</button>
+      </div>
+      ${adGateMarkup("게임 끝! 결과 보러 가기 전에\n광고 하나만 보고 갈게요 🙏")}
+    </div>
+  `));
+  bindNav(app);
+  bindAdGate(app, () => go("disc-result"));
 }

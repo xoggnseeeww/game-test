@@ -182,6 +182,13 @@ async function playCptGame(page) {
   await page.click(".modal-btn-primary");
   await playCptGame(page); // 전부 정답으로 클린 플레이 (보너스 0 → 축 퍼센트가 안 흔들림)
 
+  // 게임이 끝나면 결과가 아니라 광고 게이트(reaction-ad)를 한 번 거친다.
+  // 카운트다운 중엔 버튼이 비활성 상태이고, 다 세면 활성화된다(js/core/dom.js bindAdGate).
+  await page.waitForSelector("#ad-gate-continue", { timeout: 5000 });
+  check("ADHD 게임 종료 → 결과가 아니라 광고 게이트로 직행", page.url().endsWith("/test/adhd/reaction/ad"), page.url());
+  await page.waitForFunction(() => !document.querySelector("#ad-gate-continue").disabled, { timeout: 6000 });
+  await page.click("#ad-gate-continue");
+
   await page.waitForSelector(".result-card", { timeout: 5000 });
 
   // 전부 "매우 그렇다"(4점) → 축마다 역채점 1문항이 0점이 되어 (4+4+4+0)/16 = 75%
@@ -245,6 +252,13 @@ async function playCptGame(page) {
     dilemmaRounds++;
     if (dilemmaRounds > 20) break; // 무한루프 방지 (버그가 있으면 여기서 멎는다)
   }
+
+  // 딜레마 게임이 끝나면 결과가 아니라 광고 게이트(dilemma-ad)를 한 번 거친다.
+  await page.waitForSelector("#ad-gate-continue", { timeout: 5000 });
+  check("딜레마 게임 종료 → 결과가 아니라 광고 게이트로 직행", page.url().endsWith("/test/disc/dilemma/ad"), page.url());
+  await page.waitForFunction(() => !document.querySelector("#ad-gate-continue").disabled, { timeout: 6000 });
+  await page.click("#ad-gate-continue");
+
   await page.waitForSelector(".result-card", { timeout: 5000 });
   check("딜레마 게임 완주 → 별도 결과 화면 없이 DISC 결과로 직행", page.url().includes("/test/disc/result"), page.url());
   check("DISC 결과에 유형 표시", (await page.textContent(".result-card")).trim().length > 20);
@@ -287,6 +301,8 @@ async function playCptGame(page) {
     ["/test/disc/dilemma", ".cover", "딜레마"],
     ["/test/adhd/reaction", ".cover", "반응속도 게임 (문항 미완료)"],
     ["/test/adhd/reaction/play", ".cover", "반응속도 게임 플레이 (문항 미완료)"],
+    ["/test/adhd/reaction/ad", ".cover", "광고 게이트 (게임 미완료, ADHD)"],
+    ["/test/disc/dilemma/ad", ".cover", "광고 게이트 (게임 미완료, DISC)"],
   ]) {
     await goto(p);
     check(`${label} 주소 직접 접속 → 인트로 폴백`, await page.isVisible(sel), page.url());

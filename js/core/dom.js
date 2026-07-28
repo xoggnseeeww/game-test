@@ -1,5 +1,5 @@
 // DOM 생성·이벤트 바인딩·모달 같은 화면 공통 부품.
-import { go } from "./router.js";
+import { go, onLeave } from "./router.js";
 
 export function el(html) {
   const t = document.createElement("template");
@@ -31,6 +31,27 @@ export function bindExit(root, onExit) {
       },
     });
   });
+}
+
+// core/ads.js의 adGateMarkup()이 그린 광고 게이트 화면을 동작시킨다. 3초 카운트다운 뒤
+// "결과 보러 가기" 버튼을 활성화한다 — 강제로 가두는 게 목적이 아니라 광고를 잠깐이라도
+// 보게 하는 정도라, 카운트다운 중에도 .exit-btn(홈)은 별개로 항상 즉시 동작해야 한다.
+export function bindAdGate(root, onContinue) {
+  const btn = root.querySelector("#ad-gate-continue");
+  const countEl = root.querySelector("#ad-gate-count");
+  let remaining = Number(countEl.textContent);
+  let timer = setTimeout(function tick() {
+    remaining--;
+    if (remaining <= 0) {
+      btn.disabled = false;
+      btn.textContent = "결과 보러 가기";
+      return;
+    }
+    countEl.textContent = remaining;
+    timer = setTimeout(tick, 1000);
+  }, 1000);
+  onLeave(() => clearTimeout(timer));
+  btn.addEventListener("click", onContinue);
 }
 
 export function showModal({ title, body, confirmLabel = "확인", cancelLabel = "취소", onConfirm }) {

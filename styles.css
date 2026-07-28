@@ -155,6 +155,28 @@ body {
 }
 .ad-slot.rect { height: 250px; margin: 16px 20px 4px; }
 
+/* 300px 광고 + 좌우 여백(20px×2) = 340px. banner와 같은 이유로 그보다 좁은 기기에서는
+   여백을 줄여 잘리지 않게 한다. 세로 여백은 adGateMarkup()이 인라인으로 준다. */
+.ad-slot.interstitial {
+  height: 250px;
+  margin-left: min(20px, calc((100% - 300px) / 2));
+  margin-right: min(20px, calc((100% - 300px) / 2));
+}
+
+.ad-gate {
+  padding: 40px 20px 28px;
+  text-align: center;
+}
+
+.ad-gate-msg {
+  font-size: 15px;
+  font-weight: 700;
+  color: #17171A;
+  margin: 0;
+  line-height: 1.5;
+  white-space: pre-line;
+}
+
 .hero {
   padding: 16px 20px 6px;
 }
@@ -372,6 +394,12 @@ body {
   width: 100%;
   cursor: pointer;
   font-family: inherit;
+}
+
+.cta-btn[disabled] {
+  opacity: .55;
+  cursor: default;
+  box-shadow: none;
 }
 
 .progress-row {
