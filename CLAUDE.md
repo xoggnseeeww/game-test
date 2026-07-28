@@ -29,6 +29,7 @@
 ## 구조 개요
 ```
 index.html            진입점 (메타·OG·referrer 정책은 전 주소 공통 — 페이지별 미리보기 불가)
+assets/                favicon(svg) · apple-touch-icon(png) · og-image(png, 1200×630)
 js/main.js            부팅: 화면·테스트를 라우터에 등록
 js/core/              router(레지스트리·guard·teardown) · state · dom · share · util · ads
 js/screens/home.js    홈 · 심리테스트 목록(등록된 테스트에서 자동 생성) · 미니게임 목록
