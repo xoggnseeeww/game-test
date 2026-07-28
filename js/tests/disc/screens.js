@@ -81,7 +81,7 @@ export function renderDiscIntro() {
       </div>
       <div class="cover">
         <div class="emoji">🎭</div>
-        <div class="tag">DISC 행동유형 검사</div>
+        <div class="tag">직장인 유형검사</div>
         <h2>나는 어떤<br/>행동유형일까?</h2>
         <p>상황 ${N}개와 짧은 게임 하나.<br/>남들이랑 확실히 다르게 나와요.</p>
       </div>
@@ -263,7 +263,7 @@ export function renderDiscResult() {
         <button class="exit-btn" data-nav="home" aria-label="홈으로 가기">🏠</button>
       </div>
       <div class="result-card">
-        <div class="eyebrow">나의 DISC 유형은</div>
+        <div class="eyebrow">나의 직장인 유형은</div>
         <div class="emoji">${t.emoji}</div>
         <h2>${t.name}</h2>
         <div class="result-subtitle">${t.subtitle}</div>
@@ -322,8 +322,8 @@ export function renderDiscResult() {
 
   wireShare(app, {
     url: `${location.origin}/test/disc/result/${t.slug}`,
-    text: `나는 DISC "${t.name}(${t.subtitle})"이 나왔어요! 너는 어떤 유형일까?`,
-    filename: "과몰입구역-DISC-결과카드.png",
+    text: `나는 직장인 유형검사에서 "${t.name}(${t.subtitle})"이 나왔어요! 너는 어떤 유형일까?`,
+    filename: "과몰입구역-직장인유형-결과카드.png",
     draw: () => drawDiscCard(r),
   });
 }
@@ -384,7 +384,7 @@ async function drawDiscCard(r) {
   ctx.textAlign = "center";
   ctx.fillStyle = "rgba(255,255,255,.85)";
   ctx.font = "700 30px Pretendard, sans-serif";
-  ctx.fillText("과몰입구역 · DISC", W / 2, 84);
+  ctx.fillText("과몰입구역 · 직장인 유형검사", W / 2, 84);
 
   ctx.font = "128px sans-serif";
   ctx.fillText(t.emoji, W / 2, 236);
@@ -443,7 +443,7 @@ export function renderDilemmaIntro() {
       </div>
       <div class="cover">
         <div class="emoji">⚖️</div>
-        <div class="tag">DISC 마지막 단계</div>
+        <div class="tag">직장인 유형검사 마지막 단계</div>
         <h2>몇 가지만<br/>더 골라볼게요</h2>
         <p>문항 ${N}개는 끝났어요.<br/>같은 방식으로 상황 ${DILEMMAS.length}개만 더 고르면 결과가 나와요.</p>
       </div>

@@ -3,10 +3,14 @@
 > 이 파일은 1~2k 토큰 이하를 유지한다 — "언젠가 할 일"이 아니라 "지금 유효한 작업"만.
 
 ## 현재 작업
-없음 (딜레마 게임 4택(D/I/S/C) 재설계를 데이터팬트리 연동 등 병렬 세션 작업과 병합 + 메인 머지 완료, 2026-07-28)
+없음 (DISC 검사 이름을 "직장인 유형검사"로 사용자 노출 문구 전체 변경 완료, 2026-07-28)
 
+- **DISC → "직장인 유형검사" 명칭 변경**: 목록 카드·화면 탭·인트로 태그·결과 eyebrow·공유 문구·공유 카드 이미지·
+  `index.html` 메타 태그까지 사용자에게 보이는 "DISC" 표기를 전부 "직장인 유형검사"로 교체. 화면 id(`disc-*`)·
+  경로(`/test/disc/*`)·내부 변수(`DISC_TYPES` 등)는 `CLAUDE.md` 규칙대로 유지(개명 금지). `npm test` 31/31 ·
+  `scripts/verify.cjs` 29/29(AdFit 403은 샌드박스 외부망 차단, 무관).
 - **딜레마 게임 4택(D/I/S/C) 재설계**: 2택(과업/사람)+응답속도 추론 방식을 주 문항과 동일한 4택 단일 선택으로 교체.
-  `dilemma-play` 화면도 새 `.progress-row`(진행바+홈 버튼) 구조로 병합했다. `npm test` 31/31 · `scripts/verify.cjs` 30/30. → `docs/DECISIONS.md` D-21
+  `dilemma-play` 화면도 새 `.progress-row`(진행바+홈 버튼) 구조로 병합했다. `npm test` 31/31 · `scripts/verify.cjs` 30/30. → `docs/DECISIONS.md` D-24
 - **데이터팬트리 연동** (메인 머지 완료): 데이터팬트리(`data-pantry-web-site`) 헤더에 커뮤니티↔요금제 사이 FUN 버튼을 추가해
   `fun.data-pantry.com`(이 사이트)로 연결. 이 저장소 쪽은 그동안 없던 `og:image`/파비콘을 새로 만들어 채움:
   - `assets/og-image.png`(1200×630, Playwright로 생성) + `assets/favicon.svg` + `assets/apple-touch-icon.png`
