@@ -120,27 +120,27 @@ async function playCptGame(page) {
   check("ES 모듈 부팅", await page.isVisible(".hero-title"), page.url());
 
   // === 광고 슬롯에 AdFit 로더가 실제로 붙는가 ===
-  // AdFit 로더는 실행 시점의 문서만 훑는다. index.html에 한 번 심는 방식으로 되돌아가면
-  // 슬롯은 그려지는데 광고만 조용히 안 나온다 — 눈으로는 "빈 자리"라 발견이 늦다.
-  // (샌드박스에선 로더 자체가 차단되므로 "스크립트가 붙었는가"까지만 본다)
-  const adLoaders = (root) =>
-    root.$$eval(".ad-slot ins.kakao_ad_area", (list) =>
-      list.map((ins) => {
-        const next = ins.nextElementSibling;
-        return {
-          unit: ins.dataset.adUnit || "",
-          loaded: !!next && next.tagName === "SCRIPT" && next.src.includes("ba.min.js"),
-        };
-      })
-    );
+  // ba.min.js는 실행 시점의 문서만 훑는다. refreshAds()가 그 <script> 태그 자체를 통째로
+  // 갈아끼워(replaceWith) 재실행시키는 방식으로 화면 전환마다 재스캔시킨다 — index.html에
+  // 한 번만 심어두는 방식으로 되돌아가면 슬롯은 그려지는데 광고만 조용히 안 나온다.
+  // (샌드박스에선 로더 자체가 차단되므로 "태그가 실제로 갈아끼워지는가"까지만 본다)
+  const adSlotCount = (root) => root.$$eval(".ad-slot ins.kakao_ad_area", (list) => list.length);
+  const loaderExists = (root) => root.$eval('script[src*="ba.min.js"]', () => true).catch(() => false);
+  // 지금 붙어있는 로더 태그에 표시를 남겨서, 다음 화면 전환 때 refreshAds()가 그 태그를
+  // 실제로 갈아끼웠는지(표시가 사라졌는지) 확인한다 — 태그 존재만으로는 "한 번도 안
+  // 갈아끼워졌다"와 구분이 안 된다.
+  const markLoader = (root, mark) =>
+    root.evaluate((m) => {
+      const s = document.querySelector('script[src*="ba.min.js"]');
+      if (s) s.dataset.verifyMark = m;
+    }, mark);
+  const loaderMark = (root) =>
+    root.evaluate(() => document.querySelector('script[src*="ba.min.js"]')?.dataset.verifyMark || null);
 
-  const homeAds = await adLoaders(page);
-  check("홈 광고 슬롯 존재", homeAds.length > 0, `${homeAds.length}개`);
-  check(
-    "홈 광고 슬롯마다 AdFit 로더가 붙음",
-    homeAds.length > 0 && homeAds.every((a) => a.loaded),
-    JSON.stringify(homeAds)
-  );
+  const homeAdCount = await adSlotCount(page);
+  check("홈 광고 슬롯 존재", homeAdCount > 0, `${homeAdCount}개`);
+  check("홈 로더 스크립트 태그 존재", await loaderExists(page));
+  await markLoader(page, "home");
 
   // === 목록 카드가 등록된 테스트에서 자동 생성되는가 (registerTest) ===
   await page.click('[data-nav="psych-list"]');
@@ -152,13 +152,13 @@ async function playCptGame(page) {
   const adhdChips = await page.$$eval(".meta-chip .value", (n) => n.map((e) => e.textContent));
   check("ADHD 인트로 주소", page.url().endsWith("/test/adhd"), page.url());
 
-  // 새로고침 없는 화면 이동에서도 새 슬롯에 로더가 붙어야 한다 — index.html 한 번 심기로는
-  // 절대 통과할 수 없는 검사다(로더가 이미 실행을 끝낸 뒤 만들어진 <ins>이므로).
-  const introAds = await adLoaders(page);
+  // 새로고침 없는 화면 이동에서도(홈 → 목록 → 인트로, 둘 다 광고 슬롯 있음) 로더 태그가
+  // 매번 갈아끼워져야 한다 — index.html 한 번 심기로는 절대 통과할 수 없는 검사다
+  // (표시가 그대로 남아있으면 refreshAds()가 실행되지 않았다는 뜻).
   check(
-    "SPA 이동 후 새 광고 슬롯에도 로더가 붙음",
-    introAds.length > 0 && introAds.every((a) => a.loaded),
-    JSON.stringify(introAds)
+    "SPA 이동 후 로더 태그가 재실행됨(교체됨)",
+    (await loaderMark(page)) !== "home",
+    `mark=${await loaderMark(page)}`
   );
 
   await page.click(".cta-btn");

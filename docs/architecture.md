@@ -23,12 +23,12 @@
 ```
 js/main.js              부팅. registerScreens / registerTest 호출 후 start()
 js/core/
-  router.js             화면 레지스트리 · 경로 해석 · guard · teardown · 테마 · history · 렌더 후 mountAds()
+  router.js             화면 레지스트리 · 경로 해석 · guard · teardown · 테마 · history · 렌더 후 refreshAds()
   state.js              단일 상태 객체 (테스트별 네임스페이스)
   dom.js                el() · bindNav() · showModal() · bindAdGate()(광고 게이트 카운트다운)
   share.js              공유 URL · navigator.share · 결과 카드 캔버스
   util.js               shuffle · normalizePath · roundRect · localStorage 방어 래퍼
-  ads.js                카카오 AdFit — adSlotMarkup()(단위 코드 단일 소스) · adGateMarkup()(전면 게이트 마크업) · mountAds()(슬롯마다 로더 주입)
+  ads.js                카카오 AdFit — adSlotMarkup()(단위 코드 단일 소스) · adGateMarkup()(전면 게이트 마크업) · refreshAds()(로더 태그 재실행)
 js/screens/home.js      홈 · 심리테스트 목록 · 미니게임 목록 + commonScreens
 js/tests/<id>/
   data.js               문항·결과 유형·슬러그·게임 상수 (단일 소스)

@@ -26,10 +26,11 @@
 <link rel="preconnect" href="https://fastly.jsdelivr.net" />
 <link rel="stylesheet" href="https://fastly.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
 <link rel="stylesheet" href="/styles.css" />
-<!-- AdFit 로더(ba.min.js)는 여기서 부르지 않는다. 실행 시점의 문서만 훑는 스크립트라
-     화면을 갈아끼우는 SPA에서는 빈 #app을 훑고 끝난다. 슬롯을 그린 직후 슬롯마다
-     붙이는 일은 js/core/ads.js의 mountAds()가 한다. 여기서는 연결만 미리 열어둔다. -->
-<link rel="preconnect" href="https://t1.daumcdn.net" />
+<!-- ba.min.js는 로드되는 시점의 DOM만 스캔한다. 이 태그 자체는 최초 화면분만 채우고,
+     화면 전환마다 새로 생기는 광고 슬롯은 js/core/ads.js의 refreshAds()가 이 태그를
+     통째로 갈아끼워 재스캔시킨다(js/core/router.js의 render() 끝에서 호출) —
+     그래서 태그를 지우면 안 된다, refreshAds()가 갈아끼울 대상 자체가 없어진다. -->
+<script type="text/javascript" src="//t1.daumcdn.net/kas/static/ba.min.js" async></script>
 </head>
 <body>
   <div id="app"></div>
