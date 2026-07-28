@@ -20,6 +20,11 @@
 - 호스팅: Cloudflare Pages — 빌드 명령 없음, 출력 디렉터리 = 레포 루트
 - SPA 폴백: `_redirects` (`/*  /index.html  200`) — 없으면 하위 경로 직접 접속이 404
 - 영속 데이터: **없음** (예전엔 `localStorage["gt_reaction_best"]`로 반응속도 최고기록을 저장했으나 D-20에서 제거) / 시크릿·환경변수·백엔드 **없음**
+- 방문 분석: Cloudflare Web Analytics — `data-pantry.com` 존에 automatic setup으로 이미 등록돼 있고,
+  `fun.data-pantry.com`은 같은 존의 서브도메인이라 **코드 변경 없이 자동으로 같이 잡힌다**(2026-07-28 확인).
+  **이 레포에 분석 스크립트를 추가하지 말 것** — 페이지당 스니펫은 하나만 허용되는데 이미 상위 존에서
+  주입되고 있어서, 여기 또 넣으면 충돌한다. 대시보드는 Cloudflare 계정의 Web Analytics → `data-pantry.com`
+  → Manage site에서 경로별로 필터링해서 본다.
 
 ## 기술 스택
 빌드 없는 정적 SPA. 브라우저 네이티브 ES 모듈(`<script type="module">`), 런타임 의존성 0.
