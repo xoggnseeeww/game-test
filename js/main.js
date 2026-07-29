@@ -3,9 +3,13 @@ import { registerScreens, registerTest, registerGame, start } from "./core/route
 import { commonScreens } from "./screens/home.js";
 import { adhdTest, adhdScreens } from "./tests/adhd/index.js";
 import { discTest, discScreens } from "./tests/disc/index.js";
+import { coupleTest, coupleScreens } from "./tests/couple/index.js";
 import { numpathGame, numpathScreens } from "./games/numpath/index.js";
 
 registerScreens(commonScreens);
+
+registerTest(coupleTest);
+registerScreens(coupleScreens);
 
 registerTest(discTest);
 registerScreens(discScreens);

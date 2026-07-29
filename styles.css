@@ -40,6 +40,19 @@ body.theme-disc {
   --on-cover-body: #FFE9DD;
 }
 
+/* 부부 관계 성향 체크. 보라·초록·코랄과 구분되는 로즈 계열. --cover-grad는 커버 위
+   흰 글자가 4.5:1을 넘도록 어둡게 잡았다(위 주석과 같은 이유). */
+body.theme-couple {
+  --accent: #D9436F;
+  --accent-shadow: rgba(217,67,111,.30);
+  --accent-soft: #FDECF1;
+  --accent-ink: #8E2044;
+  --accent-dim: #EFA3BC;
+  --cover-grad: linear-gradient(160deg,#A8365A,#7C2242);
+  --on-cover: #FFD3E0;
+  --on-cover-body: #FFE5EC;
+}
+
 * { box-sizing: border-box; }
 
 body {
@@ -1352,3 +1365,240 @@ body {
     overflow: hidden;
   }
 }
+
+/* ---------------------------------------------------------------- 부부 관계 성향 체크
+   theme-couple(로즈 팔레트) 아래서 var(--accent) 계열이 이미 바뀌어 있으므로,
+   여기서는 이 검사에만 있는 부품(3축 선택 · 리커트 · 점수 막대 · 게이지)만 정의한다. */
+
+.cp-setup-lead {
+  font-size: 12px;
+  color: #5C5964;
+  line-height: 1.6;
+  margin: 0;
+  padding: 0 20px 4px;
+}
+
+.cp-axis { padding: 14px 20px 0; }
+
+.cp-axis-title { font-size: 15px; font-weight: 800; color: #3B3941; }
+
+.cp-axis-hint { font-size: 12px; color: #5C5964; margin-top: 3px; line-height: 1.5; }
+
+.cp-axis-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.cp-axis-btn {
+  background: #fff;
+  border: 2px solid transparent;
+  border-radius: 14px;
+  padding: 13px 16px;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  box-shadow: 0 2px 8px rgba(0,0,0,.05);
+  display: block;
+  width: 100%;
+}
+
+.cp-axis-btn .lbl { display: block; font-size: 15px; font-weight: 700; color: #3B3941; }
+.cp-axis-btn .sub { display: block; font-size: 12px; color: #5C5964; margin-top: 2px; }
+
+.cp-axis-btn.picked {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.cp-axis-btn.picked .lbl { color: var(--accent-ink); }
+
+/* 리커트 5단계는 문항마다 같은 순서로 나와야 한다 — 선택지를 섞으면 응답자가 매번
+   다시 읽어야 해서, 46문항 내내 누적되는 피로가 오히려 응답 품질을 떨어뜨린다. */
+.cp-likert { gap: 8px; }
+.cp-likert-btn { padding: 14px 18px; }
+
+.cp-privacy,
+.cp-anchor-notice {
+  margin: 14px 20px 0;
+  background: var(--accent-soft);
+  border-radius: 16px;
+  padding: 14px 16px;
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: #4A4750;
+}
+
+.cp-privacy-title { font-size: 13.5px; font-weight: 800; color: var(--accent-ink); margin-bottom: 6px; }
+.cp-privacy p { margin: 0 0 6px; }
+.cp-privacy p:last-child { margin-bottom: 0; }
+
+.cp-anchor-notice[hidden] { display: none; }
+
+.cp-warn {
+  margin: 12px 20px 0;
+  background: #FFF6E5;
+  border-radius: 14px;
+  padding: 12px 14px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: #7A5A16;
+}
+
+.cp-flag-list {
+  margin: 0;
+  padding: 0 40px;
+  font-size: 12.5px;
+  color: #5C5964;
+  line-height: 1.8;
+}
+
+.cp-profile,
+.cp-narrative,
+.cp-action,
+.cp-invite-cta {
+  margin: 16px 20px 0;
+  background: #fff;
+  border-radius: 20px;
+  padding: 18px 18px 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.05);
+}
+
+.cp-block-title { font-size: 15px; font-weight: 800; color: #3B3941; }
+
+.cp-block-sub {
+  font-size: 12px;
+  color: #5C5964;
+  line-height: 1.6;
+  margin: 5px 0 12px;
+}
+
+.cp-narrative p {
+  font-size: 13.5px;
+  color: #4A4750;
+  line-height: 1.75;
+  margin: 10px 0 0;
+}
+
+.cp-note {
+  font-size: 12.5px;
+  color: #4A4750;
+  line-height: 1.7;
+  margin: 12px 0 0;
+}
+
+.cp-bar-row, .cp-gap-row { margin-top: 12px; }
+
+.cp-bar-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 13px;
+  font-weight: 700;
+  color: #3B3941;
+  margin-bottom: 5px;
+}
+
+.cp-bar-head b { color: var(--accent-ink); }
+
+.cp-bar-track {
+  position: relative;
+  height: 10px;
+  background: #EFEDF3;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.cp-bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  border-radius: 6px;
+}
+
+/* 애착 두 축은 중간값(50점) 선을 같이 그린다. 4유형 라벨만 주면 사용자가 자기가
+   경계에 얼마나 가까운지 알 수 없다. */
+.cp-bar-mid {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #C9C5D4;
+  z-index: 1;
+}
+
+.cp-bar-desc { font-size: 11.5px; color: #5C5964; line-height: 1.6; margin-top: 5px; }
+
+.cp-do-list { display: flex; flex-direction: column; gap: 7px; }
+
+.cp-do, .cp-dont {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #4A4750;
+  background: #F7F6FA;
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.cp-script {
+  margin-top: 14px;
+  background: var(--accent-soft);
+  border-radius: 14px;
+  padding: 13px 14px;
+}
+
+.cp-script-title { font-size: 13px; font-weight: 800; color: var(--accent-ink); margin-bottom: 6px; }
+.cp-script p { margin: 0; font-size: 13px; line-height: 1.75; color: #4A4750; }
+
+.cp-gauge-track {
+  display: flex;
+  height: 34px;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.cp-gauge-track span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.cp-gauge-parent { background: var(--accent-ink); }
+.cp-gauge-romance { background: var(--accent); }
+
+.cp-invite-cta .cta-btn { margin-top: 4px; }
+
+.cp-invite-link {
+  margin: 16px 20px 0;
+  background: #F7F6FA;
+  border-radius: 14px;
+  padding: 13px 14px;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: #5C5964;
+  word-break: break-all;
+}
+
+.cp-pair-emoji { font-size: 44px; line-height: 1.1; }
+.cp-pair-emoji span { font-size: 24px; opacity: .7; margin: 0 8px; vertical-align: middle; }
+.cp-pair-name { font-size: 20px; line-height: 1.45; }
+
+.cp-support {
+  margin: 18px 20px 0;
+  background: #F4F3F7;
+  border-radius: 16px;
+  padding: 15px 16px;
+}
+
+/* 경고성 아이콘이나 강조색을 쓰지 않는다. 눈에 띄되 무겁지 않아야 결과를 본 모든
+   사람에게 계속 노출해도 경험을 해치지 않는다. */
+.cp-support-title { font-size: 13px; font-weight: 800; color: #3B3941; margin-bottom: 6px; }
+.cp-support p { margin: 0; font-size: 12px; line-height: 1.7; color: #5C5964; }
+.cp-support ul { margin: 8px 0 0; padding-left: 18px; font-size: 12px; line-height: 1.8; color: #5C5964; }

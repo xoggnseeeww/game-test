@@ -56,8 +56,10 @@ test("등록된 테스트의 목록 카드 문구도 같은 규칙을 따른다"
   // 카드 desc는 템플릿 문자열이라 위 정적 검사에 안 걸린다. 실제 값으로 확인한다.
   const { adhdTest } = await import("../js/tests/adhd/index.js");
   const { discTest } = await import("../js/tests/disc/index.js");
+  const { coupleTest } = await import("../js/tests/couple/index.js");
   const { QUESTIONS } = await import("../js/tests/adhd/data.js");
   const { TETRADS } = await import("../js/tests/disc/data.js");
+  const { ITEM_TOTAL } = await import("../js/tests/couple/data.js");
 
   assert.match(
     adhdTest.card.desc,
@@ -68,5 +70,10 @@ test("등록된 테스트의 목록 카드 문구도 같은 규칙을 따른다"
     discTest.card.desc,
     new RegExp(`${TETRADS.length}`),
     "DISC 카드 문구의 상황 수가 TETRADS 길이와 다르다"
+  );
+  assert.match(
+    coupleTest.card.desc,
+    new RegExp(`${ITEM_TOTAL}문항`),
+    "부부 체크 카드 문구의 문항 수가 ITEM_TOTAL과 다르다"
   );
 });

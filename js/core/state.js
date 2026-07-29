@@ -22,4 +22,16 @@ export const state = {
     run: null,
     muted: false,
   },
+  // 부부 관계 성향 체크. items는 세 축(호칭·역할·자녀단계)을 고른 뒤 조립되는 문항지라,
+  // 축을 고르기 전에는 null이다. partner는 배우자 초대 링크(?p=)에서 푼 결과로, 문항을
+  // 다시 시작해도 날아가면 안 되기 때문에 resetCouple()이 따로 살려둔다.
+  couple: {
+    setup: null,
+    items: null,
+    answers: {},
+    index: 0,
+    startedAt: null,
+    elapsedMs: null,
+    partner: null,
+  },
 };

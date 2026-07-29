@@ -613,11 +613,171 @@ async function playNumpathRun(page) {
   await page.click("#retry-btn");
   check("NumPath 다시하기 → 인트로로(자동 재시작 아님)", page.url().endsWith("/game/numpath"), page.url());
 
-  // === 공유 슬러그 주소 (두 테스트 모두) ===
+  // === 부부 관계 성향 체크: 3축 선택 → 46문항 → 결과 → 배우자 코드 왕복 ===
+  await goto("/test/couple");
+  check("부부 체크 인트로 주소", page.url().endsWith("/test/couple"), page.url());
+  check(
+    "인트로에 응답 비공개 고지 노출 (§6.5.2)",
+    await page.isVisible(".cp-privacy"),
+    "cp-privacy"
+  );
+  await page.click("#cp-start");
+  check("시작하기 → 상황 고르기", page.url().endsWith("/test/couple/setup"), page.url());
+
+  // 세 축을 다 고르기 전에는 진행 버튼이 잠겨 있어야 한다 — 하나라도 비면 문항 문장을
+  // 고를 수 없어서, 조립 단계에서 터진다.
+  check("축 미선택 상태에서 진행 버튼 잠김", await page.isDisabled("#cp-setup-next"));
+  await page.click('.cp-axis-btn[data-code="T-H"]');
+  await page.click('.cp-axis-btn[data-code="R-E"]');
+  check("두 축만 골랐을 때도 여전히 잠김", await page.isDisabled("#cp-setup-next"));
+  await page.click('.cp-axis-btn[data-code="K-1"]');
+  check("세 축을 다 고르면 진행 버튼 열림", !(await page.isDisabled("#cp-setup-next")));
+  await page.click("#cp-setup-next");
+  await page.waitForSelector(".cp-likert-btn");
+
+  const coupleTotalText = await page.textContent(".progress-count .total");
+  const coupleTotal = parseInt(coupleTotalText.replace("/", ""), 10);
+  check("문항 수를 진행 표시에서 읽음", Number.isInteger(coupleTotal) && coupleTotal > 0, coupleTotalText);
+
+  // 문항 화면도 진입 시 한 번만 그리고 내용만 갈아끼운다(광고 로더 재실행 방지).
+  await markLoader(page, "couple-question");
+
+  // 뒤로가기가 정확히 한 문항만 되돌리는지 (ADHD와 같은 회귀 지점)
+  const cq1 = await page.textContent("#cp-text");
+  await page.click(".cp-likert-btn:nth-child(2)");
+  await page.waitForFunction((prev) => document.querySelector("#cp-text")?.textContent !== prev, cq1, { timeout: 3000 });
+  const cq2 = await page.textContent("#cp-text");
+  await page.click("#cp-back");
+  await page.waitForFunction((prev) => document.querySelector("#cp-text")?.textContent !== prev, cq2, { timeout: 3000 });
+  check("부부 체크 뒤로가기 → 직전 문항으로 한 단계만 복귀", (await page.textContent("#cp-text")) === cq1);
+
+  // 앵커 구간 고지는 그 구간에 들어가기 전까지 보이면 안 된다(§6.5.2 — 두 번째 노출 지점).
+  check("앵커 고지가 초반 문항에서는 숨겨짐", !(await page.isVisible("#cp-anchor-notice")));
+
+  // 전 문항 응답. "보통이다"만 찍으면 직선 응답으로 걸리므로 값을 흩어서 답한다.
+  // 마지막 문항은 답하는 순간 광고 게이트로 넘어가므로(=refreshAds 실행) 루프 밖에 둔다 —
+  // 그래야 아래 로더 표시 검사가 "문항 진행 중"만 보게 된다.
+  let anchorNoticeSeen = false;
+  const answerCouple = async (i) => {
+    await page.waitForSelector(".cp-likert-btn");
+    if (await page.isVisible("#cp-anchor-notice")) anchorNoticeSeen = true;
+    const text = await page.textContent("#cp-text");
+    // 응답 품질 플래그가 서지 않는 "성실한 응답"을 흉내 낸다:
+    //  - QC1은 안내대로 "그렇지 않다"(2점)
+    //  - QC2와 I1은 같은 값(3점) — 두 문항 차이가 3점 이상이면 일관성 플래그가 선다.
+    //    무작위로 답하면 여기가 자주 걸려서 이 검사 자체가 들쭉날쭉해진다.
+    //  - 나머지는 값을 흩어서 직선 응답 검사를 피한다
+    let pick = [4, 2, 5, 3, 1][i % 5];
+    if (text.includes("성실한 응답을 확인하기 위한")) pick = 2;
+    else if (text.includes("대화하는 시간을 소중하게") || text.includes("시시콜콜")) pick = 3;
+    await page.click(`.cp-likert-btn:nth-child(${pick})`);
+  };
+  for (let i = 0; i < coupleTotal - 1; i++) await answerCouple(i);
+  check(
+    "부부 체크 문항 진행 중 광고 슬롯이 한 번만 마운트됨(로더 재실행 없음)",
+    (await loaderMark(page)) === "couple-question",
+    `mark=${await loaderMark(page)} (문항 ${coupleTotal - 1}개 통과)`
+  );
+  check(
+    "부부 체크 문항 화면에 광고 슬롯 정확히 2개(상단+하단, 중복 누적 없음)",
+    (await page.$$eval(".ad-slot", (l) => l.length)) === 2,
+    `${await page.$$eval(".ad-slot", (l) => l.length)}개`
+  );
+  await answerCouple(coupleTotal - 1);
+  check("앵커 구간에서 비공개 재고지가 노출됨 (§6.5.2)", anchorNoticeSeen);
+
+  await page.waitForSelector("#ad-gate-continue", { timeout: 5000 });
+  check("문항 완료 → 광고 게이트로 직행", page.url().endsWith("/test/couple/ad"), page.url());
+  await page.waitForFunction(() => !document.querySelector("#ad-gate-continue").disabled, { timeout: 6000 });
+  await page.click("#ad-gate-continue");
+  await page.waitForSelector(".result-card", { timeout: 5000 });
+  check("부부 체크 결과 주소", page.url().endsWith("/test/couple/result"), page.url());
+
+  // 결과 3요소(§6.1): 유형 라벨 · 연속 프로필 · 확신도가 항상 함께 나와야 한다.
+  const cpProfileBars = await page.$$eval(".cp-profile .cp-bar-row", (n) => n.length);
+  check("결과에 연속 프로필이 함께 나옴 (§6.1 — 라벨 단독 노출 금지)", cpProfileBars >= 6, `${cpProfileBars}개 막대`);
+  check("애착 축에 중간값 선 표시", (await page.$$(".cp-bar-mid")).length >= 2);
+  const cpBody = (await page.textContent("#app")).replace(/\s+/g, " ");
+  check("결과에 상시 안내 링크 노출 (§9.2)", await page.isVisible(".cp-support"));
+  check("결과에 서비스 성격 고지 노출 (§9.3)", cpBody.includes("진단하거나 관계의 미래를 예측하지 않습니다"));
+
+  // 규준 표본이 없으므로 백분위·석차 표현을 쓰면 안 된다(§6.2).
+  check(
+    "백분위·석차 표현 없음 (규준 미확보 — §6.2)",
+    !/상위\s*\d+\s*%|백분위|하위\s*\d+\s*%/.test(cpBody),
+    cpBody.slice(0, 120)
+  );
+
+  // === 배우자 초대 링크 왕복 ===
+  await page.click('[data-nav="couple-invite"]');
+  check("초대 링크 화면 주소", page.url().endsWith("/test/couple/invite"), page.url());
+  const inviteUrl = (await page.textContent("#cp-link")).trim();
+  check("초대 링크가 ?p= 코드를 담고 있다", /\/test\/couple\/pair\?p=[0-9a-z]+$/.test(inviteUrl), inviteUrl);
+
+  // 링크를 새 세션(state가 빈 상태)에서 열면 "배우자가 먼저 마쳤다" 화면이 떠야 한다.
+  const partnerPath = inviteUrl.slice(inviteUrl.indexOf("/test/couple/pair"));
+  await goto(partnerPath);
+  check("초대 링크 직접 접속 → 배우자 초대 화면 (홈 폴백 아님)", await page.isVisible(".cover"), page.url());
+  check("초대 화면이 배우자 유형을 보여줌", (await page.textContent(".cover")).includes("형"), page.url());
+  check("초대 화면 주소에 코드가 남아 있음", page.url().includes("?p="), page.url());
+
+  // 깨진 코드는 인트로로 떨어져야 한다 — 카카오톡에서 링크 끝이 잘려 붙는 경우가 있다.
+  // (라우터는 화면을 바꿔도 location.search를 그대로 붙이므로 경로만 본다.)
+  await goto(partnerPath.slice(0, -1));
+  check(
+    "코드가 잘린 초대 링크 → 인트로 폴백",
+    new URL(page.url()).pathname === "/test/couple",
+    page.url()
+  );
+
+  // === 초대받은 쪽이 답을 마치면 결합 리포트까지 도달하는가 ===
+  // 초대 링크의 목적이 "합쳐 보기"이므로, 문항을 마친 뒤 개인 결과에서 멈추면 안 된다.
+  await goto(partnerPath);
+  await page.click("#cp-pair-start");
+  await page.click('.cp-axis-btn[data-code="T-W"]');
+  await page.click('.cp-axis-btn[data-code="R-C"]');
+  await page.click('.cp-axis-btn[data-code="K-1"]'); // 배우자와 같은 자녀 단계
+  await page.click("#cp-setup-next");
+  await page.waitForSelector(".cp-likert-btn");
+  for (let i = 0; i < coupleTotal; i++) await answerCouple(coupleTotal - i);
+  // (초대받은 쪽은 배우자와 다른 순서로 답해 격차가 실제로 생기게 한다)
+  await page.waitForSelector("#ad-gate-continue", { timeout: 5000 });
+  await page.waitForFunction(() => !document.querySelector("#ad-gate-continue").disabled, { timeout: 6000 });
+  await page.click("#ad-gate-continue");
+  await page.waitForSelector(".result-card", { timeout: 5000 });
+  check(
+    "초대받은 쪽은 문항 완료 후 개인 결과가 아니라 결합 결과로 간다",
+    page.url().includes("/test/couple/together"),
+    page.url()
+  );
+
+  const reportBody = (await page.textContent("#app")).replace(/\s+/g, " ");
+  check("결합 결과에 두 유형 조합 이름이 나온다", (await page.textContent(".cp-pair-name")).includes("×"));
+  check("결합 결과에 구성 요소가 함께 나온다 (§7.4 규칙 2)", reportBody.includes("이 결과를 만든 것들"));
+  check("인지 격차 3개 항목이 나온다", (await page.$$(".cp-gap-row")).length === 3);
+  check("같은 자녀 단계면 부모·연인 게이지가 나온다", await page.isVisible(".cp-gauge-track"));
+  check("격차 항목에 대화 스크립트가 붙는다 (§6.5.3)", (await page.$$(".cp-script")).length >= 1);
+  check("결합 결과에 상시 안내 링크 노출 (§9.2)", await page.isVisible(".cp-support"));
+
+  // 점수·등급명을 숫자로 노출하지 않는다(§7.4·§7.5) — 구간 서술만 나가야 한다.
+  check(
+    "궁합 점수·등급명 숫자 노출 없음 (§7.4)",
+    !/궁합|매칭\s*점수|\d+\s*점\s*(만점|궁합)|매우 안정|성장 필요|상담 권유/.test(reportBody),
+    reportBody.slice(0, 140)
+  );
+  // 누가 낮게 답했는지 지목하는 표현을 쓰지 않는다(§6.5.3).
+  check(
+    "지목형 표현 없음 (§6.5.3)",
+    !/(아내|남편)분이\s|라고 답했습니다/.test(reportBody),
+    reportBody.slice(0, 140)
+  );
+
+  // === 공유 슬러그 주소 (세 테스트 모두) ===
   // 불변식은 "결과 카드가 뜨고 홈이 아니다" — 화면 문구는 테스트마다 다르므로 문구로 검사하지 않는다.
   for (const [p, expected, label] of [
     ["/test/adhd/result/typhoon", "태풍", "ADHD"],
     ["/test/disc/result/lion", null, "DISC"],
+    ["/test/couple/result/anchor", "포근한 동반자형", "부부"],
   ]) {
     await goto(p);
     const shown = await page.isVisible(".result-card");
@@ -646,6 +806,12 @@ async function playNumpathRun(page) {
     ["/test/adhd/reaction/play", ".cover", "반응속도 게임 플레이 (문항 미완료)"],
     ["/test/adhd/reaction/ad", ".cover", "광고 게이트 (게임 미완료, ADHD)"],
     ["/test/disc/dilemma/ad", ".cover", "광고 게이트 (게임 미완료, DISC)"],
+    ["/test/couple/play", ".cover", "부부 체크 문항 (축 미선택)"],
+    ["/test/couple/result", ".cover", "부부 체크 결과 (문항 미완료)"],
+    ["/test/couple/invite", ".cover", "부부 체크 초대 (문항 미완료)"],
+    ["/test/couple/ad", ".cover", "부부 체크 광고 게이트 (문항 미완료)"],
+    ["/test/couple/pair", ".cover", "부부 체크 페어링 (코드 없음)"],
+    ["/test/couple/together", ".cover", "부부 체크 결합 결과 (코드·응답 없음)"],
     ["/game/numpath/play", ".cover", "NumPath 플레이 (런 없음)"],
     ["/game/numpath/ad", ".cover", "NumPath 광고 게이트 (런 없음)"],
     ["/game/numpath/result", ".cover", "NumPath 결과 (런 없음)"],

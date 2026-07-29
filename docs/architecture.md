@@ -101,6 +101,12 @@ js/games/<id>/          테스트에 속하지 않는 독립 미니게임(예: n
 | `/test/disc/dilemma` | `dilemma-intro` | disc | 문항 미완료 → `disc-intro` |
 | `/test/disc/dilemma/play` | `dilemma-play` | disc | 문항 미완료 → `disc-intro` |
 | `/test/disc/dilemma/ad` | `dilemma-ad` | disc | 문항 미완료 → `disc-intro`, 게임 미완료 → `dilemma-intro` |
+| `/test/couple` · `/setup` | `couple-intro` · `couple-setup` | couple | — |
+| `/test/couple/play` | `couple-question` | couple | 축 미선택 → `couple-intro` · 다 답했으면 마지막 문항으로 되돌림 |
+| `/test/couple/ad` · `/result` · `/invite` | `couple-ad` · `couple-result` · `couple-invite` | couple | 문항 미완료 → `couple-intro` |
+| `/test/couple/pair?p=<코드>` | `couple-pair` | couple | 코드 안 풀림 → `couple-intro` · 본인 응답 완료 → `couple-report` |
+| `/test/couple/together` | `couple-report` | couple | 코드 없음·문항 미완료 → `couple-intro` |
+| `/test/couple/result/<slug>` | `couple-shared` | couple | 슬러그 안 풀리면 → `home` |
 | `/game/numpath` | `numpath-intro` | game | — |
 | `/game/numpath/play` | `numpath-play` | game | 런 없음 → `numpath-intro` |
 | `/game/numpath/ad` | `numpath-ad` | game | 런 없음 → `numpath-intro`, 런 미완료 → `numpath-play` |
@@ -118,6 +124,10 @@ js/games/<id>/          테스트에 속하지 않는 독립 미니게임(예: n
 하나의 결과로 합쳐 보여준다. 테스트별 흐름 상세는 각각 `docs/adhd-architecture.md` ·
 `docs/disc-architecture.md`로 분리돼 있다. NumPath(테스트에 속하지 않는 독립 게임)의 흐름·게임
 로직 개요는 `docs/numpath-architecture.md` 참고.
+
+**부부 관계 성향 체크만 화면이 9개다** — 축 선택·배우자 초대·결합 결과가 더 있기 때문이다.
+백엔드가 없어 배우자 결과를 주소(`?p=<코드>`)로 실어 나르므로 `couple-pair`만 쿼리 스트링에
+의존한다. 상세는 `docs/couple-architecture.md`.
 
 - **광고 게이트(`reaction-ad`/`dilemma-ad`/`numpath-ad`)**: `core/ads.js`의 `adGateMarkup()` +
   `core/dom.js`의 `bindAdGate()`로 구성. 300×250 AdFit 광고 단위(`interstitial`)를 3초
@@ -141,6 +151,14 @@ state = {
   numpath: {
     run: null,   // { seed, stageIndex, stars: [] } — 퍼즐 보드 자체는 안 들고 있다(위 참고)
     muted: false,
+  },
+  couple: {
+    setup: null,     // { t, r, k } — 세 축을 고르기 전에는 null
+    items: null,     // 조립된 문항지 (축을 고른 뒤에 만들어진다)
+    answers: {},     // 문항 코드 → 1~5
+    index: 0,
+    startedAt: null, elapsedMs: null,  // 소요시간 검사용. 완료 시점에 한 번 고정한다
+    partner: null,   // 초대 링크(?p=)에서 푼 배우자 결과 — 문항을 다시 시작해도 살려둔다
   },
 }
 ```
@@ -202,6 +220,8 @@ ADHD·DISC 채점 파이프라인 상세는 각각 `docs/adhd-architecture.md` �
 | `test/disc.score.test.js` | DISC 채점 불변식 (합 0, 순서 무관, 결정론, 대척점 배제, 12유형 도달, 슬러그 왕복) |
 | `test/adhd.score.test.js` | 반응 코멘트가 억제 실패×누락 9개 조합 모두 다른 문장을 주는가 / 게임 보너스 임계값 / 이미 100%인 축엔 보너스가 안 보이는가 |
 | `test/copy.test.js` | 화면 문구의 개수가 데이터에서 파생되는가 (`docs/ERRORS.md` E-1) |
+| `test/couple.score.test.js` | 문항 뱅크 구조 / 조립 규칙(요인 이격·역채점 분산·앵커 후미·축 조합 무관 동일 구성) / 채점 임계값 / 유효성 플래그 / 유형×문구 뱅크 빠짐없음 |
+| `test/couple.match.test.js` | ΔDISC 정규화 · Risk Matrix 대칭 · Gap 방향 보존 · 게이지 방향(K2 가산/K4 감산) · 등급 완충 · 구간 문구에 숫자 없음 · 배우자 코드 왕복/체크섬 |
 | `test/numpath.engine.test.js` | 순차 연산 · 이동 판정(나눗셈 정수·뺄셈 양수) · Undo 왕복 불변식 · 클리어/막힘/이동초과 판정 |
 | `test/numpath.generate.test.js` | 시드 재현성 · 레벨마다 생성된 퍼즐이 항상 solve() 가능한가(교차 검증) · 별 등급 임계값 |
 

@@ -94,9 +94,10 @@ test("등록되는 화면 id와 경로가 겹치지 않는다", async () => {
   // 라우터는 브라우저 DOM이 필요해서 직접 못 부르고, 디스크립터만 읽어 검사한다.
   const { adhdScreens } = await import("../js/tests/adhd/index.js");
   const { discScreens } = await import("../js/tests/disc/index.js");
+  const { coupleScreens } = await import("../js/tests/couple/index.js");
   const { numpathScreens } = await import("../js/games/numpath/index.js");
   const { commonScreens } = await import("../js/screens/home.js");
-  const all = [...commonScreens, ...adhdScreens, ...discScreens, ...numpathScreens];
+  const all = [...commonScreens, ...adhdScreens, ...discScreens, ...coupleScreens, ...numpathScreens];
 
   const ids = all.map((s) => s.id);
   assert.equal(new Set(ids).size, ids.length, `화면 id가 겹친다: ${ids.join(", ")}`);
@@ -116,4 +117,9 @@ test("등록되는 화면 id와 경로가 겹치지 않는다", async () => {
   assert.ok(paths.includes("/test/adhd/result"));
   assert.ok(adhdScreens.some((s) => s.id === "test-shared" && s.dynamicPath));
   assert.ok(paths.includes("/game/numpath"));
+  assert.ok(coupleScreens.some((s) => s.id === "couple-shared" && s.dynamicPath));
+
+  // 배우자 초대 링크는 ?p=<코드>를 붙여 보낸다. 그 주소가 고정 경로로 등록돼 있어야
+  // 새로고침·직접 접속에서 홈으로 튕기지 않는다.
+  assert.ok(paths.includes("/test/couple/pair"));
 });

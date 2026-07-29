@@ -39,7 +39,8 @@ js/main.js            부팅: 화면·테스트·게임을 라우터에 등록
 js/core/              router(레지스트리·guard·teardown·게임 레지스트리) · state · dom · share · util · ads
 js/screens/home.js    홈 · 심리테스트 목록(등록된 테스트에서 자동 생성) · 미니게임 목록(등록된 게임에서 자동 생성)
 js/tests/<id>/        테스트 1개 = 폴더 1개: data · score · screens · index(디스크립터)
-                      현재 adhd(+반응속도 게임), disc(+딜레마 게임)
+                      현재 adhd(+반응속도 게임), disc(+딜레마 게임),
+                      couple(+assemble · match — 문항지 조립과 부부 매칭이 따로 검증돼야 해서 분리)
 js/games/<id>/        테스트에 속하지 않는 독립 미니게임 1개 = 폴더 1개. 현재 numpath
 test/                 node --test 스위트 (채점 로직 · 게임 로직 · 모듈 import/export 정합성)
 styles.css            전체 스타일. 브랜드 색은 CSS custom properties + theme-* 클래스
@@ -55,6 +56,7 @@ docs/design-draft.html  최초 디자인 목업. 배포·동작과 무관 (.clau
 | `docs/architecture.md` | 모듈맵 · 라우터 계약 · 화면 표 (15KB 넘겨 테스트/게임별 상세는 아래로 분리됨) |
 | `docs/adhd-architecture.md` | ADHD 흐름 · 채점 파이프라인 |
 | `docs/disc-architecture.md` | DISC 흐름 · 채점 파이프라인 |
+| `docs/couple-architecture.md` | 부부 관계 성향 체크 흐름 · 문항지 조립 · 채점 · 부부 매칭 · 배우자 코드 · 안전 장치 |
 | `docs/numpath-architecture.md` | NumPath 흐름 · 게임 로직(타일 모델 · 생성기 · 솔버 · 별 판정) 개요 |
 | `docs/ERRORS.md` | 오류 패턴 (같은 증상이 재발할 때) |
 | `docs/DECISIONS.md` | 설계 결정 · 기각안 · 되돌림 |
@@ -73,6 +75,10 @@ docs/design-draft.html  최초 디자인 목업. 배포·동작과 무관 (.clau
   `npm test`는 채점·모듈 정합성만 본다. 라우팅·이벤트·레이아웃은 `scripts/verify.cjs`로만 잡힌다.
   **확인하지 못한 항목은 `CURRENT_TASK.md`의 "배포 후 확인 필요"로 옮긴다** — 침묵은 "확인됨"으로 오독된다.
 - **의학적 진단 표현 금지** — "성향 체크"까지만. `disclaimer` 문구를 제거하거나 약화하지 말 것 → `docs/DECISIONS.md` D-3
+- **부부 체크의 결과 전달 안전 장치를 빼지 말 것** — 유형 라벨 단독 노출 금지(연속 점수·확신도 동반),
+  궁합 점수 숫자 노출 금지(구간 서술만), 백분위·석차 표현 금지(규준 표본이 없다), 격차에서 한쪽을
+  지목하는 표현 금지. 전부 기획서 §6~§9의 요구이고 `scripts/verify.cjs`가 검사한다 →
+  `docs/couple-architecture.md` §8
 
 ## 동기화 매트릭스
 > `[바꾸는 것] → [반드시 같이 고칠 것]`. 모를 때 필요한 정보라서 자동 로드에 둔다.
@@ -85,6 +91,10 @@ docs/design-draft.html  최초 디자인 목업. 배포·동작과 무관 (.clau
 - `AXIS_HIGH_THRESHOLD` 변경 → `axisIntensityText()`의 구간 경계(`60`)도 같이 조정
 - `CPT_ROUNDS` / `CPT_NOGO_COUNT` 변경 → `gameBonuses()`의 오류율 구간이 여전히 의미 있는지 확인
 - 새 `theme` 값 추가 → `js/core/router.js`의 `THEME_CLASSES` 배열 + `styles.css`의 `theme-*` 변수 블록
+- 부부 체크의 배우자 코드 필드 추가/순서 변경 → `match.js`의 `VERSION`도 함께 올린다. 자리로만
+  읽는 코드라, 순서를 바꾸면 **이미 공유된 링크가 조용히 다른 값으로 해석된다**
+- 부부 체크 문항 추가/삭제 → 문장이 부부 양쪽에 동일한 문항만 `computeCouple()`의 `comparable`에
+  넣는다. 역할별로 문장이 갈리는 문항(R1~R4)이 들어가면 서로 다른 문장의 점수를 빼게 된다
 - 구조 변경(모듈 추가·이동·삭제) → **같은 커밋에** `docs/architecture.md` 모듈맵과 위 구조 개요 트리 갱신
 - `styles.css` 클래스명 변경 → 템플릿 문자열은 타입 체크가 없다. `grep -rn '<클래스명>' js/ styles.css`로 양쪽 확인
 

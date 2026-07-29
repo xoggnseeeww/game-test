@@ -122,7 +122,7 @@ function resolveScreen(screen) {
   return "home";
 }
 
-const THEME_CLASSES = ["theme-adhd", "theme-game", "theme-disc"];
+const THEME_CLASSES = ["theme-adhd", "theme-game", "theme-disc", "theme-couple"];
 
 export function setScreen(screen, { push = false, replace = false } = {}) {
   runTeardowns();
