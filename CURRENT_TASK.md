@@ -8,6 +8,8 @@
 `registerGame`/`listGames` 신규 도입(`registerTest`/`listTests`와 대칭), `/game/numpath/*` 4화면.
 `renderGameList()`가 이제 `listGames()`로 카드를 자동 생성해 "미니게임 목록이 비어 있음" 항목이
 해소됨. 리뷰 중 `starsFor()`의 2성 등급이 모든 레벨에서 도달 불가능하던 버그를 찾아 같이 수정.
+이어서 사용자 피드백("목표값이 안 보이고 설명 부족")으로 플레이 화면 HUD에 "현재값 → 목표값"
+전용 배너를 추가하고 인트로에 칸 종류(시작/연산/배수/차단) 안내를 붙임 — 전부 main 머지 완료.
 `npm test` 61/61, `scripts/verify.cjs` 64/64(로컬, 여러 차례 재현) 통과.
 관련 결정: `docs/decisions/2027-h1.md` D-28(독립 게임 레지스트리)·D-29(공유 URL, D-7과 반대
 방향)·D-30(타일 모델)·D-31(1차 범위 축소). 상세는 `docs/numpath-architecture.md`.
