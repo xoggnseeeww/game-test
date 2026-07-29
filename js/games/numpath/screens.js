@@ -26,13 +26,32 @@ export function renderNumpathIntro() {
         <div class="emoji">🧮</div>
         <div class="tag">숫자 경로 퍼즐</div>
         <h2>NumPath<br/>Stack &amp; Clear</h2>
-        <p>인접한 칸을 밟아 숫자를 계산해서<br/>목표값을 정확히 만들어보세요.<br/>지나온 칸은 사라져서 다시 밟을 수 없어요!</p>
+        <p>인접한 칸을 밟을 때마다 그 칸의 계산이 현재값에 적용돼요.<br/>현재값이 <b>목표값</b>과 정확히 같아지면 클리어!<br/>지나온 칸은 사라져서 다시 밟을 수 없어요.</p>
       </div>
       <div class="meta-chips">
         <div class="meta-chip"><div class="value">${STAGES_PER_RUN}스테이지</div><div class="label">한 런</div></div>
         <div class="meta-chip"><div class="value">${"⭐".repeat(MAX_STARS)}</div><div class="label">별 ${MAX_STARS}개 도전</div></div>
       </div>
-      <p class="disclaimer">막히거나 이동 횟수를 다 쓰면 Undo나 Reset으로 바로 다시 도전할 수 있어요.</p>
+      <div class="section-title" style="padding:16px 20px 8px;">🗺️ 칸 종류</div>
+      <div class="np-legend">
+        <div class="np-legend-item">
+          <button class="np-tile np-tile--start" tabindex="-1">5</button>
+          <span><b>시작 칸</b> — 여기서부터 출발, 숫자가 첫 현재값이에요</span>
+        </div>
+        <div class="np-legend-item">
+          <button class="np-tile np-tile--tile" tabindex="-1">+3</button>
+          <span><b>연산 칸</b> — 밟으면 현재값에 그 계산이 적용돼요 (+ − × ÷)</span>
+        </div>
+        <div class="np-legend-item">
+          <button class="np-tile np-tile--tile np-tile--multiplier" tabindex="-1">×2</button>
+          <span><b>배수 칸</b> — 현재값 전체에 2배 또는 3배를 곱해요</span>
+        </div>
+        <div class="np-legend-item">
+          <button class="np-tile np-tile--block" tabindex="-1">✕</button>
+          <span><b>차단 칸</b> — 지나갈 수 없어요</span>
+        </div>
+      </div>
+      <p class="disclaimer">막히거나 이동 횟수를 다 쓰면 Undo나 Reset으로 바로 다시 도전할 수 있어요.<br/>최적 경로로 클리어하면 ⭐⭐⭐, 여유 있게 클리어하면 ⭐⭐, 그냥 클리어해도 ⭐예요.</p>
       <div class="cta">
         <button class="cta-btn" id="start-btn">런 시작하기</button>
       </div>
@@ -43,7 +62,7 @@ export function renderNumpathIntro() {
   app.querySelector("#start-btn").addEventListener("click", () => {
     showModal({
       title: "🧮 시작 전 안내",
-      body: "인접한 칸을 탭해서 이동하세요. 지나온 칸은 사라져서\n다시 밟을 수 없어요.\n\n이동한 순서대로 계산이 적용돼요 (예: 5 → +3 → 8).\n\n막히면 Undo나 Reset으로 바로 다시 시작할 수 있어요.",
+      body: "인접한 칸을 탭해서 이동하세요. 지나온 칸은 사라져서\n다시 밟을 수 없어요.\n\n이동한 순서대로 계산이 적용돼요 (예: 5 → +3 → 8). 현재값이\n화면 위쪽의 목표값과 정확히 같아지면 클리어예요.\n\n✕ 표시된 칸은 지나갈 수 없고, 테두리가 강조된 칸은 현재값\n전체를 2배·3배 해요.\n\n막히면 Undo나 Reset으로 바로 다시 시작할 수 있어요.",
       confirmLabel: "시작할게요",
       cancelLabel: "취소",
       onConfirm: startRun,
