@@ -632,7 +632,7 @@ async function playNumpathRun(page) {
     guideBody.includes("내 결과가 더 정확해지지는 않습니다"),
     guideBody.slice(0, 120)
   );
-  check("안내에 이용 순서가 있다", guideBody.includes("배우자 초대 링크 만들기"));
+  check("안내에 이용 순서가 있다", guideBody.includes("배우자 초대 링크"));
   check("안내에 자주 묻는 것이 있다", guideBody.includes("자녀 단계는 꼭 같게 골라야 하나요"));
   check("안내에도 상시 안내 링크가 있다", await page.isVisible(".cp-support"));
   // 설명서가 "둘이 하면 더 정확" 류로 되돌아가는 변경을 막는다.
@@ -679,11 +679,28 @@ async function playNumpathRun(page) {
   // 전 문항 응답. "보통이다"만 찍으면 직선 응답으로 걸리므로 값을 흩어서 답한다.
   // 마지막 문항은 답하는 순간 광고 게이트로 넘어가므로(=refreshAds 실행) 루프 밖에 둔다 —
   // 그래야 아래 로더 표시 검사가 "문항 진행 중"만 보게 된다.
+  // 앵커 문항(양쪽에 같은 문장으로 나가는 문항)은 두 사람이 정반대로 답하게 만든다.
+  // 우연에 맡기면 인지 격차가 전부 "비슷함"으로 나올 수 있는데, 그러면 "격차 항목에는
+  // 반드시 대화 스타터가 붙는다"(§6.5.3) 검사가 볼 대상 자체가 없어져 조용히 통과한다.
+  const ANCHOR_HINTS = [
+    "고마워한다고 느낀다",
+    "들이는 노력을 잘 알고",
+    "몫이 버겁게",
+    "감당하기에 벅차다",
+    "모두에게 공정하다",
+    "몫의 크기는 서로 비슷",
+  ];
+
   let noticeSeenAt = [];
+  let anchorPick = 5; // 첫 번째 사람은 앵커에 "매우 그렇다"
   const answerCouple = async (i) => {
     await page.waitForSelector(".cp-likert-btn");
     if (await page.isVisible("#cp-anchor-notice")) noticeSeenAt.push(i + 1);
     const text = await page.textContent("#cp-text");
+    if (ANCHOR_HINTS.some((h) => text.includes(h))) {
+      await page.click(`.cp-likert-btn:nth-child(${anchorPick})`);
+      return;
+    }
     // 응답 품질 플래그가 서지 않는 "성실한 응답"을 흉내 낸다:
     //  - QC1은 안내대로 "그렇지 않다"(2점)
     //  - QC2와 I1은 같은 값(3점) — 두 문항 차이가 3점 이상이면 일관성 플래그가 선다.
@@ -722,6 +739,15 @@ async function playNumpathRun(page) {
   check("부부 체크 결과 주소", page.url().endsWith("/test/couple/result"), page.url());
 
   // 결과 3요소(§6.1): 유형 라벨 · 연속 프로필 · 확신도가 항상 함께 나와야 한다.
+  // 접기 블록: 핵심만 펼쳐두고 나머지는 접는다. 접힌 내용도 DOM에는 있어야 한다
+  // (§6.4의 블록을 생략한 게 아니라 순서를 준 것).
+  const folds = await page.$$eval(".cp-fold", (n) => n.map((d) => d.querySelector("summary").textContent.trim()));
+  check("개인 결과에 접기 블록이 있다", folds.length >= 2, folds.join(" | "));
+  check(
+    "접힌 블록도 DOM에 내용이 있다",
+    (await page.$$eval(".cp-fold .cp-fold-body", (n) => n.every((b) => b.textContent.trim().length > 10))),
+    ""
+  );
   const cpProfileBars = await page.$$eval(".cp-profile .cp-bar-row", (n) => n.length);
   check("결과에 연속 프로필이 함께 나옴 (§6.1 — 라벨 단독 노출 금지)", cpProfileBars >= 6, `${cpProfileBars}개 막대`);
   check("애착 축에 중간값 선 표시", (await page.$$(".cp-bar-mid")).length >= 2);
@@ -767,8 +793,8 @@ async function playNumpathRun(page) {
   await page.click('.cp-axis-btn[data-code="K-1"]'); // 배우자와 같은 자녀 단계
   await page.click("#cp-setup-next");
   await page.waitForSelector(".cp-likert-btn");
+  anchorPick = 1; // 초대받은 쪽은 앵커에 "전혀 아니다" → 인지 격차가 반드시 생긴다
   for (let i = 0; i < coupleTotal; i++) await answerCouple(coupleTotal - i);
-  // (초대받은 쪽은 배우자와 다른 순서로 답해 격차가 실제로 생기게 한다)
   await page.waitForSelector("#ad-gate-continue", { timeout: 5000 });
   await page.waitForFunction(() => !document.querySelector("#ad-gate-continue").disabled, { timeout: 6000 });
   await page.click("#ad-gate-continue");
@@ -781,10 +807,25 @@ async function playNumpathRun(page) {
 
   const reportBody = (await page.textContent("#app")).replace(/\s+/g, " ");
   check("결합 결과에 두 유형 조합 이름이 나온다", (await page.textContent(".cp-pair-name")).includes("×"));
-  check("성향 조합 해석이 나온다 (§7.2)", reportBody.includes("두 분의 성향은 이렇게 만나요"));
-  check("앵커 기반 체감 비교가 나온다 (§7.3)", reportBody.includes("같은 상황, 서로의 체감"));
-  check("환경축 비교가 나온다 (§7.4)", reportBody.includes("역할과 자녀 이야기에서는"));
-  check("격차 항목에 대화 스타터가 붙는다 (§6.5.3)", (await page.$$(".cp-script")).length >= 1);
+  check("성향 조합 해석이 나온다 (§7.2)", reportBody.includes("두 분의 성향은"));
+  check("앵커 기반 체감 비교가 나온다 (§7.3)", reportBody.includes("같은 질문, 서로의 대답"));
+  check("환경축 비교가 나온다 (§7.4)", reportBody.includes("역할과 자녀 이야기"));
+  // "격차가 큰 항목에는 반드시 대화 스크립트를 함께 붙인다"(§6.5.3)를 구조로 확인한다.
+  // 스크립트가 화면 어딘가에 1개 있는지만 보면, 정작 격차 항목에 안 붙어도 통과한다.
+  const gapRowsMissingScript = await page.$$eval(".cp-gap-row", (rows) =>
+    rows
+      .filter((r) => {
+        const level = r.querySelector(".cp-bar-head b");
+        return level && level.textContent.trim() !== "비슷함";
+      })
+      .filter((r) => !r.querySelector(".cp-script"))
+      .map((r) => r.querySelector(".cp-bar-head span").textContent.trim())
+  );
+  check(
+    "격차가 있는 항목에는 빠짐없이 대화 스타터가 붙는다 (§6.5.3)",
+    gapRowsMissingScript.length === 0,
+    gapRowsMissingScript.join(", ")
+  );
   check("결합 결과에 상시 안내 링크 노출 (§9.2)", await page.isVisible(".cp-support"));
 
   // 단일 궁합 점수·등급명을 만들지 않는다(§7.2). 점수를 되살리는 변경은 여기서 걸린다.

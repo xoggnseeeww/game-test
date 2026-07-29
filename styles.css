@@ -1454,7 +1454,6 @@ body {
 }
 
 .cp-profile,
-.cp-narrative,
 .cp-action,
 .cp-invite-cta {
   margin: 16px 20px 0;
@@ -1471,13 +1470,6 @@ body {
   color: #5C5964;
   line-height: 1.6;
   margin: 5px 0 12px;
-}
-
-.cp-narrative p {
-  font-size: 13.5px;
-  color: #4A4750;
-  line-height: 1.75;
-  margin: 10px 0 0;
 }
 
 .cp-note {
@@ -1672,3 +1664,61 @@ body {
   line-height: 1.75;
   color: #4A4750;
 }
+
+/* 결과 화면의 접는 블록. 핵심만 펼쳐두고 나머지는 여기 넣는다 —
+   :has() 없이 details/summary 기본 동작만 쓴다(구형 브라우저에서도 최소한 열린다). */
+.cp-fold {
+  margin: 16px 20px 0;
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.05);
+  overflow: hidden;
+}
+
+.cp-fold > summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 17px 18px;
+  font-size: 15px;
+  font-weight: 800;
+  color: #3B3941;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cp-fold > summary::-webkit-details-marker { display: none; }
+
+.cp-fold > summary::after {
+  content: "＋";
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--accent);
+  margin-left: 10px;
+}
+
+.cp-fold[open] > summary::after { content: "－"; }
+
+.cp-fold-body { padding: 0 18px 18px; }
+.cp-fold-body > p { margin: 0 0 10px; font-size: 13.5px; line-height: 1.75; color: #4A4750; }
+.cp-fold-body > p:last-child { margin-bottom: 0; }
+.cp-fold-body .cp-note:first-child { margin-top: 0; }
+
+/* 네 성향 비교를 한 줄로 훑을 수 있게 하는 칩. 설명은 눈여겨볼 항목에만 붙는다. */
+.cp-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.cp-chip {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 7px 11px;
+  border-radius: 999px;
+  background: #F0EEF4;
+  color: #5C5964;
+}
+
+.cp-chip-contrast { background: var(--accent-soft); color: var(--accent-ink); }

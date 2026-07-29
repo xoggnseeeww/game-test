@@ -43,19 +43,19 @@ const DYNAMIC_LEVELS = [
     max: 1,
     levelKey: "similar",
     levelLabel: "닮은 편",
-    levelDesc: "비슷한 방식으로 접근해서 서로를 빨리 이해해요. 다만 같은 사각지대를 함께 놓칠 수 있어요.",
+    levelDesc: "비슷해서 서로를 빨리 이해해요. 대신 같은 걸 함께 놓칠 수 있어요.",
   },
   {
     max: 3,
     levelKey: "complement",
     levelLabel: "보완하는 편",
-    levelDesc: "서로 다른 강점이 상대의 약한 지점을 메워주는 조합이에요.",
+    levelDesc: "서로의 약한 지점을 메워주는 조합이에요.",
   },
   {
     max: Infinity,
     levelKey: "contrast",
     levelLabel: "많이 다른 편",
-    levelDesc: "접근 방식 차이가 커서 부딪히기 쉬운 지점이에요. 아래 대화 스타터를 함께 써보세요.",
+    levelDesc: "방식이 많이 달라서 부딪히기 쉬운 지점이에요.",
   },
 ];
 
@@ -71,16 +71,16 @@ export function behaviorDynamics(rawA, rawB) {
 // "정답 조합"을 알려주려는 표가 아니라, 자주 부딪히는 지점을 미리 짚어 대화 스타터로
 // 연결하기 위한 해석 보조 장치다.
 export const ATTACH_PAIR_TAGS = {
-  "AT1|AT1": { tag: "안정 기반형", desc: "서로에게 기댈 자리가 되어주는 조합이에요. 갈등이 생겨도 오래 끌지 않는 편입니다." },
-  "AT1|AT2": { tag: "균형 잡는형", desc: "한 분의 일관된 태도가 다른 한 분의 확인하고 싶은 마음을 가라앉히는 데 도움이 됩니다." },
-  "AT1|AT3": { tag: "거리 조율형", desc: "먼저 다가가되 속도는 상대에 맞출 필요가 있어요." },
-  "AT1|AT4": { tag: "신뢰 축적형", desc: "꾸준함이 신뢰를 서서히 쌓아가는 데 유리한 조합입니다." },
-  "AT2|AT2": { tag: "감정 증폭형", desc: "서로의 확인 욕구가 맞물려 커질 수 있어요. 같은 요구가 반복되지 않도록 주의해보세요." },
-  "AT2|AT3": { tag: "다가감-물러남형", desc: "한 분이 다가갈수록 다른 한 분이 물러나는 패턴이 나타나기 쉬운 조합이에요." },
-  "AT2|AT4": { tag: "엇갈림형", desc: "둘 다 확인받고 싶어하지만 표현 방식이 달라 서로 놓치기 쉬워요." },
-  "AT3|AT3": { tag: "평행 독립형", desc: "각자의 공간은 편안하지만, 정서적 교류가 줄어들지 않도록 의식적인 노력이 필요해요." },
-  "AT3|AT4": { tag: "이중 거리형", desc: "둘 다 거리를 두는 편이라 갈등이 겉으로 드러나지 않고 쌓일 수 있어요." },
-  "AT4|AT4": { tag: "서로 재는형", desc: "둘 다 다가감과 신중함을 함께 가지고 있어요. 작은 시도부터 서로 격려해보세요." },
+  "AT1|AT1": { tag: "안정 기반형", desc: "서로에게 기댈 자리가 되어주는 조합이에요." },
+  "AT1|AT2": { tag: "균형 잡는형", desc: "한 분의 꾸준함이 다른 한 분의 불안을 가라앉혀 줘요." },
+  "AT1|AT3": { tag: "거리 조율형", desc: "먼저 다가가되 속도는 상대에 맞춰주세요." },
+  "AT1|AT4": { tag: "신뢰 축적형", desc: "꾸준함이 신뢰를 천천히 쌓아가는 조합이에요." },
+  "AT2|AT2": { tag: "감정 증폭형", desc: "확인하고 싶은 마음이 서로 맞물려 커질 수 있어요." },
+  "AT2|AT3": { tag: "다가감-물러남형", desc: "한 분이 다가갈수록 다른 한 분이 물러나기 쉬워요." },
+  "AT2|AT4": { tag: "엇갈림형", desc: "둘 다 확인받고 싶은데 표현이 달라 서로 놓치기 쉬워요." },
+  "AT3|AT3": { tag: "평행 독립형", desc: "각자의 공간은 편하지만 대화가 줄어들기 쉬워요." },
+  "AT3|AT4": { tag: "이중 거리형", desc: "둘 다 거리를 두는 편이라 불편함이 속으로 쌓이기 쉬워요." },
+  "AT4|AT4": { tag: "서로 재는형", desc: "둘 다 신중한 편이에요. 작은 시도부터 서로 격려해보세요." },
 };
 
 export function attachPairTag(keyA, keyB) {
@@ -97,13 +97,13 @@ export function conflictPairText(a, b) {
 // 경계값이 두 구간에 동시에 걸리는 것을 막기 위해서다.
 // 1점 차이까지 "격차"로 통보하면 격차 항목이 남발돼 정작 중요한 항목이 묻힌다.
 const GAP_LEVELS = [
-  { max: 1.0, levelKey: "low", levelLabel: "비슷함", levelText: "이 부분은 두 분이 비슷하게 느끼고 있어요." },
-  { max: 2.0, levelKey: "mid", levelLabel: "조금 다름", levelText: "이 부분은 두 분의 체감이 조금 다르게 나타났어요." },
+  { max: 1.0, levelKey: "low", levelLabel: "비슷함", levelText: "두 분이 비슷하게 느끼고 있어요." },
+  { max: 2.0, levelKey: "mid", levelLabel: "조금 다름", levelText: "느끼는 정도가 조금 달라요." },
   {
     max: Infinity,
     levelKey: "high",
     levelLabel: "뚜렷하게 다름",
-    levelText: "이 부분은 두 분의 체감 차이가 뚜렷해요 — 대화로 확인해볼 만한 지점입니다.",
+    levelText: "느끼는 정도가 꽤 달라요. 이야기 나눠볼 만한 지점입니다.",
   },
 ];
 

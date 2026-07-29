@@ -140,9 +140,7 @@ export function renderCoupleIntro() {
         <div class="meta-chip"><div class="value">${Object.keys(COUPLE_TYPES).length}가지</div><div class="label">결과 유형</div></div>
       </div>
       ${PRIVACY_MARKUP}
-      <p class="disclaimer">${SERVICE_NOTICE}<br/>
-      먼저 호칭·역할·자녀 단계를 고르면, 그 상황에 맞는 문장으로 문항이 나옵니다.
-      결과는 유형 하나로 단정하지 않고 <b>네 성향 점수와 확신도를 함께</b> 보여줘요.</p>
+      <p class="disclaimer">${SERVICE_NOTICE}</p>
       <div class="cta">
         <button class="cta-btn" id="cp-start">시작하기</button>
       </div>
@@ -190,7 +188,7 @@ export function renderCoupleSetup() {
         <div class="qno">시작 전에</div>
         <h2 class="disc-scene">지금 두 분의 상황을 알려주세요</h2>
       </div>
-      <p class="cp-setup-lead">고른 내용에 따라 문항 문장이 바뀝니다. 문항 수와 채점 기준은 어느 조합에서도 같아요.</p>
+      <p class="cp-setup-lead">고른 내용에 맞춰 문항 문장이 바뀝니다.</p>
       ${axisGroupMarkup("나는", "결과 문구의 호칭에만 쓰이고 점수에는 영향을 주지 않아요", "t", T_AXIS)}
       ${axisGroupMarkup("우리 집에서 나는", "지금 주로 맡고 있는 쪽을 고르세요", "r", R_AXIS)}
       ${axisGroupMarkup("자녀는", "배우자와 함께 결과를 보려면 같은 항목을 골라야 해요", "k", K_AXIS)}
@@ -341,6 +339,18 @@ function confidenceText(behavior) {
   return `${first}과 ${second}이 거의 같은 크기로 나왔어요. 상황에 따라 두 모습이 번갈아 나오는 편일 수 있습니다.`;
 }
 
+// 한 화면에 전부 펼쳐놓으면 정보가 많아 무겁게 읽힌다. 핵심(유형 + 네 성향 점수 +
+// 실행 제안)만 펼쳐두고 나머지는 접는다 — 감추는 게 아니라 순서를 준 것이라, 펼치면
+// §6.4가 요구하는 블록이 전부 그대로 있다.
+function foldMarkup(title, body) {
+  return `
+    <details class="cp-fold">
+      <summary>${title}</summary>
+      <div class="cp-fold-body">${body}</div>
+    </details>
+  `;
+}
+
 // 백분위·석차 표현은 쓰지 않는다. 비교할 규준 표본이 없는 상태에서 "상위 20%"라고 쓰는
 // 것은 허위 정보다 — 절대값과 기준선만 보여주고 사용자가 직접 위치를 읽게 한다(§6.2).
 function barMarkup(label, value, { midline = false } = {}) {
@@ -358,44 +368,41 @@ function barMarkup(label, value, { midline = false } = {}) {
 function profileMarkup(r) {
   return `
     <div class="cp-profile">
-      <div class="cp-block-title">나의 성향 프로필</div>
-      <p class="cp-block-sub">유형 라벨 하나가 버리는 정보를 그대로 보여드려요. 네 성향 점수를 모두 확인하세요.</p>
+      <div class="cp-block-title">네 가지 성향 점수</div>
       ${BEHAVIOR_AXES.map((ax) => barMarkup(BEHAVIOR_LABELS[ax], r.norm[ax])).join("")}
-      <div class="cp-block-sub" style="margin-top:14px;">애착 두 축 · 가운데 선이 중간값이에요</div>
+      <p class="cp-note">${confidenceText(r.behavior)}</p>
+      <div class="cp-block-title" style="margin-top:18px;">가까움과 거리</div>
+      <p class="cp-block-sub">가운데 선이 중간이에요.</p>
       ${barMarkup(AXIS_LABELS.ANX, r.norm.ANX, { midline: true })}
       ${barMarkup(AXIS_LABELS.AVO, r.norm.AVO, { midline: true })}
-      <p class="cp-note">${confidenceText(r.behavior)}</p>
       ${r.attachment.anx.edge || r.attachment.avo.edge
         ? `<p class="cp-note">${[
             r.attachment.anx.edge ? AXIS_LABELS.ANX : null,
             r.attachment.avo.edge ? AXIS_LABELS.AVO : null,
-          ].filter(Boolean).join("·")}은 중간값 근처라 어느 쪽이라고 단정하기 어려워요. "중간 정도"로 읽어주세요.</p>`
+          ].filter(Boolean).join("·")}은 딱 가운데쯤이라 어느 쪽이라고 말하기 어려워요.</p>`
         : ""}
     </div>
   `;
 }
 
-function conflictMarkup(r) {
+// 갈등 스타일은 §6.4의 리포트 블록에 없다 — 대화 스크립트를 고르는 재료다. 표면에
+// 성향 유형·애착 유형·갈등 스타일 세 체계를 한꺼번에 내놓으면 읽는 사람이 무엇을 기억해야
+// 하는지 알 수 없어져서, 축 점수 막대는 빼고 접어둔다. 필요한 사람만 펼쳐본다.
+function conflictBody(r) {
   return `
-    <div class="cp-profile">
-      <div class="cp-block-title">갈등이 생겼을 때</div>
-      ${barMarkup(AXIS_LABELS.SC, r.norm.SC)}
-      ${barMarkup(AXIS_LABELS.OC, r.norm.OC)}
-      <p class="cp-note">두 축의 위치로 보면 <b>${CONFLICT_STYLES[r.conflict.style].name}</b>에 가까워요 —
-      ${CONFLICT_STYLES[r.conflict.style].desc}입니다.
-      ${r.conflict.confidence === "edge" ? "다만 경계에 가까워서, 상황에 따라 옆 스타일로도 나올 수 있어요." : ""}</p>
-    </div>
+    <p class="cp-note">부딪혔을 때 <b>${CONFLICT_STYLES[r.conflict.style].name}</b>에 가까워요.
+    ${CONFLICT_STYLES[r.conflict.style].desc}입니다.
+    ${r.conflict.confidence === "edge" ? "다만 경계에 가까워서 상황에 따라 달라질 수 있어요." : ""}</p>
+    ${barMarkup(AXIS_LABELS.SC, r.norm.SC)}
+    ${barMarkup(AXIS_LABELS.OC, r.norm.OC)}
   `;
 }
 
-function narrativeMarkup(r) {
+function narrativeBody(r) {
   if (!r.setup) return "";
   return `
-    <div class="cp-narrative">
-      <div class="cp-block-title">지금 이 상황에서는</div>
-      <p>${ROLE_NARRATIVE[r.behavior.primary][r.setup.r]}</p>
-      <p>${CHILD_NARRATIVE[r.setup.k]}</p>
-    </div>
+    <p>${ROLE_NARRATIVE[r.behavior.primary][r.setup.r]}</p>
+    <p>${CHILD_NARRATIVE[r.setup.k]}</p>
   `;
 }
 
@@ -405,13 +412,13 @@ function actionMarkup(r) {
   return `
     <div class="cp-action">
       <div class="cp-block-title">배우자에게 보여주세요</div>
-      <p class="cp-block-sub">나를 대할 때 이렇게 해주면 좋아요.</p>
+      <p class="cp-block-sub">나를 이렇게 대해주면 좋아요.</p>
       <div class="cp-do-list">
         ${dos.map((d) => `<div class="cp-do">✅ ${d}</div>`).join("")}
         ${donts.map((d) => `<div class="cp-dont">🚫 ${d}</div>`).join("")}
       </div>
       <div class="cp-script">
-        <div class="cp-script-title">💬 나에게는 이렇게 말해주면 좋아요</div>
+        <div class="cp-script-title">💬 나에게는 이렇게 말해주세요</div>
         <p>${CONFLICT_SCRIPTS[r.conflict.style]}</p>
       </div>
     </div>
@@ -424,7 +431,7 @@ function inviteBlockMarkup() {
     return `
       <div class="cp-invite-cta">
         <div class="cp-block-title">배우자 결과가 준비돼 있어요</div>
-        <p class="cp-block-sub">두 분의 답을 합쳐서, 서로를 어떻게 다르게 보고 있는지 확인해보세요.</p>
+        <p class="cp-block-sub">같은 질문에 두 분이 얼마나 다르게 답했는지 볼 수 있어요.</p>
         <button class="cta-btn" data-nav="couple-report">두 분의 결합 결과 보기</button>
       </div>
     `;
@@ -432,8 +439,8 @@ function inviteBlockMarkup() {
   return `
     <div class="cp-invite-cta">
       <div class="cp-block-title">배우자와 결과를 합쳐볼까요?</div>
-      <p class="cp-block-sub">배우자도 각자 답한 뒤 두 결과를 합치면, <b>혼자서는 알 수 없는 것</b>이 보여요 —
-      같은 질문에 두 사람이 얼마나 다르게 답했는지. (위 결과가 더 정확해지는 건 아니에요.)</p>
+      <p class="cp-block-sub">같은 질문에 두 분이 얼마나 다르게 답했는지 볼 수 있어요.
+      <b>혼자서는 알 수 없는 것</b>이에요. (위 결과가 더 정확해지는 건 아니에요.)</p>
       <button class="cta-btn" data-nav="couple-invite">배우자 초대 링크 만들기</button>
     </div>
   `;
@@ -497,8 +504,8 @@ export function renderCoupleResult() {
       </div>
 
       ${profileMarkup(r)}
-      ${conflictMarkup(r)}
-      ${narrativeMarkup(r)}
+      ${foldMarkup("지금 이 상황에서는", narrativeBody(r))}
+      ${foldMarkup("갈등이 생겼을 때", conflictBody(r))}
       ${actionMarkup(r)}
 
       ${inviteBlockMarkup()}
@@ -655,17 +662,24 @@ export function renderCouplePair() {
 
 // 단일 "궁합 점수"를 만들지 않는다(§7.2). 대신 요인별로 세 구간만 서술하고, 어떤 조합도
 // "나쁜 궁합"으로 단정하지 않는다 — 모든 조합에 강점과 유의점이 함께 붙는다.
+// 네 성향에 각각 설명을 붙이면 여덟 줄이 된다. 한눈에 보이는 요약 줄(칩)을 먼저 놓고,
+// 설명은 **눈여겨볼 것(많이 다른 편)**에만 붙인다 — 전부 같은 무게로 늘어놓으면
+// 무엇을 봐야 하는지가 사라진다. 해당 항목이 여럿이면 같은 설명이 반복되므로 한 줄로 묶는다
+// (같은 구간이면 levelDesc가 같다는 전제 — DYNAMIC_LEVELS가 구간당 문구 하나만 갖는다).
 function dynamicsMarkup(dynamics) {
+  const notable = dynamics.filter((d) => d.levelKey === "contrast");
   return `
     <div class="cp-profile">
-      <div class="cp-block-title">두 분의 성향은 이렇게 만나요</div>
-      <p class="cp-block-sub">네 성향을 각각 비교했어요. 닮았다고 좋고 다르다고 나쁜 게 아니라, 만나는 방식이 다를 뿐이에요.</p>
-      ${dynamics.map((d) => `
-        <div class="cp-gap-row">
-          <div class="cp-bar-head"><span>${d.label}</span><b>${d.levelLabel}</b></div>
-          <div class="cp-bar-desc">${d.levelDesc}</div>
-        </div>
-      `).join("")}
+      <div class="cp-block-title">두 분의 성향은</div>
+      <p class="cp-block-sub">닮았다고 좋고 다르다고 나쁜 게 아니에요.</p>
+      <div class="cp-chip-row">
+        ${dynamics.map((d) => `
+          <span class="cp-chip cp-chip-${d.levelKey}">${d.label} · ${d.levelLabel}</span>
+        `).join("")}
+      </div>
+      ${notable.length
+        ? `<p class="cp-note"><b>${notable.map((d) => d.label).join(" · ")}</b> — ${notable[0].levelDesc}</p>`
+        : `<p class="cp-note">크게 부딪힐 만한 성향 차이는 보이지 않았어요.</p>`}
     </div>
   `;
 }
@@ -676,23 +690,36 @@ function dynamicsMarkup(dynamics) {
 //
 // 격차가 작은 항목을 먼저 배치한다(§8.2). 부정적인 내용으로 리포트를 시작하지 않기 위해서다.
 function gapMarkup(c) {
-  const rows = c.gapOrdered.map((item) => `
+  // 비슷한 항목까지 각각 막대와 문장을 붙이면 같은 말이 세 번 반복된다. 비슷한 것은
+  // 한 줄로 묶고, **다른 것만** 펼쳐서 대화 스타터를 붙인다. 순서는 §8.2대로 비슷한 쪽이
+  // 먼저 — 부정적인 내용으로 블록을 시작하지 않는다.
+  const low = c.gapOrdered.filter((i) => i.levelKey === "low");
+  const notable = c.gapOrdered.filter((i) => i.levelKey !== "low");
+
+  const lowLine = low.length
+    ? `<p class="cp-note">${low.map((i) => `<b>${i.label}</b>`).join(" · ")}은 두 분이 비슷하게 느끼고 있어요.</p>`
+    : "";
+
+  const rows = notable.map((item) => `
     <div class="cp-gap-row">
       <div class="cp-bar-head"><span>${item.label}</span><b>${item.levelLabel}</b></div>
       <div class="cp-bar-track"><span class="cp-bar-fill" style="width:${Math.max(3, Math.round((item.diff / 4) * 100))}%;"></span></div>
-      <div class="cp-bar-desc">${item.desc} · ${item.levelText}</div>
-      ${item.levelKey === "low" ? "" : `<div class="cp-script"><div class="cp-script-title">💬 이렇게 꺼내보세요</div><p>${GAP_SCRIPTS[item.key]}</p></div>`}
+      <div class="cp-bar-desc">${item.levelText}</div>
+      <div class="cp-script"><div class="cp-script-title">💬 이렇게 꺼내보세요</div><p>${GAP_SCRIPTS[item.key]}</p></div>
     </div>
   `).join("");
 
   return `
     <div class="cp-profile">
-      <div class="cp-block-title">같은 상황, 서로의 체감</div>
-      <p class="cp-block-sub">누가 맞고 틀린 게 아니라, 서로 다른 자리에서 보고 있다는 신호예요.</p>
+      <div class="cp-block-title">같은 질문, 서로의 대답</div>
+      ${notable.length
+        ? `<p class="cp-block-sub">누가 맞고 틀린 게 아니라, 서로 다른 자리에서 보고 있다는 신호예요.</p>`
+        : ""}
+      ${lowLine}
       ${rows}
       ${c.gapHidden.length
-        ? `<p class="cp-note">${c.gapHidden.map((i) => i.label).join("·")}은 두 문항 사이 답이 많이 갈려서
-           이번 결과에서는 비교하지 않았어요. 흔들리는 응답을 차이로 보여드리면 오히려 오해가 생기니까요.</p>`
+        ? `<p class="cp-note">${c.gapHidden.map((i) => i.label).join("·")}은 두 문항 사이 답이 갈려서
+           이번엔 비교하지 않았어요.</p>`
         : ""}
     </div>
   `;
@@ -702,10 +729,10 @@ function envMarkup(c) {
   if (!c.envTop.length) {
     return `<p class="cp-note">역할·자녀 관련 항목은 두 분의 체감이 대체로 비슷했어요.</p>`;
   }
-  return c.envTop.slice(0, 3).map((item) => `
+  return c.envTop.slice(0, 2).map((item) => `
     <div class="cp-gap-row">
       <div class="cp-bar-head"><span>${item.label}</span><b>${item.levelLabel}</b></div>
-      <div class="cp-bar-desc">${item.desc} · ${item.levelText}</div>
+      <div class="cp-bar-desc">${item.levelText}</div>
       ${GAP_SCRIPTS[item.code] ? `<div class="cp-script"><div class="cp-script-title">💬 이렇게 꺼내보세요</div><p>${GAP_SCRIPTS[item.code]}</p></div>` : ""}
     </div>
   `).join("");
@@ -775,20 +802,18 @@ export function renderCoupleReport() {
       ${gapMarkup(c)}
 
       <div class="cp-profile">
-        <div class="cp-block-title">역할과 자녀 이야기에서는</div>
-        <p class="cp-block-sub">두 분이 같은 문장을 받은 항목만 비교했어요. 차이가 큰 순서로 보여드립니다.</p>
+        <div class="cp-block-title">역할과 자녀 이야기</div>
+        <p class="cp-block-sub">차이가 큰 것부터 보여드려요.</p>
         ${envMarkup(c)}
         ${c.roleOverlap ? `<p class="cp-note">${c.roleOverlap.text}</p>` : ""}
       </div>
 
-      <div class="cp-profile">
-        <div class="cp-block-title">갈등이 생겼을 때 두 분은</div>
-        <p class="cp-note">${conflictPairText(mine, partner)} 조합이에요.
-        배우자에게는 아래처럼 말을 꺼내면 대화가 덜 부딪혀요.</p>
-        <div class="cp-script">
-          <p>${CONFLICT_SCRIPTS[partner.conflict.style]}</p>
-        </div>
-      </div>
+      ${foldMarkup(
+        "갈등이 생겼을 때 두 분은",
+        `<p class="cp-note">${conflictPairText(mine, partner)} 조합이에요.
+         배우자에게는 아래처럼 말을 꺼내면 대화가 덜 부딪혀요.</p>
+         <div class="cp-script"><p>${CONFLICT_SCRIPTS[partner.conflict.style]}</p></div>`
+      )}
 
       ${adSlotMarkup("rect")}
 
@@ -936,7 +961,7 @@ export function renderCoupleGuide() {
         <div class="emoji">📖</div>
         <div class="tag">부부 관계 성향 체크</div>
         <h2>혼자서는<br/>알 수 없는 것</h2>
-        <p>혼자 해도 되고, 배우자와 함께 해도 됩니다.<br/>다만 나오는 게 서로 다릅니다.</p>
+        <p>혼자 해도 되고, 배우자와 함께 해도 돼요.<br/>나오는 게 서로 다릅니다.</p>
       </div>
 
       <div class="cp-profile">
@@ -944,95 +969,87 @@ export function renderCoupleGuide() {
         <div class="cp-guide-two">
           <div class="cp-guide-col">
             <div class="head">혼자 하면</div>
-            <p>나의 관계 성향 유형, 네 가지 성향 점수, 애착 두 축 점수, 갈등이 생겼을 때의 방식.
-            그리고 <b>얼마나 확실한 결과인지</b>(확신도)까지 함께 나옵니다.</p>
+            <p>나의 관계 성향 유형과 네 가지 성향 점수.</p>
           </div>
           <div class="cp-guide-col">
             <div class="head">둘이 하면</div>
-            <p>위의 내용은 <b>그대로</b>이고, 여기에 <b>같은 질문에 두 사람이 얼마나 다르게 답했는지</b>가
-            더해집니다. 그리고 그 차이를 어떻게 이야기로 꺼낼지도요.</p>
+            <p>위는 <b>그대로</b>이고, <b>같은 질문에 두 사람이 얼마나 다르게 답했는지</b>가 더해져요.</p>
           </div>
         </div>
       </div>
 
       <div class="cp-profile cp-guide-key">
-        <div class="cp-block-title">⚠️ 가장 오해하기 쉬운 것</div>
+        <div class="cp-block-title">⚠️ 오해하기 쉬운 것</div>
         <p class="cp-guide-lead">둘이 한다고 <b>내 결과가 더 정확해지지는 않습니다.</b></p>
-        <p>내 유형과 점수는 <b>내가 답한 문항 ${ITEM_TOTAL}개만으로</b> 계산됩니다.
-        배우자의 답은 이 계산에 한 글자도 들어가지 않아요. 혼자 해도 개인 결과의 정확도는 똑같습니다.</p>
-        <p>합쳐서 얻는 건 "더 정확한 결과"가 아니라 <b>혼자서는 아예 존재할 수 없는 정보</b>입니다.</p>
+        <p>내 점수는 <b>내가 답한 문항 ${ITEM_TOTAL}개만으로</b> 계산돼요. 배우자의 답은 한 글자도
+        들어가지 않습니다. 합쳐서 얻는 건 더 정확한 결과가 아니라
+        <b>혼자서는 아예 없는 정보</b>예요.</p>
       </div>
 
       <div class="cp-profile">
-        <div class="cp-block-title">예를 들면 이런 겁니다</div>
+        <div class="cp-block-title">예를 들면</div>
         <div class="cp-guide-story">
-          <p>"지금의 분담이 공정하다"는 문장에 <b>내가 2점</b>을 눌렀다고 해볼게요.</p>
-          <p>이것만으로는 알 수 없습니다. 내가 유난히 예민한 걸까요, 실제로 한쪽으로 기울어 있는 걸까요?</p>
-          <p><b>배우자가 같은 문장에 4점을 눌렀다</b>는 걸 알아야
-          "두 사람이 같은 집을 다르게 보고 있다"는 이야기가 됩니다.</p>
-          <p class="punch">정밀도가 올라간 게 아니라, <b>재는 대상이 '나'에서 '우리'로 바뀐 것</b>입니다.</p>
+          <p>"지금의 분담이 공정하다"에 <b>내가 2점</b>을 눌렀다고 해볼게요.
+          내가 예민한 걸까요, 실제로 기울어 있는 걸까요? 이것만으론 알 수 없어요.</p>
+          <p><b>배우자가 같은 문장에 4점</b>을 눌렀다는 걸 알아야
+          "같은 집을 서로 다르게 보고 있다"는 이야기가 됩니다.</p>
+          <p class="punch">재는 대상이 <b>'나'에서 '우리'로</b> 바뀌는 거예요.</p>
         </div>
-      </div>
-
-      <div class="cp-profile">
-        <div class="cp-block-title">차이 값은 오히려 더 흔들립니다</div>
-        <p class="cp-block-sub">그래서 이렇게 만들었어요.</p>
-        <p class="cp-note">두 사람의 답을 빼면 <b>두 사람의 오차가 함께 실립니다.</b>
-        이 체크에서 가장 흔들리기 쉬운 값이에요. 그래서 차이를 내는 문항만 개념 하나당
-        ${anchorPerConcept}문항씩, 모두 ${ANCHOR_ITEMS.length}문항을 썼습니다 — 다른 문항보다 두껍게 받쳐둔 겁니다.</p>
-        <p class="cp-note">반대로 <b>두 분에게 공통으로 있는 버릇은 빼는 순간 사라집니다.</b>
-        둘 다 후하게 답하는 편이라면, 그 후함은 차이값에서 상쇄돼요.</p>
-        <p class="cp-note">차이를 "몇 점"이 아니라 <b>비슷함 / 조금 다름 / 뚜렷하게 다름</b> 세 구간으로만
-        보여드리는 것도 같은 이유입니다. 소수점까지 단정할 만큼 정밀한 값이 아니니까요.</p>
-      </div>
-
-      <div class="cp-profile">
-        <div class="cp-block-title">한 사람이 대충 답하면, 둘 다 못 봅니다</div>
-        <p class="cp-note">결합 결과의 신뢰도는 두 사람의 평균이 아니라 <b>약한 쪽</b>을 따릅니다.
-        한 분이라도 응답 점검에 두 번 이상 걸리면 결합 결과를 아예 만들지 않아요.
-        서로 시간 있을 때, 각자 천천히 답해주세요.</p>
       </div>
 
       <div class="cp-profile">
         <div class="cp-block-title">순서</div>
         <ol class="cp-guide-steps">
-          <li><b>상황 고르기</b> — 호칭·역할·자녀 단계를 고르면 그 상황에 맞는 문장이 나옵니다.</li>
-          <li><b>문항에 답하기</b> — 문항 ${ITEM_TOTAL}개, 약 6분 30초.</li>
-          <li><b>내 결과 보기</b> — 여기서 끝내도 됩니다.</li>
-          <li><b>배우자 초대 링크 만들기</b> — 결과 화면 아래 버튼으로 링크를 만들어 배우자에게 보냅니다.</li>
-          <li><b>배우자가 답하면</b> — 배우자 화면에 두 분의 결합 결과가 나옵니다.</li>
+          <li>상황 고르기 (호칭·역할·자녀 단계)</li>
+          <li>문항 ${ITEM_TOTAL}개 답하기 (약 6분 30초)</li>
+          <li>내 결과 보기 — 여기서 끝내도 돼요</li>
+          <li>결과 화면에서 <b>배우자 초대 링크</b> 만들어 보내기</li>
+          <li>배우자가 답하면 <b>배우자 화면</b>에 결합 결과가 나와요</li>
         </ol>
-        <p class="cp-note">순서를 바꿔도 됩니다. 배우자가 먼저 하고 나에게 링크를 보내도 똑같이 동작해요.</p>
+        <p class="cp-note">배우자가 먼저 하고 나에게 링크를 보내도 똑같이 동작해요.</p>
       </div>
 
-      <div class="cp-profile">
-        <div class="cp-block-title">자주 묻는 것</div>
-        <div class="cp-guide-qa">
-          <div class="q">자녀 단계는 꼭 같게 골라야 하나요?</div>
-          <p>네. 자녀 단계가 다르면 두 분이 서로 다른 문장을 받게 돼서 비교 자체가 성립하지 않고,
-          결합 결과를 만들지 않습니다. 반면 <b>역할은 달라도 되고, 둘 다 같은 걸 골라도 괜찮아요</b> —
-          두 분 다 "내가 주로 맡고 있다"고 느끼는 것 자체가 의미 있는 신호라서 따로 짚어드립니다.</p>
+      ${foldMarkup(
+        "차이 값은 왜 세 단계로만 보여주나요?",
+        `<p>두 사람의 답을 빼면 <b>두 사람의 오차가 함께 실려요.</b> 이 체크에서 가장 흔들리기 쉬운
+         값이라, 차이를 내는 문항만 개념 하나당 ${anchorPerConcept}문항씩 모두 ${ANCHOR_ITEMS.length}문항을 써서 두껍게 받쳤습니다.</p>
+         <p>반대로 <b>두 분에게 공통으로 있는 버릇은 빼는 순간 사라집니다.</b> 둘 다 후하게 답하는
+         편이라면 그 후함은 차이에서 상쇄돼요.</p>
+         <p>그래도 소수점까지 단정할 만큼 정밀한 값은 아니라서,
+         <b>비슷함 / 조금 다름 / 뚜렷하게 다름</b> 세 단계로만 보여드립니다.</p>`
+      )}
 
-          <div class="q">내가 문항에 어떻게 답했는지 배우자가 보게 되나요?</div>
-          <p>어느 화면에도 표시되지 않습니다. 두 분의 결과를 비교한 요약만 함께 보시게 돼요.
-          다만 초대 링크에는 결과 계산에 필요한 값이 담겨 있으니,
-          <b>배우자 외 다른 사람에게는 보내지 마세요.</b></p>
+      ${foldMarkup(
+        "한 사람이 대충 답하면 어떻게 되나요?",
+        `<p>결합 결과의 신뢰도는 두 사람의 평균이 아니라 <b>약한 쪽</b>을 따릅니다.
+         한 분이라도 응답 점검에 두 번 이상 걸리면 결합 결과를 아예 만들지 않아요.
+         서로 시간 있을 때 각자 천천히 답해주세요.</p>`
+      )}
+
+      ${foldMarkup(
+        "자주 묻는 것",
+        `<div class="cp-guide-qa">
+          <div class="q">자녀 단계는 꼭 같게 골라야 하나요?</div>
+          <p>네. 다르면 두 분이 서로 다른 문장을 받게 돼서 비교가 성립하지 않아요.
+          <b>역할은 달라도 되고, 둘 다 같은 걸 골라도 괜찮습니다</b> — 두 분 다 "내가 주로 맡고 있다"고
+          느끼는 것 자체가 의미 있는 신호라 따로 짚어드려요.</p>
+
+          <div class="q">내 답을 배우자가 보게 되나요?</div>
+          <p>어느 화면에도 표시되지 않아요. 비교한 요약만 함께 보시게 됩니다.
+          다만 초대 링크에는 계산에 필요한 값이 담기니 <b>배우자 외에는 보내지 마세요.</b></p>
 
           <div class="q">"결과를 만들 수 없다"고 나와요.</div>
-          <p>응답이 너무 빠르거나 한쪽 값으로만 치우쳤을 때 나오는 안내입니다.
-          틀린 답이 있어서가 아니라, 그 상태로 낸 결과는 두 분에게 도움이 안 되기 때문이에요.
-          천천히 다시 해주시면 됩니다.</p>
+          <p>응답이 너무 빠르거나 한쪽 값으로만 치우쳤을 때예요. 천천히 다시 해주시면 됩니다.</p>
 
           <div class="q">결과가 나랑 안 맞는 것 같아요.</div>
-          <p>유형 옆의 <b>확신도</b>를 봐주세요. "경계"라고 적혀 있으면 1·2위 성향이 거의 붙어 있다는
-          뜻이고, 그건 실제로 단정하기 어려운 값입니다. 유형 이름보다 <b>네 성향 점수</b>를 함께 보시는 게
-          더 정확합니다.</p>
+          <p>유형 이름보다 <b>네 성향 점수</b>를 봐주세요. 1·2위가 거의 붙어 있으면
+          결과 화면이 그렇게 알려드리는데, 그런 경우는 원래 단정하기 어려운 값이에요.</p>
 
           <div class="q">다시 해도 되나요?</div>
           <p>언제든지요. 다만 짧은 간격으로 반복하면 성향이 아니라
-          "지난번에 뭐라고 답했는지"를 재게 됩니다. 시간을 좀 두고 하시는 편이 좋아요.</p>
-        </div>
-      </div>
+          "지난번에 뭐라고 답했는지"를 재게 됩니다.</p>
+        </div>`
+      )}
 
       ${SUPPORT_MARKUP}
       <p class="disclaimer">${SERVICE_NOTICE}</p>
