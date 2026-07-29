@@ -651,16 +651,16 @@ async function playNumpathRun(page) {
   await page.waitForFunction((prev) => document.querySelector("#cp-text")?.textContent !== prev, cq2, { timeout: 3000 });
   check("부부 체크 뒤로가기 → 직전 문항으로 한 단계만 복귀", (await page.textContent("#cp-text")) === cq1);
 
-  // 앵커 구간 고지는 그 구간에 들어가기 전까지 보이면 안 된다(§6.5.2 — 두 번째 노출 지점).
-  check("앵커 고지가 초반 문항에서는 숨겨짐", !(await page.isVisible("#cp-anchor-notice")));
+  // 비공개 재고지는 후반부 구간 진입 시점에 딱 한 번만 나온다(§6.5.2 v3.2).
+  check("비공개 재고지가 초반 문항에서는 숨겨짐", !(await page.isVisible("#cp-anchor-notice")));
 
   // 전 문항 응답. "보통이다"만 찍으면 직선 응답으로 걸리므로 값을 흩어서 답한다.
   // 마지막 문항은 답하는 순간 광고 게이트로 넘어가므로(=refreshAds 실행) 루프 밖에 둔다 —
   // 그래야 아래 로더 표시 검사가 "문항 진행 중"만 보게 된다.
-  let anchorNoticeSeen = false;
+  let noticeSeenAt = [];
   const answerCouple = async (i) => {
     await page.waitForSelector(".cp-likert-btn");
-    if (await page.isVisible("#cp-anchor-notice")) anchorNoticeSeen = true;
+    if (await page.isVisible("#cp-anchor-notice")) noticeSeenAt.push(i + 1);
     const text = await page.textContent("#cp-text");
     // 응답 품질 플래그가 서지 않는 "성실한 응답"을 흉내 낸다:
     //  - QC1은 안내대로 "그렇지 않다"(2점)
@@ -684,7 +684,13 @@ async function playNumpathRun(page) {
     `${await page.$$eval(".ad-slot", (l) => l.length)}개`
   );
   await answerCouple(coupleTotal - 1);
-  check("앵커 구간에서 비공개 재고지가 노출됨 (§6.5.2)", anchorNoticeSeen);
+  // 특정 문항 바로 앞에 붙이면 그 문항이 민감하다는 신호가 되므로, 구간 진입 시점에
+  // 중립적으로 딱 한 번만 노출한다.
+  check(
+    "비공개 재고지가 후반부 구간 진입 시점에 1회만 노출됨 (§6.5.2)",
+    noticeSeenAt.length === 1 && noticeSeenAt[0] >= 30,
+    `노출된 문항 번호: ${noticeSeenAt.join(",") || "없음"}`
+  );
 
   await page.waitForSelector("#ad-gate-continue", { timeout: 5000 });
   check("문항 완료 → 광고 게이트로 직행", page.url().endsWith("/test/couple/ad"), page.url());
@@ -753,23 +759,49 @@ async function playNumpathRun(page) {
 
   const reportBody = (await page.textContent("#app")).replace(/\s+/g, " ");
   check("결합 결과에 두 유형 조합 이름이 나온다", (await page.textContent(".cp-pair-name")).includes("×"));
-  check("결합 결과에 구성 요소가 함께 나온다 (§7.4 규칙 2)", reportBody.includes("이 결과를 만든 것들"));
-  check("인지 격차 3개 항목이 나온다", (await page.$$(".cp-gap-row")).length === 3);
-  check("같은 자녀 단계면 부모·연인 게이지가 나온다", await page.isVisible(".cp-gauge-track"));
-  check("격차 항목에 대화 스크립트가 붙는다 (§6.5.3)", (await page.$$(".cp-script")).length >= 1);
+  check("성향 조합 해석이 나온다 (§7.2)", reportBody.includes("두 분의 성향은 이렇게 만나요"));
+  check("앵커 기반 체감 비교가 나온다 (§7.3)", reportBody.includes("같은 상황, 서로의 체감"));
+  check("환경축 비교가 나온다 (§7.4)", reportBody.includes("역할과 자녀 이야기에서는"));
+  check("격차 항목에 대화 스타터가 붙는다 (§6.5.3)", (await page.$$(".cp-script")).length >= 1);
   check("결합 결과에 상시 안내 링크 노출 (§9.2)", await page.isVisible(".cp-support"));
 
-  // 점수·등급명을 숫자로 노출하지 않는다(§7.4·§7.5) — 구간 서술만 나가야 한다.
+  // 단일 궁합 점수·등급명을 만들지 않는다(§7.2). 점수를 되살리는 변경은 여기서 걸린다.
   check(
-    "궁합 점수·등급명 숫자 노출 없음 (§7.4)",
+    "궁합 점수·등급명 노출 없음 (§7.2)",
     !/궁합|매칭\s*점수|\d+\s*점\s*(만점|궁합)|매우 안정|성장 필요|상담 권유/.test(reportBody),
     reportBody.slice(0, 140)
   );
-  // 누가 낮게 답했는지 지목하는 표현을 쓰지 않는다(§6.5.3).
+  // 격차의 크기와 개념명만 내보내고, 누가 어느 쪽이었는지(방향)는 내보내지 않는다(§7.3).
   check(
-    "지목형 표현 없음 (§6.5.3)",
-    !/(아내|남편)분이\s|라고 답했습니다/.test(reportBody),
+    "격차 방향·지목 표현 없음 (§6.5.3·§7.3)",
+    !/(아내|남편)\s*쪽이|(아내|남편)분이\s|라고 답했습니다|더 크게 느끼고/.test(reportBody),
     reportBody.slice(0, 140)
+  );
+  // 원 척도의 유형명·축 명칭을 사용자 화면에 노출하지 않는다(§2.1 B등급 · §2.3).
+  check(
+    "원 척도 유형명·축 명칭 미노출 (§2.3)",
+    !/집착형|두려움형|경쟁형|순응형|타협형|애착\s*불안|애착\s*회피/.test(reportBody),
+    reportBody.slice(0, 140)
+  );
+
+  // === §7.6 자녀 단계 불일치는 결합 리포트를 만들지 않는다 ===
+  // 자녀 단계는 객관적 사실이라 갈릴 수 없다. 갈리면 K문항의 문장 자체가 달라져
+  // 비교 근거가 사라진다.
+  await goto(partnerPath);
+  await page.click("#cp-pair-start");
+  await page.click('.cp-axis-btn[data-code="T-W"]');
+  await page.click('.cp-axis-btn[data-code="R-C"]');
+  await page.click('.cp-axis-btn[data-code="K-2"]'); // 배우자는 K-1을 골랐다
+  await page.click("#cp-setup-next");
+  for (let i = 0; i < coupleTotal; i++) await answerCouple(coupleTotal - i);
+  await page.waitForFunction(() => !document.querySelector("#ad-gate-continue").disabled, { timeout: 6000 });
+  await page.click("#ad-gate-continue");
+  await page.waitForSelector(".empty-state, .result-card", { timeout: 5000 });
+  const mismatchBody = (await page.textContent("#app")).replace(/\s+/g, " ");
+  check(
+    "자녀 단계가 다르면 결합 결과를 만들지 않고 다시 확인하도록 안내 (§7.6)",
+    mismatchBody.includes("자녀 단계를 다시 확인"),
+    mismatchBody.slice(0, 120)
   );
 
   // === 공유 슬러그 주소 (세 테스트 모두) ===

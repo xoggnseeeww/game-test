@@ -12,8 +12,8 @@ import {
   LIKERT,
   ITEM_TOTAL,
   BEHAVIOR_LABELS,
-  ATTACH_LABELS,
-  CONFLICT_LABELS,
+  ATTACH_TYPES,
+  CONFLICT_STYLES,
   AXIS_LABELS,
   COUPLE_TYPES,
   ROLE_NARRATIVE,
@@ -23,10 +23,18 @@ import {
   DONTS_BEHAVIOR,
   DONTS_ATTACH,
   CONFLICT_SCRIPTS,
+  GAP_SCRIPTS,
 } from "./data.js";
 import { computeCouple, BEHAVIOR_AXES } from "./score.js";
-import { assembleQuestionnaire, anchorStartIndex } from "./assemble.js";
-import { combine, personaName, conflictPairText, encodePartner, decodePartner } from "./match.js";
+import { assembleQuestionnaire, NOTICE_POSITION } from "./assemble.js";
+import {
+  combine,
+  coupleReportBlock,
+  personaName,
+  conflictPairText,
+  encodePartner,
+  decodePartner,
+} from "./match.js";
 
 const COMBO_COUNT = T_AXIS.length * R_AXIS.length * K_AXIS.length;
 
@@ -125,7 +133,7 @@ export function renderCoupleIntro() {
         <p>문항 ${ITEM_TOTAL}개에 답하면 나의 관계 성향이 나와요.<br/>배우자와 각자 해보고 결과를 합칠 수도 있어요.</p>
       </div>
       <div class="meta-chips">
-        <div class="meta-chip"><div class="value">${ITEM_TOTAL}문항</div><div class="label">약 6분</div></div>
+        <div class="meta-chip"><div class="value">${ITEM_TOTAL}문항</div><div class="label">약 6분 30초</div></div>
         <div class="meta-chip"><div class="value">${COMBO_COUNT}가지</div><div class="label">상황 조합</div></div>
         <div class="meta-chip"><div class="value">${Object.keys(COUPLE_TYPES).length}가지</div><div class="label">결과 유형</div></div>
       </div>
@@ -220,7 +228,6 @@ export function renderCoupleSetup() {
 // 갈아끼운다(DISC 문항 화면과 같은 패턴).
 export function renderCoupleQuestion() {
   const items = state.couple.items;
-  const anchorAt = anchorStartIndex(items);
   if (state.couple.startedAt === null) state.couple.startedAt = Date.now();
 
   app.appendChild(el(`
@@ -233,8 +240,8 @@ export function renderCoupleQuestion() {
       </div>
       ${adSlotMarkup("banner", "margin-top:10px; margin-bottom:4px;")}
       <div class="cp-anchor-notice" id="cp-anchor-notice" hidden>
-        🔒 여기서부터는 두 분에게 똑같이 나가는 문항이에요.
-        <b>이 답도 배우자에게 문항별로 보여지지 않습니다</b> — 있는 그대로 답해주세요.
+        🔒 거의 다 왔어요. 남은 문항도 <b>배우자에게 문항별로 보여지지 않습니다</b> —
+        있는 그대로 답해주세요.
       </div>
       <div class="question-block">
         <div class="qno" id="cp-qno"></div>
@@ -265,7 +272,9 @@ export function renderCoupleQuestion() {
     count.innerHTML = `${i + 1}<span class="total">/${items.length}</span>`;
     qno.textContent = `Q${i + 1}.`;
     textEl.textContent = item.text;
-    notice.hidden = i < anchorAt;
+    // 재고지는 구간 진입 시점에 딱 한 문항에만 붙인다. 앵커 문항 바로 앞에 붙이면
+    // 그 문항이 민감하다는 신호가 되어 그 구간에서만 방어적으로 답하게 된다(§6.5.2 v3.2).
+    notice.hidden = i !== NOTICE_POSITION - 1;
 
     const current = state.couple.answers[item.code];
     optionsEl.innerHTML = "";
@@ -322,10 +331,11 @@ export function renderCoupleAd() {
 // ---------------------------------------------------------------- 결과 부품
 
 function confidenceText(behavior) {
+  const first = BEHAVIOR_LABELS[behavior.primary];
   const second = BEHAVIOR_LABELS[behavior.secondary];
-  if (behavior.confidence === "clear") return `${BEHAVIOR_LABELS[behavior.primary]} 성향이 다른 성향들보다 뚜렷하게 높게 나왔어요.`;
-  if (behavior.confidence === "moderate") return `${second} 성향도 가깝게 나왔지만, ${BEHAVIOR_LABELS[behavior.primary]} 쪽이 조금 더 높아요.`;
-  return `${BEHAVIOR_LABELS[behavior.primary]}과 ${second}이 거의 같은 크기로 나왔어요. 상황에 따라 두 모습이 번갈아 나오는 편일 수 있습니다.`;
+  if (behavior.confidence === "clear") return `${first} 성향이 다른 성향들보다 뚜렷하게 높게 나왔어요.`;
+  if (behavior.confidence === "moderate") return `${second} 성향도 가깝게 나왔지만, ${first} 쪽이 조금 더 높아요.`;
+  return `${first}과 ${second}이 거의 같은 크기로 나왔어요. 상황에 따라 두 모습이 번갈아 나오는 편일 수 있습니다.`;
 }
 
 // 백분위·석차 표현은 쓰지 않는다. 비교할 규준 표본이 없는 상태에서 "상위 20%"라고 쓰는
@@ -352,11 +362,11 @@ function profileMarkup(r) {
       ${barMarkup(AXIS_LABELS.ANX, r.norm.ANX, { midline: true })}
       ${barMarkup(AXIS_LABELS.AVO, r.norm.AVO, { midline: true })}
       <p class="cp-note">${confidenceText(r.behavior)}</p>
-      ${r.attachment.anx.mixed || r.attachment.avo.mixed
+      ${r.attachment.anx.edge || r.attachment.avo.edge
         ? `<p class="cp-note">${[
-            r.attachment.anx.mixed ? AXIS_LABELS.ANX : null,
-            r.attachment.avo.mixed ? AXIS_LABELS.AVO : null,
-          ].filter(Boolean).join("·")} 축은 중간값 근처라 어느 쪽이라고 단정하기 어려워요. "중간 정도"로 읽어주세요.</p>`
+            r.attachment.anx.edge ? AXIS_LABELS.ANX : null,
+            r.attachment.avo.edge ? AXIS_LABELS.AVO : null,
+          ].filter(Boolean).join("·")}은 중간값 근처라 어느 쪽이라고 단정하기 어려워요. "중간 정도"로 읽어주세요.</p>`
         : ""}
     </div>
   `;
@@ -368,7 +378,8 @@ function conflictMarkup(r) {
       <div class="cp-block-title">갈등이 생겼을 때</div>
       ${barMarkup(AXIS_LABELS.SC, r.norm.SC)}
       ${barMarkup(AXIS_LABELS.OC, r.norm.OC)}
-      <p class="cp-note">두 축의 위치로 보면 <b>${CONFLICT_LABELS[r.conflict.style]}</b>에 가까워요.
+      <p class="cp-note">두 축의 위치로 보면 <b>${CONFLICT_STYLES[r.conflict.style].name}</b>에 가까워요 —
+      ${CONFLICT_STYLES[r.conflict.style].desc}입니다.
       ${r.conflict.confidence === "edge" ? "다만 경계에 가까워서, 상황에 따라 옆 스타일로도 나올 수 있어요." : ""}</p>
     </div>
   `;
@@ -424,9 +435,11 @@ function inviteBlockMarkup() {
   `;
 }
 
+// 사유를 특정하지 않는다. 속도 외의 사유로 플래그가 섰을 때 "빠르게 진행되어"라고
+// 안내하면 사실과 다른 말이 나간다(§5.0 v3.1 교정 3).
 function warnMarkup(validity) {
   if (validity.verdict !== "warn") return "";
-  return `<div class="cp-warn">⚠️ ${validity.flags[0]}. 결과 정확도가 낮을 수 있어요.</div>`;
+  return `<div class="cp-warn">⚠️ 일부 문항의 응답이 서로 엇갈려 결과 정확도가 낮을 수 있어요.</div>`;
 }
 
 // ---------------------------------------------------------------- 개인 결과
@@ -475,7 +488,7 @@ export function renderCoupleResult() {
         <div class="eyebrow">나의 관계 성향은</div>
         <div class="emoji">${t.emoji}</div>
         <h2>${t.name}</h2>
-        <div class="result-subtitle">${ATTACH_LABELS[r.attachment.key]} · ${BEHAVIOR_LABELS[r.behavior.primary]}</div>
+        <div class="result-subtitle">${ATTACH_TYPES[r.attachment.key].name} · ${BEHAVIOR_LABELS[r.behavior.primary]}</div>
         <p>${t.desc}</p>
       </div>
 
@@ -634,79 +647,85 @@ export function renderCouplePair() {
 
 // ---------------------------------------------------------------- 결합 리포트
 
-function componentMarkup(components) {
-  const rows = [
-    ["성향 차이", components.delta, "두 분의 행동 성향이 얼마나 다른지"],
-    ["애착 조합", components.risk, "두 분의 애착 방식이 부딪히기 쉬운 조합인지"],
-    ["인지 격차", components.gap, "같은 상황을 서로 다르게 느끼고 있는 정도"],
-  ];
+// 단일 "궁합 점수"를 만들지 않는다(§7.2). 대신 요인별로 세 구간만 서술하고, 어떤 조합도
+// "나쁜 궁합"으로 단정하지 않는다 — 모든 조합에 강점과 유의점이 함께 붙는다.
+function dynamicsMarkup(dynamics) {
   return `
     <div class="cp-profile">
-      <div class="cp-block-title">이 결과를 만든 것들</div>
-      <p class="cp-block-sub">무엇 때문에 이런 결과가 나왔는지 알아야, 함께 다듬을 지점을 찾을 수 있어요. 막대가 길수록 영향이 컸다는 뜻이에요.</p>
-      ${rows.map(([label, c, desc]) => `
-        <div class="cp-bar-row">
-          <div class="cp-bar-head"><span>${label}</span><b>${["거의 없음", "조금", "보통", "큼"][Math.min(3, Math.floor((c.weighted / c.max) * 4))]}</b></div>
-          <div class="cp-bar-track"><span class="cp-bar-fill" style="width:${Math.max(2, Math.round((c.weighted / c.max) * 100))}%;"></span></div>
-          <div class="cp-bar-desc">${desc}</div>
+      <div class="cp-block-title">두 분의 성향은 이렇게 만나요</div>
+      <p class="cp-block-sub">네 성향을 각각 비교했어요. 닮았다고 좋고 다르다고 나쁜 게 아니라, 만나는 방식이 다를 뿐이에요.</p>
+      ${dynamics.map((d) => `
+        <div class="cp-gap-row">
+          <div class="cp-bar-head"><span>${d.label}</span><b>${d.levelLabel}</b></div>
+          <div class="cp-bar-desc">${d.levelDesc}</div>
         </div>
       `).join("")}
     </div>
   `;
 }
 
-// 누가 낮게 답했는지를 지목하지 않는다(§6.5.3). "아내분이 공정하지 않다고 답했습니다"가
-// 아니라 "두 분이 느끼는 정도에 차이가 있습니다"로 적는다 — 결과를 본 부부가 다투게 되면
-// 다음 재검사에서 솔직도가 급락한다.
-function gapMarkup(gap, mine, myLabel, partnerLabel) {
+// 누가 낮게 답했는지를 지목하지 않는다(§6.5.3). 나아가 v3.2부터는 **방향 자체를 내보내지
+// 않는다** — 공개하는 것은 "어느 개념에서 얼마나 벌어졌는가"뿐이고, 누구의 응답이 어느
+// 쪽이었는지는 §6.5.1 원칙에 따라 끝까지 비공개다.
+//
+// 격차가 작은 항목을 먼저 배치한다(§8.2). 부정적인 내용으로 리포트를 시작하지 않기 위해서다.
+function gapMarkup(c) {
+  const rows = c.gapOrdered.map((item) => `
+    <div class="cp-gap-row">
+      <div class="cp-bar-head"><span>${item.label}</span><b>${item.levelLabel}</b></div>
+      <div class="cp-bar-track"><span class="cp-bar-fill" style="width:${Math.max(3, Math.round((item.diff / 4) * 100))}%;"></span></div>
+      <div class="cp-bar-desc">${item.desc} · ${item.levelText}</div>
+      ${item.levelKey === "low" ? "" : `<div class="cp-script"><div class="cp-script-title">💬 이렇게 꺼내보세요</div><p>${GAP_SCRIPTS[item.key]}</p></div>`}
+    </div>
+  `).join("");
+
   return `
     <div class="cp-profile">
-      <div class="cp-block-title">서로 다르게 느끼고 있는 것</div>
+      <div class="cp-block-title">같은 상황, 서로의 체감</div>
       <p class="cp-block-sub">누가 맞고 틀린 게 아니라, 서로 다른 자리에서 보고 있다는 신호예요.</p>
-      ${gap.items.map((item) => {
-        const level = item.gap >= 50 ? "큼" : item.gap >= 25 ? "보통" : "작음";
-        const who = item.direction > 0 ? myLabel : partnerLabel;
-        const dirText = item.gap < 25
-          ? "두 분이 비슷하게 느끼고 있어요."
-          : `<b>${who}</b> 쪽이 더 크게 느끼고 있어요.`;
-        return `
-          <div class="cp-gap-row">
-            <div class="cp-bar-head"><span>${item.label}</span><b>차이 ${level}</b></div>
-            <div class="cp-bar-track"><span class="cp-bar-fill" style="width:${Math.max(2, Math.round(item.gap))}%;"></span></div>
-            <div class="cp-bar-desc">${item.desc} · ${dirText}</div>
-          </div>
-        `;
-      }).join("")}
-      <div class="cp-script">
-        <div class="cp-script-title">💬 이 이야기를 꺼낼 때</div>
-        <p>${CONFLICT_SCRIPTS[mine]}</p>
-      </div>
+      ${rows}
+      ${c.gapHidden.length
+        ? `<p class="cp-note">${c.gapHidden.map((i) => i.label).join("·")}은(는) 두 문항 사이 답이 많이 갈려서
+           이번 결과에서는 비교하지 않았어요. 흔들리는 응답을 차이로 보여드리면 오히려 오해가 생기니까요.</p>`
+        : ""}
     </div>
   `;
 }
 
-function romanceMarkup(romance) {
-  if (!romance) {
-    return `<p class="cp-note">자녀 단계를 서로 다르게 고르셔서, 부모·연인 역할 게이지는 계산하지 않았어요.
-    두 분이 같은 항목을 골라야 같은 문장을 받고, 그래야 비교가 성립합니다.</p>`;
+function envMarkup(c) {
+  if (!c.envTop.length) {
+    return `<p class="cp-note">역할·자녀 관련 항목은 두 분의 체감이 대체로 비슷했어요.</p>`;
   }
-  return `
-    <div class="cp-gauge">
-      <div class="cp-gauge-track">
-        <span class="cp-gauge-parent" style="width:${Math.round(romance.parenting)}%;">부모 ${Math.round(romance.parenting)}</span>
-        <span class="cp-gauge-romance" style="width:${Math.round(romance.romance)}%;">연인 ${Math.round(romance.romance)}</span>
-      </div>
-      <p class="cp-block-sub">지금 두 분의 무게중심이에요. 어느 쪽이 옳은 배치는 없고, 시기에 따라 자연스럽게 움직입니다.</p>
+  return c.envTop.slice(0, 3).map((item) => `
+    <div class="cp-gap-row">
+      <div class="cp-bar-head"><span>${item.label}</span><b>${item.levelLabel}</b></div>
+      <div class="cp-bar-desc">${item.desc} · ${item.levelText}</div>
+      ${GAP_SCRIPTS[item.code] ? `<div class="cp-script"><div class="cp-script-title">💬 이렇게 꺼내보세요</div><p>${GAP_SCRIPTS[item.code]}</p></div>` : ""}
     </div>
-  `;
+  `).join("");
 }
 
 export function renderCoupleReport() {
   const mine = result();
   const partner = state.couple.partner;
+  const blocked = coupleReportBlock(mine, partner);
 
-  // 한쪽이라도 플래그 2개 이상이면 결합 리포트를 발급하지 않는다(§5.0).
-  if (mine.validity.verdict === "blocked" || partner.validity.verdict === "blocked") {
+  // §7.6 발급 조건. 두 사유는 사용자가 할 일이 달라서 문구를 나눈다.
+  if (blocked) {
+    const body =
+      blocked === "childStage"
+        ? {
+            msg: "자녀 단계를 다시 확인해 주세요",
+            detail: `두 분이 고른 자녀 단계가 서로 달라요. 자녀 단계는 두 분에게 같은 사실이고,
+              이 값이 갈리면 같은 문항인데도 서로 다른 문장을 받게 돼 비교가 성립하지 않습니다.
+              한 분이 상황 고르기부터 다시 진행해 주세요.`,
+          }
+        : {
+            msg: "두 분의 결과를 합치기 어려워요",
+            // 상대방의 응답 태도를 평가한 정보를 전달하지 않는다(§7.6 v3.2 안내 문구 중립화).
+            detail: `아직 두 분의 결과가 모두 준비되지 않았어요. 한 분이 문항을 다시 한 번
+              천천히 진행해 주시면 결합 결과를 보실 수 있습니다.`,
+          };
     app.appendChild(el(`
       <div>
         <div class="back-row">
@@ -714,11 +733,9 @@ export function renderCoupleReport() {
         </div>
         <div class="empty-state">
           <div class="emoji">🙏</div>
-          <div class="msg">두 분의 결과를 합치기 어려워요</div>
+          <div class="msg">${body.msg}</div>
         </div>
-        <p class="disclaimer">두 분 중 한 분의 응답이 매우 빠르거나 한쪽으로 치우쳐 있어요.
-        부정확한 데이터로 나온 차이는 두 분에게 도움이 되기 어려워서, 결합 결과를 만들지 않았습니다.
-        천천히 다시 답해보시면 결합 결과를 보실 수 있어요.</p>
+        <p class="disclaimer">${body.detail}</p>
         <div class="cta">
           <button class="cta-btn" data-nav="couple-intro">다시 해보기</button>
         </div>
@@ -731,12 +748,6 @@ export function renderCoupleReport() {
   const c = combine(mine, partner);
   const myType = COUPLE_TYPES[mine.typeKey];
   const partnerType = COUPLE_TYPES[partner.typeKey];
-  // 방향을 서술할 땐 두 사람을 같은 방식으로 부른다("나 쪽이" vs "남편 쪽이"처럼 섞이면
-  // 한쪽만 지목당하는 것처럼 읽힌다). 호칭을 같게 고른 경우엔 호칭으로 구분이 안 되므로
-  // 둘 다 중립 표기로 떨어뜨린다.
-  const sameLabel = mine.setup.t === partner.setup.t;
-  const myLabel = sameLabel ? "나" : T_AXIS.find((t) => t.code === mine.setup.t).label;
-  const partnerLabel = sameLabel ? "배우자" : T_AXIS.find((t) => t.code === partner.setup.t).label;
 
   app.appendChild(el(`
     <div>
@@ -747,19 +758,21 @@ export function renderCoupleReport() {
         <div class="eyebrow">두 분의 조합</div>
         <div class="cp-pair-emoji">${myType.emoji}<span>×</span>${partnerType.emoji}</div>
         <h2 class="cp-pair-name">${personaName(mine, partner)}</h2>
-        <p>${c.band.tone}</p>
+        <p>${c.attachTag.tag} · ${c.attachTag.desc}</p>
       </div>
 
       ${c.lowConfidence
-        ? `<div class="cp-warn">⚠️ 한 분의 응답이 빠르게 진행돼, 아래 내용은 오차가 있을 수 있어요.</div>`
+        ? `<div class="cp-warn">⚠️ 한 분의 응답에 엇갈리는 부분이 있어, 아래 내용은 오차가 있을 수 있어요.</div>`
         : ""}
 
-      ${componentMarkup(c.components)}
-      ${gapMarkup(c.gap, mine.conflict.style, myLabel, partnerLabel)}
+      ${dynamicsMarkup(c.dynamics)}
+      ${gapMarkup(c)}
 
       <div class="cp-profile">
-        <div class="cp-block-title">부모 역할과 연인 역할</div>
-        ${romanceMarkup(c.romance)}
+        <div class="cp-block-title">역할과 자녀 이야기에서는</div>
+        <p class="cp-block-sub">두 분이 같은 문장을 받은 항목만 비교했어요. 차이가 큰 순서로 보여드립니다.</p>
+        ${envMarkup(c)}
+        ${c.roleOverlap ? `<p class="cp-note">${c.roleOverlap.text}</p>` : ""}
       </div>
 
       <div class="cp-profile">
@@ -801,7 +814,7 @@ export function renderCoupleShared() {
         <div class="eyebrow">이 유형은</div>
         <div class="emoji">${t.emoji}</div>
         <h2>${t.name}</h2>
-        <div class="result-subtitle">${ATTACH_LABELS[attach]} · ${BEHAVIOR_LABELS[primary]}</div>
+        <div class="result-subtitle">${ATTACH_TYPES[attach].name} · ${BEHAVIOR_LABELS[primary]}</div>
         <p>${t.desc}</p>
       </div>
       <div class="cp-action">
@@ -851,7 +864,7 @@ async function drawCoupleCard(r) {
   ctx.fillText(t.name, W / 2, 396);
 
   ctx.font = "700 30px Pretendard, sans-serif";
-  const sub = `${ATTACH_LABELS[r.attachment.key]} · ${BEHAVIOR_LABELS[r.behavior.primary]}`;
+  const sub = `${ATTACH_TYPES[r.attachment.key].name} · ${BEHAVIOR_LABELS[r.behavior.primary]}`;
   const subW = ctx.measureText(sub).width + 60;
   ctx.fillStyle = "rgba(255,255,255,.18)";
   roundRect(ctx, W / 2 - subW / 2, 430, subW, 56, 28);

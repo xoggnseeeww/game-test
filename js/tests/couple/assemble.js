@@ -2,18 +2,34 @@
 //
 // 세 축(호칭·역할·자녀단계) 중 역할·자녀단계만 문장을 갈아끼운다. 조합이 무엇이든 문항
 // 수는 항상 같다 — 체감 소요시간을 고정하기 위해서다. "같은 코드 = 같은 개념"이 유지되므로
-// 서로 다른 조합을 고른 두 사람도 요인 점수 기준으로는 같은 척도 위에 놓인다(§3.3).
+// 서로 다른 조합을 고른 두 사람도 같은 개념에 답한 것으로 해석할 수 있다. 다만 개념이 같다고
+// 수치 비교가 되는 것은 아니라서, 부부 간 비교는 양쪽에 **문장까지 같은** 문항으로만 한다(§3.3).
 import { shuffle } from "../../core/util.js";
 import {
   BEHAVIOR_ITEMS,
   ATTACH_ITEMS,
   CONFLICT_ITEMS,
   ANCHOR_ITEMS,
+  ANCHOR_CONCEPTS,
   QC_ITEMS,
   ROLE_ITEMS,
   CHILD_ITEMS,
 } from "./data.js";
 import { REVERSE_CODES } from "./score.js";
+
+// 앵커를 놓기 시작하는 자리(1-based)와 자리 사이 간격.
+//
+// 기획서는 zoneStart=35 · 앵커 간 minGap=2(=사이에 2문항)를 함께 요구하지만, 49문항에서
+// 두 조건은 동시에 만족할 수 없다 — 앵커 6개를 3칸 간격으로 놓으려면 마지막이 35+15=50번이
+// 되어 문항지를 벗어난다. 한 칸 앞당겨(34번부터) 이격 쪽을 지켰다. 후반부 배치의 목적
+// (자기 상황을 충분히 떠올린 뒤 응답)은 한 문항 차이로 달라지지 않는다.
+const ANCHOR_ZONE_START = 34;
+const ANCHOR_STRIDE = 3;
+
+// 비공개 재고지를 띄우는 자리(1-based). **앵커 문항이 아닌 자리**여야 한다 — 특정 문항
+// 바로 앞에 안내를 붙이면 그 문항이 민감하다는 신호가 되어, 그 구간에서만 방어적으로
+// 답하게 만든다(§6.5.2 v3.2). 앵커가 34·37·40…이므로 35번은 일반 문항 자리다.
+export const NOTICE_POSITION = ANCHOR_ZONE_START + 1;
 
 // 같은 요인 문항이 연달아 나오면 앞 문항의 답이 다음 답을 끌어당긴다. 역채점 문항끼리
 // 붙어도 마찬가지로 "이번엔 반대로 답해야 한다"는 감각이 이어져, 역채점이 잡으려던
@@ -69,9 +85,8 @@ function spacingOkAt(items, idx, factor, minGap) {
 }
 
 // orderItems는 역채점 연속을 피하려 하지만, 이격 조건을 만족하는 후보가 전부 역채점이면
-// 어쩔 수 없이 붙여 놓는다(41문항 중 9문항이 역채점이라 가끔 실제로 일어난다).
-// 남은 붙은 쌍을 뒤쪽의 정방향 문항과 맞바꿔 떼어놓되, 그 교환이 요인 이격을 깨뜨리면
-// 건너뛴다 — 한쪽 규칙을 지키려고 다른 쪽을 깨면 남는 게 없다.
+// 어쩔 수 없이 붙여 놓는다. 남은 붙은 쌍을 뒤쪽의 정방향 문항과 맞바꿔 떼어놓되, 그
+// 교환이 요인 이격을 깨뜨리면 건너뛴다 — 한쪽 규칙을 지키려고 다른 쪽을 깨면 남는 게 없다.
 function repairReverseRuns(items, minGap) {
   const out = items.slice();
   for (let i = 1; i < out.length; i++) {
@@ -92,6 +107,36 @@ function repairReverseRuns(items, minGap) {
   return out;
 }
 
+// 앵커 6개를 후반부에 **흩어서** 놓는다.
+//
+// v3.1까지는 검사 맨 끝에 연속 배치했는데, 기여 인정·부담·공정성을 묻는 문항이 한 덩어리로
+// 붙어 나오면 "여기가 배우자와 비교되는 구간이구나"를 쉽게 알아차리고 그 구간에서만
+// 방어적으로 답하게 된다. 앵커의 존재 이유가 정직한 비교인데 배치가 그걸 방해하는 셈이다.
+//
+// 같은 개념의 a·b 문항은 슬롯을 3칸 띄워 배치한다(문항 수로는 9문항 간격) — 앞 문항을
+// 기억하고 똑같이 맞추는 응답을 억제하기 위해서다.
+function scatterAnchors(base, anchors, shuffleFn) {
+  const order = shuffleFn(ANCHOR_CONCEPTS.map((c) => c.key));
+  const byConcept = {};
+  for (const key of order) {
+    byConcept[key] = shuffleFn(anchors.filter((a) => a.concept === key));
+  }
+  // 슬롯 배열: [c0-1st, c1-1st, c2-1st, c0-2nd, c1-2nd, c2-2nd]
+  const sequence = [
+    ...order.map((k) => byConcept[k][0]),
+    ...order.map((k) => byConcept[k][1]),
+  ];
+
+  const out = base.slice();
+  // 앞에서부터 끼워 넣는다. 목표 자리는 **완성본 기준**이고, i번째를 넣을 시점에는 그보다
+  // 앞에 놓일 앵커 i개가 이미 들어가 있으므로 그 자리에 그대로 splice하면 맞는다.
+  // (뒤에서부터 넣으면 아직 짧은 배열의 범위를 넘어 전부 끝에 붙는다.)
+  for (let i = 0; i < sequence.length; i++) {
+    out.splice(ANCHOR_ZONE_START - 1 + i * ANCHOR_STRIDE, 0, sequence[i]);
+  }
+  return out;
+}
+
 function variantOf(item, axisCode) {
   const text = item.variants[axisCode];
   if (!text) throw new Error(`${item.code}에 ${axisCode} 버전 문장이 없다`);
@@ -99,7 +144,7 @@ function variantOf(item, axisCode) {
 }
 
 /**
- * 46문항 배열을 만든다. 각 원소는 { code, factor, text }.
+ * 문항지 배열을 만든다. 각 원소는 { code, factor, concept?, text }.
  * @param {{r:string, k:string}} setup 축2(역할)·축3(자녀단계) 선택값
  * @param {{shuffleFn?:Function}} opts 테스트에서 순서를 고정하려고 주입한다
  */
@@ -120,13 +165,5 @@ export function assembleQuestionnaire(setup, { shuffleFn = shuffle } = {}) {
   withQc.splice(Math.round(ordered.length * 0.66), 0, QC_ITEMS[1]);
   withQc.splice(Math.round(ordered.length * 0.33), 0, QC_ITEMS[0]);
 
-  // 앵커 문항은 셔플 대상에서 빼고 맨 뒤에 연속 배치한다(§3.2 v3.0). 앞 문항들에 답하며
-  // 자기 상황을 충분히 떠올린 상태에서 답해야 회상 정확도가 올라가고, 이 구간 직전에
-  // 비공개 재고지를 한 번 더 띄울 수 있다(§6.5.2).
-  return [...withQc, ...ANCHOR_ITEMS.map(({ code, factor, concept, text }) => ({ code, factor, concept, text }))];
-}
-
-// 앵커 구간이 시작되는 인덱스. 화면이 이 지점에서 비공개 재고지를 띄운다.
-export function anchorStartIndex(items) {
-  return items.findIndex((i) => i.factor === "AN");
+  return scatterAnchors(withQc, ANCHOR_ITEMS, shuffleFn);
 }

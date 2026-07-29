@@ -1,9 +1,10 @@
 // 부부 관계 성향 체크의 개인 채점 (기획서 §5). DOM을 모르는 순수 함수만 둔다 —
 // 그래야 node --test로 브라우저 없이 채점 불변식을 검증할 수 있다.
-import { BEHAVIOR_ITEMS, ATTACH_ITEMS, CONFLICT_ITEMS } from "./data.js";
+import { BEHAVIOR_ITEMS, ATTACH_ITEMS, CONFLICT_ITEMS, ANCHOR_CONCEPTS } from "./data.js";
 
-// 역채점 대상(§4 v3.0). 모든 문항이 같은 방향이면 읽지 않고 한쪽으로만 찍는 응답을
+// 역채점 대상(§4). 모든 문항이 같은 방향이면 읽지 않고 한쪽으로만 찍는 응답을
 // 걸러낼 수 없고 점수가 실제보다 부풀려진다. 요인마다 최소 1개씩 들어 있다.
+// 앵커에는 넣지 않는다 — 두 사람의 응답을 직접 빼는 용도라 방향 일관성이 더 중요하다(§4.4).
 export const REVERSE_CODES = new Set(["D4", "I4", "S4", "C4", "A4", "V4", "SC3", "OC3", "R6"]);
 
 export const BEHAVIOR_AXES = ["D", "I", "S", "C"];
@@ -28,7 +29,12 @@ export const FACTOR_ITEMS = {
 export const QC1_EXPECTED = 2;
 const QC_CONSISTENCY_GAP = 3;
 const STRAIGHT_LINE_RATIO = 0.8;
-const MIN_ELAPSED_MS = 120000;
+const MIN_ELAPSED_MS = 130000;
+// 역채점 정합성: 요인 하나가 어긋나는 것은 우연일 수 있으므로 2개 요인 이상일 때만 센다.
+const REVERSE_MISMATCH_GAP = 3;
+const REVERSE_MISMATCH_MIN = 2;
+// 같은 개념의 앵커 두 문항이 이만큼 벌어지면 본인 응답 자체가 흔들린 것으로 본다.
+const ANCHOR_INCONSISTENT_GAP = 3;
 
 // ---------------------------------------------------------------- 원점수·정규화
 
@@ -59,6 +65,29 @@ export function stepOf(itemCount) {
 
 // ---------------------------------------------------------------- §5.0 응답 유효성 사전 검사
 
+// 문항을 읽지 않고 한쪽으로만 찍으면 정방향 문항 평균과 역채점 문항의 변환값이 크게
+// 어긋난다. 역채점 문항이 원래 잡아내도록 설계된 행동을 그대로 검사로 쓰는 것이라
+// 문항을 새로 추가하지 않아도 되고, 특정 문항쌍이 아니라 여러 요인을 훑으므로
+// 국소적 위양성에도 강하다(§5.0 응답 일관성 ②).
+//
+// 갈등 두 축(SC·OC)은 정방향이 2문항뿐이라 평균이 거칠어 위양성이 늘 수 있으므로
+// 기획서가 지정한 6개 요인만 본다.
+const REVERSE_CHECK_FACTORS = ["D", "I", "S", "C", "ANX", "AVO"];
+
+export function reverseMismatchCount(answers) {
+  let count = 0;
+  for (const factor of REVERSE_CHECK_FACTORS) {
+    const codes = FACTOR_ITEMS[factor];
+    const reverse = codes.filter((c) => REVERSE_CODES.has(c));
+    const forward = codes.filter((c) => !REVERSE_CODES.has(c));
+    if (reverse.length !== 1 || !forward.length) continue;
+    const forwardMean = forward.reduce((acc, c) => acc + answers[c], 0) / forward.length;
+    const reverseConv = 6 - answers[reverse[0]];
+    if (Math.abs(forwardMean - reverseConv) >= REVERSE_MISMATCH_GAP) count += 1;
+  }
+  return count;
+}
+
 // 플래그 2개 이상이면 결과를 내지 않고 재응답을 유도한다. 부정확한 데이터로 산출된
 // 인지 격차는 부부에게 도움이 되기는커녕 다툼거리만 만든다.
 export function validityCheck(answers, elapsedMs) {
@@ -66,6 +95,9 @@ export function validityCheck(answers, elapsedMs) {
   if (answers.QC1 !== QC1_EXPECTED) flags.push("지시 이행 문항의 답이 안내와 다릅니다");
   if (Math.abs(answers.QC2 - answers.I1) >= QC_CONSISTENCY_GAP) {
     flags.push("비슷한 내용의 두 문항에 크게 다르게 답하셨습니다");
+  }
+  if (reverseMismatchCount(answers) >= REVERSE_MISMATCH_MIN) {
+    flags.push("방향이 반대인 문항들의 답이 서로 엇갈립니다");
   }
 
   const counts = {};
@@ -80,8 +112,25 @@ export function validityCheck(answers, elapsedMs) {
     flags,
     count: flags.length,
     // blocked면 결과 자체를 내지 않고, warn이면 결과 상단에 정확도 고지를 붙인다.
+    // 화면 고지 문구는 사유를 특정하지 않는다 — 속도 외의 사유로 플래그가 섰을 때
+    // "빠르게 진행되어"라고 안내하면 사실과 다른 말이 나간다(§5.0 v3.1 교정 3).
     verdict: flags.length >= 2 ? "blocked" : flags.length === 1 ? "warn" : "ok",
   };
+}
+
+// ---------------------------------------------------------------- §4.4·§7.3 앵커 개념 점수
+
+// 개념 점수 = 같은 개념 두 문항의 평균(1.0~5.0, 0.5 단위). 두 문항이 3점 이상 벌어지면
+// 본인 응답 자체가 흔들린 것이므로 점수는 내되 격차 항목으로는 노출하지 않는다 —
+// 흔들리는 응답을 부부 간 격차로 제시하면 근거 없는 갈등을 만든다(§7.3 앵커 내부 일관성).
+export function anchorScores(answers) {
+  const out = {};
+  for (const { key } of ANCHOR_CONCEPTS) {
+    const a = answers[`${key}a`];
+    const b = answers[`${key}b`];
+    out[key] = { score: (a + b) / 2, consistent: Math.abs(a - b) < ANCHOR_INCONSISTENT_GAP };
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------- §5.3 행동성향 유형
@@ -99,11 +148,16 @@ export function resolveBehavior(norm) {
   const margin = norm[primary] - norm[secondary];
   const step = stepOf(FACTOR_ITEMS[primary].length);
 
-  // 유형 라벨은 언제나 primary 하나로만 정한다. 경계 사례를 감추는 대신 확신도로 드러내는
-  // 것이 v3.0의 방침이다 — 유형을 더 잘게 쪼개면 오분류만 늘어난다.
+  // 유형 라벨은 언제나 primary 하나로만 정한다. 경계 사례를 감추는 대신 확신도로 드러낸다 —
+  // 유형을 더 잘게 쪼개면 오분류만 늘어난다.
+  //
+  // 임계값이 3칸/2칸인 이유(§5.3 v3.1 재조정): 정규화 점수가 한 칸(6.25점) 단위의 이산값이라
+  // "1칸 이상이면 보통"으로 두면 원점수 1점 차이 — 문항 하나에 4점 대신 5점을 누른 것 —
+  // 까지 단정적으로 서술하게 된다. 가장 불안정한 사례를 오히려 확신 있게 전달하는 구조라,
+  // 1칸 차이는 "경계"로 흡수한다.
   let confidence = "edge";
-  if (margin >= step * 2) confidence = "clear";
-  else if (margin >= step) confidence = "moderate";
+  if (margin >= step * 3) confidence = "clear";
+  else if (margin >= step * 2) confidence = "moderate";
 
   return { primary, secondary, ranked, margin, confidence };
 }
@@ -112,52 +166,65 @@ export function resolveBehavior(norm) {
 
 const ATTACH_MIDPOINT = 50;
 
-// 중앙값 절단은 편의적 기준이고 애착은 원래 연속 변인이다. 원점수가 중앙값 ±1점이면
-// 그 축을 단정하지 않고 "중간 정도"로 서술하도록 mixed를 세워둔다.
+// 중앙값 절단은 편의적 기준이고 애착은 원래 연속 변인이다.
+//  - 라벨: 원점수 ≥ 중앙값(12점) → "높음". 16유형 체계가 라벨을 반드시 하나 요구하므로
+//    경계 구간에서도 규칙 하나로 확정한다(§5.4 v3.1 — 이 규칙이 없으면 구현자 임의 판단이 된다).
+//  - 확신도: 원점수가 중앙값 ±1점(11~13)이면 그 축은 "경계". 라벨은 주되 단정하지 않는다.
 function axisState(raw, itemCount) {
   const mid = itemCount * 3; // 문항당 3점 = 척도 중앙값
-  return { raw, norm: normalize(raw, itemCount), mixed: Math.abs(raw - mid) <= 1 };
+  return { raw, norm: normalize(raw, itemCount), high: raw >= mid, edge: Math.abs(raw - mid) <= 1 };
 }
 
 export function resolveAttachment(anxRaw, avoRaw) {
   const anx = axisState(anxRaw, FACTOR_ITEMS.ANX.length);
   const avo = axisState(avoRaw, FACTOR_ITEMS.AVO.length);
-  const anxHigh = anx.norm >= ATTACH_MIDPOINT;
-  const avoHigh = avo.norm >= ATTACH_MIDPOINT;
-  const key = anxHigh ? (avoHigh ? "Fe" : "An") : avoHigh ? "Av" : "Se";
-  return { key, anx, avo, anxHigh, avoHigh, midpoint: ATTACH_MIDPOINT };
+  const key = anx.high ? (avo.high ? "AT4" : "AT2") : avo.high ? "AT3" : "AT1";
+  return {
+    key,
+    anx,
+    avo,
+    midpoint: ATTACH_MIDPOINT,
+    // 유형 전체의 확신도는 두 축 중 더 낮은 쪽을 따른다(§5.4).
+    confidence: anx.edge || avo.edge ? "edge" : "clear",
+  };
 }
 
 // ---------------------------------------------------------------- §5.5 갈등 대처 2축 → 5스타일
 
-const CONFLICT_LOW = 40;
-const CONFLICT_HIGH = 60;
+// 절단점을 정규화 점수(40/60)가 아니라 **원점수**로 정의한다. SC·OC는 3문항 척도라
+// 정규화 점수가 8.33점 단위의 이산값만 갖고, 40점·60점은 어떤 응답 조합으로도 도달할 수
+// 없는 값이다(가능한 값은 … 33.33, 41.67, 50, 58.33, 66.67 …). 문서에 40/60이라 적고
+// 실제로는 33.33/66.67에서 갈리면 읽는 사람이 다른 분포를 예상하게 된다.
+const CONFLICT_LOW_MAX = 7; // 3~7 낮음
+const CONFLICT_HIGH_MIN = 11; // 11~15 높음
+// 절단점 바로 옆 값. 원점수 1점 차이로 스타일이 뒤집히는 자리라 인접 스타일도 함께 언급한다.
+const CONFLICT_EDGE_RAWS = [7, 8, 10, 11];
 
-export function resolveConflict(scNorm, ocNorm) {
-  const scHigh = scNorm >= CONFLICT_HIGH;
-  const ocHigh = ocNorm >= CONFLICT_HIGH;
-  const scLow = scNorm < CONFLICT_LOW;
-  const ocLow = ocNorm < CONFLICT_LOW;
+function conflictLevel(raw) {
+  if (raw <= CONFLICT_LOW_MAX) return "low";
+  if (raw >= CONFLICT_HIGH_MIN) return "high";
+  return "mid";
+}
 
-  let style = "compromise";
-  if (scHigh && ocLow) style = "compete";
-  else if (scLow && ocHigh) style = "accommodate";
-  else if (scLow && ocLow) style = "avoid";
-  else if (scHigh && ocHigh) style = "collaborate";
+export function resolveConflict(scRaw, ocRaw) {
+  const sc = conflictLevel(scRaw);
+  const oc = conflictLevel(ocRaw);
 
-  // 기획서는 경계 판정 폭을 6.25로 적어뒀지만 그 값은 4문항 척도(§5.3)의 한 칸이다.
-  // 갈등 두 축은 3문항이라 한 칸이 8.33점이고, 6.25를 쓰면 원점수 1점 차이로 스타일이
-  // 바뀌는 경우의 절반(33.3점·66.7점 쪽)이 경계로 잡히지 않는다. 척도에서 파생된
-  // 칸 크기를 쓴다 — 규칙의 의도가 "한 칸 차이로 뒤집히면 인접 스타일도 같이 언급"이다.
-  const step = stepOf(FACTOR_ITEMS.SC.length);
-  const dist = Math.min(
-    Math.abs(scNorm - CONFLICT_LOW),
-    Math.abs(scNorm - CONFLICT_HIGH),
-    Math.abs(ocNorm - CONFLICT_LOW),
-    Math.abs(ocNorm - CONFLICT_HIGH)
-  );
+  // 절충형(CS5)은 "양축이 모두 중간"이 아니라 **한 축만 중간인 조합까지 포함**하는
+  // 나머지 전부다. 그래서 실제 분포에서 비중이 커질 수 있다.
+  let style = "CS5";
+  if (sc === "high" && oc === "low") style = "CS1"; // 관철형
+  else if (sc === "low" && oc === "high") style = "CS2"; // 맞춰주기형
+  else if (sc === "low" && oc === "low") style = "CS3"; // 보류형
+  else if (sc === "high" && oc === "high") style = "CS4"; // 조율형
 
-  return { style, confidence: dist < step ? "edge" : "clear", sc: scNorm, oc: ocNorm };
+  return {
+    style,
+    confidence:
+      CONFLICT_EDGE_RAWS.includes(scRaw) || CONFLICT_EDGE_RAWS.includes(ocRaw) ? "edge" : "clear",
+    scRaw,
+    ocRaw,
+  };
 }
 
 // ---------------------------------------------------------------- 전체 채점
@@ -181,7 +248,7 @@ export function computeCouple(answers, { elapsedMs = null, setup = null } = {}) 
 
   const behavior = resolveBehavior(norm);
   const attachment = resolveAttachment(raw.ANX, raw.AVO);
-  const conflict = resolveConflict(norm.SC, norm.OC);
+  const conflict = resolveConflict(raw.SC, raw.OC);
 
   return {
     setup,
@@ -192,16 +259,18 @@ export function computeCouple(answers, { elapsedMs = null, setup = null } = {}) 
     attachment,
     conflict,
     typeKey: `${behavior.primary}-${attachment.key}`,
-    // 부부 비교에 쓰이는 개별 문항값. 문장이 양쪽에 동일한 것만 담는다(§5.6) —
+    anchors: anchorScores(answers),
+    // 부부 비교에 쓰이는 문항값. 문장이 양쪽에 동일한 것만 담는다(§5.6) —
     // R1~R4는 역할마다 문장이 달라 측정 동등성이 없으므로 여기 들어오면 안 된다.
+    // 앵커는 개별 응답값이 아니라 개념 점수(anchors)로만 넘어간다.
     comparable: {
-      AN1: answers.AN1,
-      AN2: answers.AN2,
-      AN3: answers.AN3,
       R5: answers.R5,
       R6: answers.R6,
+      K1: answers.K1,
       K2: answers.K2,
+      K3: answers.K3,
       K4: answers.K4,
+      K5: answers.K5,
     },
   };
 }

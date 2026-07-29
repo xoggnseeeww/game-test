@@ -4,24 +4,24 @@ import assert from "node:assert/strict";
 
 import { computeCouple } from "../js/tests/couple/score.js";
 import { assembleQuestionnaire } from "../js/tests/couple/assemble.js";
+import { ANCHOR_CONCEPTS } from "../js/tests/couple/data.js";
 import {
-  deltaBehavior,
-  RISK_MATRIX,
-  riskOf,
-  itemNorm,
+  behaviorDynamics,
+  ATTACH_PAIR_TAGS,
+  attachPairTag,
   gapScore,
-  matchScore,
-  matchBand,
-  romanceRatio,
+  envCompare,
+  ENV_ITEMS,
+  roleOverlap,
   combine,
+  coupleReportBlock,
   personaName,
   encodePartner,
   decodePartner,
-  WEIGHTS,
 } from "../js/tests/couple/match.js";
 
 const IDENTITY = { shuffleFn: (a) => a };
-const ATTACH_KEYS = ["Se", "An", "Av", "Fe"];
+const ATTACH_KEYS = ["AT1", "AT2", "AT3", "AT4"];
 
 // fill을 주지 않으면 값이 흩어진 "성실한 응답"을 만든다(직선 응답 검사에 안 걸린다).
 // 숫자를 주면 전 문항을 그 값으로 채운다 — 코덱의 극단값 처리를 볼 때 쓴다.
@@ -37,132 +37,169 @@ function resultOf(setup, fill = null, overrides = {}) {
   return computeCouple({ ...answers, ...overrides }, { elapsedMs: 400000, setup });
 }
 
-// ---------------------------------------------------------------- §7.1 ΔDISC
+// ---------------------------------------------------------------- §7.2 성향 조합
 
-test("ΔDISC는 0~100으로 정규화된다", () => {
-  const zero = { D: 50, I: 50, S: 50, C: 50 };
-  assert.equal(deltaBehavior(zero, zero), 0);
-  // 네 축이 모두 정반대인 이론적 최대(거리 200)가 100이 돼야 다른 항목과 스케일이 맞는다.
-  assert.equal(deltaBehavior({ D: 0, I: 0, S: 0, C: 0 }, { D: 100, I: 100, S: 100, C: 100 }), 100);
+test("단일 궁합 점수를 만들지 않는다", () => {
+  // "궁합 87점" 같은 값은 근거가 빈약한데도 확정적으로 들려서, 오분류 위험이 있는
+  // 정밀함의 대표 사례다. 점수·등급을 되살리려는 변경은 여기서 걸린다.
+  const a = resultOf({ t: "T-H", r: "R-E", k: "K-1" });
+  const b = resultOf({ t: "T-W", r: "R-C", k: "K-1" });
+  const c = combine(a, b);
+  assert.equal(c.score, undefined, "종합 점수가 결합 결과에 들어 있다");
+  assert.equal(c.band, undefined, "등급 구간이 결합 결과에 들어 있다");
 });
 
-// ---------------------------------------------------------------- §7.2 Risk Matrix
+test("행동성향 조합은 원점수 차로 세 구간으로만 갈린다", () => {
+  const base = { D: 12, I: 12, S: 12, C: 12 };
+  const near = behaviorDynamics(base, { ...base, D: 13 });
+  assert.equal(near.find((d) => d.axis === "D").levelKey, "similar");
+  assert.equal(behaviorDynamics(base, { ...base, D: 14 }).find((d) => d.axis === "D").levelKey, "complement");
+  assert.equal(behaviorDynamics(base, { ...base, D: 15 }).find((d) => d.axis === "D").levelKey, "complement");
+  assert.equal(behaviorDynamics(base, { ...base, D: 16 }).find((d) => d.axis === "D").levelKey, "contrast");
+  // 요인 이름이 구간 이름에 덮이면 화면에 구간명이 두 번 찍힌다
+  assert.equal(near.find((d) => d.axis === "D").label, "주도형");
+  assert.equal(near.length, 4);
+});
 
-test("Risk Matrix가 대칭이고 추격자-도망자 조합이 최고값이다", () => {
+test("애착 조합 태그가 모든 조합에 있고 순서에 무관하다", () => {
   for (const a of ATTACH_KEYS) {
     for (const b of ATTACH_KEYS) {
-      assert.equal(riskOf(a, b), riskOf(b, a), `${a}×${b}가 비대칭이다`);
+      assert.ok(attachPairTag(a, b), `${a}×${b} 태그가 없다`);
+      assert.equal(attachPairTag(a, b), attachPairTag(b, a), `${a}×${b}가 순서에 따라 달라진다`);
     }
   }
-  const values = ATTACH_KEYS.flatMap((a) => ATTACH_KEYS.map((b) => riskOf(a, b)));
-  assert.equal(Math.max(...values), 18);
-  assert.equal(riskOf("An", "Av"), 18);
-  assert.equal(riskOf("Se", "Se"), 0);
-  // 표 전체가 채워져 있어야 한다 — 빠진 칸이 있으면 NaN이 점수까지 흘러간다
-  assert.ok(values.every((v) => Number.isFinite(v)));
-  assert.equal(Object.keys(RISK_MATRIX).length, ATTACH_KEYS.length);
+  // 4유형의 순서 없는 조합은 10가지
+  assert.equal(Object.keys(ATTACH_PAIR_TAGS).length, 10);
+  // 개인 유형명과 부부 조합 태그가 같은 단어를 쓰면 화면에서 구분되지 않는다
+  for (const t of Object.values(ATTACH_PAIR_TAGS)) {
+    assert.ok(!t.tag.includes("조심스러운 접근형"), `조합 태그가 개인 유형명과 겹친다: ${t.tag}`);
+  }
 });
 
 // ---------------------------------------------------------------- §7.3 Gap Score
 
-test("Gap Score는 앵커 문항만 쓰고 방향을 보존한다", () => {
-  const a = { AN1: 5, AN2: 1, AN3: 3, R5: 3, R6: 3, K2: 3, K4: 3 };
-  const b = { AN1: 1, AN2: 5, AN3: 3, R5: 3, R6: 3, K2: 3, K4: 3 };
+function anchorsOf(scores, consistent = true) {
+  const out = {};
+  ANCHOR_CONCEPTS.forEach(({ key }, i) => {
+    out[key] = { score: scores[i], consistent };
+  });
+  return out;
+}
+
+test("Gap Score는 앵커 개념 점수 차로 세 구간을 낸다", () => {
+  const a = anchorsOf([5, 3, 2]);
+  const b = anchorsOf([5, 4.5, 4.5]);
   const g = gapScore(a, b);
-  assert.equal(g.items.length, 3);
-  assert.deepEqual(g.items.map((i) => i.code), ["AN1", "AN2", "AN3"]);
-  assert.equal(g.items[0].gap, 100);
-  // 부호가 살아 있어야 "누가 더 크게 느끼는지"를 서술할 수 있다
-  assert.ok(g.items[0].direction > 0);
-  assert.ok(g.items[1].direction < 0);
-  assert.equal(g.items[2].gap, 0);
-  assert.ok(Math.abs(g.total - 200 / 3) < 1e-9);
-
-  // 같은 응답이면 격차가 0
-  assert.equal(gapScore(a, a).total, 0);
+  assert.equal(g.items.length, ANCHOR_CONCEPTS.length);
+  assert.equal(g.items[0].diff, 0);
+  assert.equal(g.items[0].levelKey, "low");
+  assert.equal(g.items[1].diff, 1.5);
+  assert.equal(g.items[1].levelKey, "mid"); // 2문항 평균이라 1.5라는 중간 값이 생긴다
+  assert.equal(g.items[2].diff, 2.5);
+  assert.equal(g.items[2].levelKey, "high");
+  // 개념명이 구간명에 덮이지 않는다
+  assert.equal(g.items[0].label, ANCHOR_CONCEPTS[0].label);
 });
 
-test("개별 문항 100점 환산이 1~5점을 0~100으로 편다", () => {
-  assert.equal(itemNorm(1), 0);
-  assert.equal(itemNorm(3), 50);
-  assert.equal(itemNorm(5), 100);
-});
-
-// ---------------------------------------------------------------- §7.4·§7.5 종합 점수
-
-test("Match_Score는 이론적 최저에서도 0 아래로 내려가지 않는다", () => {
-  assert.equal(matchScore({ delta: 0, risk: 0, gap: 0 }), 100);
-  // 기획서 §7.4 예시: ΔDISC 20 · Risk 4 · Gap 30 → 81점
-  assert.equal(matchScore({ delta: 20, risk: 4, gap: 30 }), 81);
-  const worst = matchScore({ delta: 100, risk: 18, gap: 100 });
-  assert.ok(worst >= 0);
-  assert.equal(worst, 100 - (WEIGHTS.delta * 100 + WEIGHTS.risk * 18 + WEIGHTS.gap * 100));
-});
-
-test("등급 구간은 경계 ±3점을 높은 쪽으로 완충한다", () => {
-  assert.equal(matchBand(90).lead, "strength");
-  assert.equal(matchBand(75).lead, "balanced");
-  assert.equal(matchBand(60).lead, "growth");
-  assert.equal(matchBand(30).lead, "support");
-  // 오차 범위 안이면 낙담시키지 않고 위 구간 문구를 쓴다
-  assert.equal(matchBand(82).lead, "strength");
-  assert.equal(matchBand(67).lead, "balanced");
-  assert.equal(matchBand(47).lead, "growth");
-  assert.equal(matchBand(46).lead, "support");
-});
-
-test("사용자에게 나가는 것은 숫자가 아니라 구간 서술이다", () => {
-  for (const score of [0, 25, 55, 75, 95]) {
-    const band = matchBand(score);
-    assert.ok(band.tone.length > 0);
-    assert.ok(!/\d/.test(band.tone), `구간 문구에 숫자가 들어 있다: ${band.tone}`);
+test("격차는 크기와 개념명만 내보내고 방향은 내보내지 않는다", () => {
+  // 누가 더 낮게 답했는지는 §6.5.1 원칙에 따라 끝까지 비공개다. direction 같은 필드가
+  // 되살아나면 화면이 다시 한쪽을 지목하게 된다.
+  const g = gapScore(anchorsOf([5, 1, 3]), anchorsOf([1, 5, 3]));
+  for (const item of g.items) {
+    assert.equal(item.direction, undefined, `${item.key}에 방향 정보가 있다`);
+    assert.ok(item.diff >= 0);
   }
 });
 
-// ---------------------------------------------------------------- §8.2 게이지
-
-test("단둘 시간이 늘면 연인 비중이 오르고, 양육 스트레스가 늘면 내려간다", () => {
-  // v1 산식은 K2를 100에서 빼는 방향 오류가 있었다. 여기가 뒤집히면 그 버그의 재발이다.
-  const base = { K2: 3, K4: 3 };
-  const flat = romanceRatio(base, base);
-  assert.equal(flat.romance, 50);
-  assert.equal(flat.parenting, 50);
-
-  assert.ok(romanceRatio({ K2: 5, K4: 3 }, base).romance > flat.romance);
-  assert.ok(romanceRatio({ K2: 1, K4: 3 }, base).romance < flat.romance);
-  assert.ok(romanceRatio({ K2: 3, K4: 5 }, base).romance < flat.romance);
-  assert.ok(romanceRatio({ K2: 3, K4: 1 }, base).romance > flat.romance);
-
-  const r = romanceRatio({ K2: 5, K4: 1 }, { K2: 5, K4: 1 });
-  assert.equal(r.romance, 100);
-  assert.equal(r.parenting, 0);
+test("개념 내부 일관성이 깨지면 그 개념을 격차 항목에서 뺀다", () => {
+  // 본인 응답 자체가 흔들리는 개념을 부부 간 격차로 제시하면 근거 없는 갈등을 만든다.
+  const a = anchorsOf([5, 3, 2]);
+  a.AN2.consistent = false;
+  const g = gapScore(a, anchorsOf([1, 1, 2]));
+  assert.equal(g.items.find((i) => i.key === "AN1").shown, true);
+  assert.equal(g.items.find((i) => i.key === "AN2").shown, false);
 });
 
-// ---------------------------------------------------------------- 결합
+test("격차가 작은 항목이 먼저 배치된다", () => {
+  // 부정적인 내용으로 리포트를 시작하지 않는다(§8.2 긍정 항목 우선 배치).
+  const a = resultOf({ t: "T-H", r: "R-E", k: "K-1" }, null, { AN1a: 5, AN1b: 5, AN3a: 1, AN3b: 1 });
+  const b = resultOf({ t: "T-W", r: "R-C", k: "K-1" }, null, { AN1a: 5, AN1b: 5, AN3a: 5, AN3b: 5 });
+  const c = combine(a, b);
+  for (let i = 1; i < c.gapOrdered.length; i++) {
+    assert.ok(c.gapOrdered[i].diff >= c.gapOrdered[i - 1].diff, "격차가 큰 항목이 앞에 왔다");
+  }
+});
 
-test("결합 결과가 구성 요소와 방향까지 담는다", () => {
+// ---------------------------------------------------------------- §7.4 환경축 · 역할 인식
+
+test("환경축은 양쪽 문장이 같은 문항만 비교한다", () => {
+  // R1~R4는 역할마다 문장이 달라 비교하면 안 된다.
+  const codes = ENV_ITEMS.map((i) => i.code);
+  for (const banned of ["R1", "R2", "R3", "R4"]) {
+    assert.ok(!codes.includes(banned), `${banned}가 부부 비교에 들어갔다`);
+  }
+  assert.deepEqual(codes.sort(), ["K1", "K2", "K3", "K4", "K5", "R5", "R6"]);
+
+  const same = { R5: 3, R6: 3, K1: 3, K2: 3, K3: 3, K4: 3, K5: 3 };
+  assert.ok(envCompare(same, same).every((i) => i.levelKey === "low"));
+  const far = envCompare(same, { ...same, K2: 5 }).find((i) => i.code === "K2");
+  assert.equal(far.diff, 2);
+  assert.equal(far.levelKey, "mid");
+});
+
+test("두 사람이 같은 역할을 고르면 인식 불일치 인사이트가 된다", () => {
+  // R축은 자기 인식이라 겹칠 수 있고, 겹치는 것 자체가 의미 있는 신호다 — 오류로 막지 않는다.
+  assert.ok(roleOverlap({ r: "R-E" }, { r: "R-E" }));
+  assert.ok(roleOverlap({ r: "R-C" }, { r: "R-C" }));
+  // 둘 다 동등 분담이면 인식이 일치한 정상 상태
+  assert.equal(roleOverlap({ r: "R-S" }, { r: "R-S" }), null);
+  assert.equal(roleOverlap({ r: "R-E" }, { r: "R-C" }), null);
+});
+
+// ---------------------------------------------------------------- §7.6 발급 조건
+
+test("자녀 단계 불일치를 응답 품질보다 먼저 알린다", () => {
+  // 둘 다 걸린 경우 "다시 천천히 답해 주세요"를 먼저 안내하면, 문항을 다시 다 풀고 나서도
+  // 축이 어긋나 또 막힌다. 재응답으로 풀리지 않는 문제를 먼저 알려줘야 한다.
+  const a = resultOf({ t: "T-H", r: "R-E", k: "K-0" });
+  const bad = resultOf({ t: "T-W", r: "R-C", k: "K-2" }, 5, { QC1: 5 });
+  assert.equal(bad.validity.verdict, "blocked");
+  assert.equal(coupleReportBlock(a, bad), "childStage");
+});
+
+test("자녀 단계가 다르면 결합 리포트를 발급하지 않는다", () => {
+  // 자녀 단계는 객관적 사실이라 갈릴 수 없다. 갈리면 K문항의 문장 자체가 달라져
+  // 비교 근거가 사라진다.
+  const a = resultOf({ t: "T-H", r: "R-E", k: "K-0" });
+  const b = resultOf({ t: "T-W", r: "R-C", k: "K-2" });
+  assert.equal(coupleReportBlock(a, b), "childStage");
+
+  const same = resultOf({ t: "T-W", r: "R-C", k: "K-0" });
+  assert.equal(coupleReportBlock(a, same), null);
+});
+
+test("한쪽이라도 플래그 2개 이상이면 결합 리포트를 발급하지 않는다", () => {
+  const ok = resultOf({ t: "T-H", r: "R-E", k: "K-1" });
+  // 전 문항에 5점만 찍은 응답: 직선 응답 + 지시 미이행 + 역채점 정합성 세 가지가 함께 걸린다
+  const bad = resultOf({ t: "T-W", r: "R-C", k: "K-1" }, 5, { QC1: 5 });
+  assert.equal(bad.validity.verdict, "blocked");
+  assert.equal(coupleReportBlock(ok, bad), "validity");
+  assert.equal(coupleReportBlock(bad, ok), "validity");
+});
+
+test("결합 결과가 필요한 블록을 모두 담는다", () => {
   const a = resultOf({ t: "T-H", r: "R-E", k: "K-1" });
   const b = resultOf({ t: "T-W", r: "R-C", k: "K-1" });
   const c = combine(a, b);
-
-  assert.ok(c.score >= 0 && c.score <= 100);
-  assert.ok(c.band.tone);
-  for (const key of ["delta", "risk", "gap"]) {
-    assert.ok(c.components[key].weighted <= c.components[key].max + 1e-9, `${key} 비중이 최대를 넘는다`);
-  }
-  assert.equal(c.gap.items.length, 3);
-  assert.ok(c.romance, "같은 자녀 단계면 게이지가 나와야 한다");
+  assert.equal(c.dynamics.length, 4);
+  assert.ok(c.attachTag.tag);
+  assert.equal(c.gap.items.length, ANCHOR_CONCEPTS.length);
+  assert.equal(c.env.length, ENV_ITEMS.length);
   assert.equal(c.lowConfidence, false);
 });
 
-test("자녀 단계가 다르면 게이지를 계산하지 않는다", () => {
-  // K문항은 단계마다 문장이 달라진다. 다른 문장의 점수를 평균 내면 비교 근거가 없다.
-  const a = resultOf({ t: "T-H", r: "R-E", k: "K-0" });
-  const b = resultOf({ t: "T-W", r: "R-C", k: "K-2" });
-  assert.equal(combine(a, b).romance, null);
-});
-
 test("페르소나 이름은 같은 호칭을 골라도 깨지지 않는다", () => {
+  // 동성 부부 등 두 사람이 같은 호칭을 고르는 것은 오류가 아니다(§9.2).
   const a = resultOf({ t: "T-H", r: "R-E", k: "K-1" });
   const b = resultOf({ t: "T-H", r: "R-C", k: "K-1" });
   const name = personaName(a, b);
@@ -175,13 +212,13 @@ test("페르소나 이름은 같은 호칭을 골라도 깨지지 않는다", ()
 
 test("배우자 코드는 왕복해도 결과가 같다", () => {
   const setup = { t: "T-W", r: "R-S", k: "K-2" };
-  const mine = resultOf(setup, null, { D1: 5, D2: 4, A1: 5, A2: 4, SC1: 5, AN1: 5, AN2: 2, K2: 4, R5: 2 });
-  const code = encodePartner(mine);
-  const back = decodePartner(code);
+  const mine = resultOf(setup, null, { D1: 5, D2: 4, A1: 5, SC1: 5, AN1a: 5, AN1b: 4, K2: 4, R5: 2 });
+  const back = decodePartner(encodePartner(mine));
 
   assert.deepEqual(back.setup, setup);
   assert.deepEqual(back.raw, mine.raw);
   assert.deepEqual(back.comparable, mine.comparable);
+  assert.deepEqual(back.anchors, mine.anchors);
   assert.deepEqual(back.norm, mine.norm);
   assert.equal(back.typeKey, mine.typeKey);
   assert.equal(back.behavior.confidence, mine.behavior.confidence);
@@ -189,15 +226,29 @@ test("배우자 코드는 왕복해도 결과가 같다", () => {
   assert.equal(back.validity.count, mine.validity.count);
 });
 
-test("코드는 문항별 응답을 통째로 싣지 않는다", () => {
-  // 링크에 담기는 값은 부부 비교에 실제로 쓰이는 것만이어야 한다. 46문항 응답이
-  // 그대로 실리면 배우자 쪽에서 원문항 단위로 복원할 수 있게 된다.
-  const mine = resultOf({ t: "T-H", r: "R-E", k: "K-1" });
-  const code = encodePartner(mine);
-  assert.ok(code.length < 30, `코드가 너무 길다(${code.length})`);
-  const back = decodePartner(code);
-  assert.deepEqual(Object.keys(back.comparable).sort(), ["AN1", "AN2", "AN3", "K2", "K4", "R5", "R6"]);
+test("코드에 앵커 문항별 응답값이 실리지 않는다", () => {
+  // 개념 점수(2문항 합)만 실으므로 원 문항값을 되돌릴 수 없다 — 합이 6이면 1+5인지
+  // 3+3인지 구분되지 않는다. 같은 개념 점수를 만드는 서로 다른 응답은 같은 코드를 낸다.
+  const setup = { t: "T-H", r: "R-E", k: "K-1" };
+  const one = resultOf(setup, null, { AN1a: 1, AN1b: 5 });
+  const two = resultOf(setup, null, { AN1a: 3, AN1b: 3 });
+  assert.equal(decodePartner(encodePartner(one)).anchors.AN1.score, 3);
+  assert.equal(decodePartner(encodePartner(two)).anchors.AN1.score, 3);
+
+  const back = decodePartner(encodePartner(one));
   assert.equal(back.answers, undefined);
+  for (const code of ["AN1a", "AN1b", "AN2a", "AN2b", "AN3a", "AN3b"]) {
+    assert.equal(back.comparable[code], undefined, `${code}가 코드에 실렸다`);
+  }
+});
+
+test("앵커 내부 일관성 플래그가 코드에 함께 실린다", () => {
+  // 받는 쪽이 격차 항목을 노출할지 판단하려면 이 정보가 필요하다.
+  const setup = { t: "T-H", r: "R-E", k: "K-1" };
+  const shaky = resultOf(setup, null, { AN2a: 1, AN2b: 5 });
+  const back = decodePartner(encodePartner(shaky));
+  assert.equal(back.anchors.AN2.consistent, false);
+  assert.equal(back.anchors.AN1.consistent, true);
 });
 
 test("깨진 코드는 null로 떨어진다", () => {
@@ -207,9 +258,27 @@ test("깨진 코드는 null로 떨어진다", () => {
   assert.equal(decodePartner(code.slice(0, -1)), null, "끝이 잘린 코드");
   assert.equal(decodePartner(code + "a"), null, "뒤에 붙은 코드");
   assert.equal(decodePartner("9" + code.slice(1)), null, "다른 버전");
+  // v1 코드(기획서 v3.0 기준)는 필드 구성이 달라 더 이상 읽히면 안 된다
+  assert.equal(decodePartner("1001ggbcga5d31414151c"), null, "예전 버전 코드");
   // 한 글자만 바뀌어도 체크섬이 잡는다
   const flipped = code.slice(0, 5) + (code[5] === "a" ? "b" : "a") + code.slice(6);
   assert.equal(decodePartner(flipped), null, "값이 변조된 코드");
+});
+
+test("코드의 전송 형식이 고정돼 있다 (골든 샘플)", () => {
+  // encode/decode는 같이 움직이므로, 필드 순서나 VERSION을 바꿔도 왕복 검사는 그대로
+  // 통과한다. 이미 공유된 링크가 조용히 다른 값으로 읽히는 사고를 잡으려면 바깥에서
+  // 고정한 샘플이 하나 필요하다. 이 검사가 깨졌다면 형식이 바뀐 것이므로, 값을 고치기
+  // 전에 VERSION을 올리고 예전 버전을 어떻게 처리할지부터 정할 것.
+  const golden = "21118ah8fcc88777333544404";
+  const back = decodePartner(golden);
+  assert.ok(back, "골든 샘플이 더 이상 읽히지 않는다 — 코드 형식이 바뀌었다");
+  assert.deepEqual(back.setup, { t: "T-W", r: "R-C", k: "K-1" });
+  assert.deepEqual(back.raw, { D: 8, I: 10, S: 17, C: 8, ANX: 15, AVO: 12, SC: 12, OC: 8 });
+  assert.deepEqual(back.comparable, { R5: 3, R6: 3, K1: 3, K2: 5, K3: 4, K4: 4, K5: 4 });
+  assert.equal(back.anchors.AN1.score, 4);
+  assert.equal(back.anchors.AN2.score, 3.5);
+  assert.equal(back.typeKey, "S-AT4");
 });
 
 test("코드가 대소문자·공백에 흔들리지 않는다", () => {
@@ -228,6 +297,7 @@ test("모든 축 조합과 극단 응답에서 코드가 만들어진다", () =>
           const back = decodePartner(encodePartner(mine));
           assert.ok(back, `${t}/${r}/${k} fill=${fill}에서 코드가 깨졌다`);
           assert.deepEqual(back.raw, mine.raw);
+          assert.deepEqual(back.anchors, mine.anchors);
         }
       }
     }

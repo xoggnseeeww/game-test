@@ -1,145 +1,224 @@
-// 부부 매칭 연산 (기획서 §7·§8.2)과 배우자 결과를 링크로 실어 나르는 코덱.
+// 부부 매칭 연산 (기획서 §7)과 배우자 결과를 링크로 실어 나르는 코덱.
 // score.js와 마찬가지로 순수 함수만 둔다.
 //
-// ⚠ 이 사이트에는 백엔드가 없다. 기획서 §10의 페어링 코드(서버 발급·72시간 만료·1회 매칭)
-// 대신, 결과 계산에 필요한 값만 담은 짧은 코드를 주소에 실어 배우자에게 보낸다. 코드에
-// 담기는 항목은 아래 PAYLOAD_FIELDS가 전부이고, 그중 앵커·K2·K4·R5·R6은 개별 문항 응답값이다
-// (인지 격차와 게이지가 문항 단위 차이에서 나오므로 뺄 수 없다). 화면에서는 배우자의
-// 문항별 응답을 어디에도 표시하지 않지만, 코드 자체는 암호화된 것이 아니라서 기획서 §6.5.1의
+// ⚠ 이 사이트에는 백엔드가 없다. 기획서 §9.2의 페어링(서버 발급·7일 만료·세션 격리) 대신,
+// 결합 계산에 필요한 값만 담은 짧은 코드를 주소에 실어 배우자에게 보낸다. 담기는 항목은
+// 아래 PAYLOAD_FIELDS가 전부다. 앵커는 **개별 문항 응답값이 아니라 개념 점수(2문항 합)**로만
+// 넘어가므로 원 문항값을 되돌릴 수 없다(합이 6이면 1+5인지 3+3인지 구분되지 않는다).
+// 다만 R5·R6·K1~K5는 §7.4가 문항 단위 비교를 요구해 값 그대로 실린다. 화면에서는 배우자의
+// 문항별 응답을 어디에도 표시하지 않지만, 코드 자체는 암호화된 것이 아니라서 §6.5.1의
 // "영구 비공개"를 기술적으로 보장하지는 못한다. 사전 고지 문구도 이 사실에 맞춰 적었다.
-import { COUPLE_TYPES, T_AXIS, R_AXIS, K_AXIS, CONFLICT_LABELS } from "./data.js";
-import { FACTOR_ITEMS, normalize, resolveBehavior, resolveAttachment, resolveConflict } from "./score.js";
+import {
+  COUPLE_TYPES,
+  T_AXIS,
+  R_AXIS,
+  K_AXIS,
+  ANCHOR_CONCEPTS,
+  CONFLICT_STYLES,
+  BEHAVIOR_LABELS,
+} from "./data.js";
+import {
+  FACTOR_ITEMS,
+  BEHAVIOR_AXES,
+  normalize,
+  resolveBehavior,
+  resolveAttachment,
+  resolveConflict,
+} from "./score.js";
 
-// ---------------------------------------------------------------- §7.1 ΔDISC
+// ---------------------------------------------------------------- §7.2 성향 조합 해석
 
-// 4차원 벡터의 이론적 최대 거리가 200이라 2로 나눠 0~100으로 맞춘다. 이렇게 하지 않으면
-// ΔDISC만 값 범위가 두 배라 가중치 0.3의 실제 영향력이 설계 의도보다 커진다.
-export function deltaBehavior(normA, normB) {
-  const sq = ["D", "I", "S", "C"].reduce((acc, ax) => acc + (normA[ax] - normB[ax]) ** 2, 0);
-  return Math.sqrt(sq) / 2;
+// 단일 "궁합 점수"를 만들지 않는다. "궁합 87점" 같은 값은 근거가 빈약한데도 확정적으로
+// 들려서, 오분류 위험이 있는 정밀함의 대표 사례다. 대신 요인별로 세 구간만 나누고 어떤
+// 조합도 "나쁜 궁합"으로 단정하지 않는다 — 모든 조합에 강점과 유의점이 함께 붙는다.
+//
+// 구간을 원점수 차로 정의하는 이유: 정규화 점수차는 6.25점 단위의 이산값이라 연속 구간으로
+// 쓰면 경계값(예: 정확히 25)이 두 구간에 동시에 걸린다.
+//
+// 아래 두 표의 필드는 전부 level* 접두사를 쓴다. 이 객체들은 개념/축 객체 위에 펼쳐지는데,
+// 같은 이름(label·desc)을 쓰면 개념명이 구간명으로 조용히 덮인다.
+const DYNAMIC_LEVELS = [
+  {
+    max: 1,
+    levelKey: "similar",
+    levelLabel: "닮은 편",
+    levelDesc: "비슷한 방식으로 접근해서 서로를 빨리 이해해요. 다만 같은 사각지대를 함께 놓칠 수 있어요.",
+  },
+  {
+    max: 3,
+    levelKey: "complement",
+    levelLabel: "보완하는 편",
+    levelDesc: "서로 다른 강점이 상대의 약한 지점을 메워주는 조합이에요.",
+  },
+  {
+    max: Infinity,
+    levelKey: "contrast",
+    levelLabel: "많이 다른 편",
+    levelDesc: "접근 방식 차이가 커서 부딪히기 쉬운 지점이에요. 아래 대화 스타터를 함께 써보세요.",
+  },
+];
+
+export function behaviorDynamics(rawA, rawB) {
+  return BEHAVIOR_AXES.map((ax) => {
+    const diff = Math.abs(rawA[ax] - rawB[ax]);
+    const level = DYNAMIC_LEVELS.find((l) => diff <= l.max);
+    return { axis: ax, label: BEHAVIOR_LABELS[ax], diff, ...level };
+  });
 }
 
-// ---------------------------------------------------------------- §7.2 애착 조합 Risk Matrix
-
-// 집착형×거리두기형(추격자-도망자)에 최고 위험도를 주는 것은 애착이론 문헌에서 가장 잘
-// 알려진 고갈등 패턴이라서다. 다만 구체적 수치는 실증값이 아니라 배정값이다 — 그래서
-// 이 값에서 나온 점수를 숫자 그대로 노출하지 않는다(§7.4).
-export const RISK_MATRIX = {
-  Se: { Se: 0, An: 4, Av: 4, Fe: 6 },
-  An: { Se: 4, An: 8, Av: 18, Fe: 14 },
-  Av: { Se: 4, An: 18, Av: 10, Fe: 12 },
-  Fe: { Se: 6, An: 14, Av: 12, Fe: 16 },
+// 애착 조합 10태그(§7.2). 순서가 없는 조합이라 정렬한 키로 찾는다.
+// "정답 조합"을 알려주려는 표가 아니라, 자주 부딪히는 지점을 미리 짚어 대화 스타터로
+// 연결하기 위한 해석 보조 장치다.
+export const ATTACH_PAIR_TAGS = {
+  "AT1|AT1": { tag: "안정 기반형", desc: "서로에게 기댈 자리가 되어주는 조합이에요. 갈등이 생겨도 오래 끌지 않는 편입니다." },
+  "AT1|AT2": { tag: "균형 잡는형", desc: "한 분의 일관된 태도가 다른 한 분의 확인하고 싶은 마음을 가라앉히는 데 도움이 됩니다." },
+  "AT1|AT3": { tag: "거리 조율형", desc: "먼저 다가가되 속도는 상대에 맞출 필요가 있어요." },
+  "AT1|AT4": { tag: "신뢰 축적형", desc: "꾸준함이 신뢰를 서서히 쌓아가는 데 유리한 조합입니다." },
+  "AT2|AT2": { tag: "감정 증폭형", desc: "서로의 확인 욕구가 맞물려 커질 수 있어요. 같은 요구가 반복되지 않도록 주의해보세요." },
+  "AT2|AT3": { tag: "다가감-물러남형", desc: "한 분이 다가갈수록 다른 한 분이 물러나는 패턴이 나타나기 쉬운 조합이에요." },
+  "AT2|AT4": { tag: "엇갈림형", desc: "둘 다 확인받고 싶어하지만 표현 방식이 달라 서로 놓치기 쉬워요." },
+  "AT3|AT3": { tag: "평행 독립형", desc: "각자의 공간은 편안하지만, 정서적 교류가 줄어들지 않도록 의식적인 노력이 필요해요." },
+  "AT3|AT4": { tag: "이중 거리형", desc: "둘 다 거리를 두는 편이라 갈등이 겉으로 드러나지 않고 쌓일 수 있어요." },
+  "AT4|AT4": { tag: "서로 재는형", desc: "둘 다 다가감과 신중함을 함께 가지고 있어요. 작은 시도부터 서로 격려해보세요." },
 };
 
-export function riskOf(keyA, keyB) {
-  return RISK_MATRIX[keyA][keyB];
+export function attachPairTag(keyA, keyB) {
+  return ATTACH_PAIR_TAGS[[keyA, keyB].sort().join("|")];
+}
+
+export function conflictPairText(a, b) {
+  return `${CONFLICT_STYLES[a.conflict.style].name} × ${CONFLICT_STYLES[b.conflict.style].name}`;
 }
 
 // ---------------------------------------------------------------- §7.3 Gap Score (앵커 전용)
 
-export function itemNorm(raw) {
-  return ((raw - 1) / 4) * 100;
-}
-
-export const GAP_ITEMS = [
-  { code: "AN1", label: "인정 격차", desc: "우리가 하고 있는 일을 서로 알아준다고 느끼는 정도의 차이" },
-  { code: "AN2", label: "부담 격차", desc: "지금 짊어진 몫이 버겁다고 느끼는 정도의 차이" },
-  { code: "AN3", label: "공정성 격차", desc: "지금의 분담이 공정하다고 느끼는 정도의 차이" },
+// 개념 점수 차(0~4.0, 0.5 단위)로 판정한다. 연속 구간 대신 이산 표를 쓰는 이유는
+// 경계값이 두 구간에 동시에 걸리는 것을 막기 위해서다.
+// 1점 차이까지 "격차"로 통보하면 격차 항목이 남발돼 정작 중요한 항목이 묻힌다.
+const GAP_LEVELS = [
+  { max: 1.0, levelKey: "low", levelLabel: "비슷함", levelText: "이 부분은 두 분이 비슷하게 느끼고 있어요." },
+  { max: 2.0, levelKey: "mid", levelLabel: "조금 다름", levelText: "이 부분은 두 분의 체감이 조금 다르게 나타났어요." },
+  {
+    max: Infinity,
+    levelKey: "high",
+    levelLabel: "뚜렷하게 다름",
+    levelText: "이 부분은 두 분의 체감 차이가 뚜렷해요 — 대화로 확인해볼 만한 지점입니다.",
+  },
 ];
 
-// 절대값만 쓰면 "누가 더 크게 느끼는지"가 사라진다. 부호를 살린 방향값도 같이 돌려줘서
-// "한 분이 부담을 더 크게 느끼고 있다"처럼 방향까지 서술할 수 있게 한다.
-export function gapScore(comparableA, comparableB) {
-  const items = GAP_ITEMS.map(({ code, label, desc }) => {
-    const a = itemNorm(comparableA[code]);
-    const b = itemNorm(comparableB[code]);
-    return { code, label, desc, gap: Math.abs(a - b), direction: a - b };
+/**
+ * 앵커 개념별 격차. 어느 한쪽이라도 개념 내부 일관성이 깨졌으면 `shown: false`로 표시해
+ * 리포트에서 격차 항목으로 노출하지 않는다 — 본인 응답 자체가 흔들리는 개념을 부부 간
+ * 격차로 제시하면 근거 없는 갈등을 만든다(§7.3).
+ *
+ * 노출되는 것은 **격차의 크기와 개념명뿐**이다. 누가 더 낮게 답했는지(방향)는 §6.5.1의
+ * 개별 응답 비공개 원칙에 따라 끝까지 내보내지 않는다.
+ */
+export function gapScore(anchorsA, anchorsB) {
+  const items = ANCHOR_CONCEPTS.map(({ key, label, desc }) => {
+    const diff = Math.abs(anchorsA[key].score - anchorsB[key].score);
+    const level = GAP_LEVELS.find((l) => diff <= l.max);
+    return {
+      key,
+      label,
+      desc,
+      diff,
+      shown: anchorsA[key].consistent && anchorsB[key].consistent,
+      // 두 사람 다 높게 답한 개념은 격차가 없어도 따로 짚을 값이 있다(§7.3 절대 수준 활용).
+      bothScore: (anchorsA[key].score + anchorsB[key].score) / 2,
+      ...level,
+    };
   });
-  const total = items.reduce((acc, i) => acc + i.gap, 0) / items.length;
-  return { total, items };
+  // 내부 정렬 전용. 사용자에게 "격차 점수 OO점"으로 노출하면 §7.2가 배제한 단일 스코어를
+  // 뒷문으로 들이는 셈이 된다.
+  const composite = items.reduce((acc, i) => acc + i.diff, 0) / items.length;
+  return { items, composite };
 }
 
-// 역할 배분의 자발성 인식 차이. R5·R6은 세 역할 버전의 문장이 같아 비교가 가능하다.
-export function volitionGap(comparableA, comparableB) {
-  return {
-    R5: Math.abs(itemNorm(comparableA.R5) - itemNorm(comparableB.R5)),
-    R6: Math.abs(itemNorm(comparableA.R6) - itemNorm(comparableB.R6)),
-  };
-}
+// ---------------------------------------------------------------- §7.4 환경축 비교
 
-// ---------------------------------------------------------------- §7.4 종합 매칭 점수
-
-export const WEIGHTS = { delta: 0.3, risk: 1.0, gap: 0.3 };
-
-export function matchScore({ delta, risk, gap }) {
-  const penalty = WEIGHTS.delta * delta + WEIGHTS.risk * risk + WEIGHTS.gap * gap;
-  return Math.max(0, 100 - penalty);
-}
-
-// ---------------------------------------------------------------- §7.5 등급 구간
-
-// 사용자에게는 점수도 등급명도 보여주지 않는다 — 가중치와 Risk Matrix가 실증 데이터가
-// 아니라 이론적 배정값이라, "62점"이라는 숫자가 근거 없는 낙인이 될 수 있어서다.
-const BANDS = [
-  { min: 85, tone: "두 분은 서로를 이해하는 방식이 잘 맞습니다", lead: "strength" },
-  { min: 70, tone: "두 분은 대체로 잘 맞고, 몇 가지 다듬을 지점이 있습니다", lead: "balanced" },
-  { min: 50, tone: "두 분이 함께 이야기 나눠볼 지점이 몇 가지 보입니다", lead: "growth" },
-  { min: 0, tone: "두 분만으로 풀기 어려운 부분이 있어 보입니다. 전문가와 함께 이야기해보시면 도움이 될 수 있어요", lead: "support" },
+export const ENV_ITEMS = [
+  { code: "R5", label: "역할 분담의 자발성", desc: "지금의 역할 분담이 함께 상의한 결과라고 느끼는 정도" },
+  { code: "R6", label: "역할 전환 여지", desc: "상황이 바뀌면 역할을 조정할 수 있다고 느끼는 정도" },
+  { code: "K1", label: "자녀 관련 대화", desc: "자녀 이야기를 서로 편하게 꺼낼 수 있다고 느끼는 정도" },
+  { code: "K2", label: "부부 단둘 시간", desc: "둘만의 시간이 확보되고 있다고 느끼는 정도" },
+  { code: "K3", label: "자녀 관련 의사결정", desc: "자녀 관련 결정을 함께 상의하고 있다고 느끼는 정도" },
+  { code: "K4", label: "자녀로 인한 부담", desc: "자녀 관련 스트레스가 관계에 영향을 준다고 느끼는 정도" },
+  { code: "K5", label: "자녀 관련 가치관", desc: "자녀에 대한 생각이 서로 맞는다고 느끼는 정도" },
 ];
 
-// 구간 경계 ±3점은 측정 오차 범위 안이므로 더 완만한(높은) 쪽 문구를 쓴다.
-// 오차 때문에 부부가 불필요하게 낙담하는 것을 막기 위한 완충이다.
-const BAND_BUFFER = 3;
-
-export function matchBand(score) {
-  return BANDS.find((b) => score >= b.min - BAND_BUFFER) || BANDS[BANDS.length - 1];
+// 단일 문항이라 앵커(2문항 평균)보다 해상도가 낮다. 같은 구간 표를 쓰되, 정수 차이만
+// 나오므로 실질적으로 0~1 비슷함 / 2 조금 다름 / 3~4 뚜렷하게 다름으로 갈린다.
+export function envCompare(comparableA, comparableB) {
+  return ENV_ITEMS.map(({ code, label, desc }) => {
+    const diff = Math.abs(comparableA[code] - comparableB[code]);
+    const level = GAP_LEVELS.find((l) => diff <= l.max);
+    return { code, label, desc, diff, ...level };
+  });
 }
 
-// ---------------------------------------------------------------- §8.2 부모 역할 vs 연인 역할
+// ---------------------------------------------------------------- §7.4 역할 인식 불일치
 
-// K2(단둘 시간)는 높을수록 연인 역할이 강하고, K4(양육 스트레스의 관계 침식)는 높을수록
-// 약하다. 자녀 단계는 부부 공통 사실이라 두 사람이 같은 문장을 받으므로 평균을 낼 수 있다.
-export function romanceRatio(comparableA, comparableB) {
-  const k2 = (itemNorm(comparableA.K2) + itemNorm(comparableB.K2)) / 2;
-  const k4 = (itemNorm(comparableA.K4) + itemNorm(comparableB.K4)) / 2;
-  const romance = 0.5 * k2 + 0.5 * (100 - k4);
-  return { romance, parenting: 100 - romance };
+// R축은 객관적 사실이 아니라 각자의 자기 인식이라, 두 사람이 같은 값을 고를 수 있다.
+// 오류로 막지 않는다 — 둘 다 자신이 주된 몫을 지고 있다고 느끼는 상태는 그 자체로
+// 의미 있는 신호이기 때문이다. (자녀 단계 K는 객관적 사실이라 §7.6에서 다르게 다룬다.)
+export function roleOverlap(setupA, setupB) {
+  if (setupA.r !== setupB.r) return null;
+  if (setupA.r === "R-S") return null; // 둘 다 동등 분담 = 인식이 일치한 정상 상태
+  const label = R_AXIS.find((x) => x.code === setupA.r).label;
+  return {
+    role: setupA.r,
+    label,
+    text:
+      "두 분 다 스스로가 가정의 주된 몫을 맡고 있다고 느끼고 계세요. 이건 누가 착각한 게 아니라, 서로가 지고 있는 무게를 상대가 다 보지는 못하고 있다는 뜻일 수 있어요.",
+  };
 }
 
 // ---------------------------------------------------------------- 결합 결과
 
 /**
- * 두 사람의 결과를 합친다. 어느 한쪽이라도 응답 품질 플래그가 2개 이상이면 호출하지 않는다
- * (§5.0) — 부정확한 데이터로 나온 인지 격차는 부부에게 도움이 아니라 다툼거리가 된다.
+ * 두 사람의 결과를 합친다. 발급 조건은 coupleReportBlock()이 따로 본다(§7.6).
  */
 export function combine(a, b) {
-  const delta = deltaBehavior(a.norm, b.norm);
-  const risk = riskOf(a.attachment.key, b.attachment.key);
-  const gap = gapScore(a.comparable, b.comparable);
-  const score = matchScore({ delta, risk, gap: gap.total });
+  const gap = gapScore(a.anchors, b.anchors);
+  const env = envCompare(a.comparable, b.comparable);
+
+  // 긍정 항목 우선 배치(§8.2): 격차가 작은 항목을 먼저 보여주고, 큰 항목은 그 뒤에
+  // "대화해볼 지점"으로 전환해 배치한다. 부정적인 내용으로 리포트를 시작하지 않는다.
+  const shownGaps = gap.items.filter((i) => i.shown);
+  const byDiffAsc = (x, y) => x.diff - y.diff;
 
   return {
-    score,
-    band: matchBand(score),
-    // 무엇 때문에 이 결과가 나왔는지를 알아야 부부가 실제로 개선할 지점을 찾는다.
-    // 점수를 감추는 대신 구성 요소는 반드시 함께 보여준다(§7.4 규칙 2).
-    components: {
-      delta: { value: delta, weighted: WEIGHTS.delta * delta, max: WEIGHTS.delta * 100 },
-      risk: { value: risk, weighted: WEIGHTS.risk * risk, max: WEIGHTS.risk * 18 },
-      gap: { value: gap.total, weighted: WEIGHTS.gap * gap.total, max: WEIGHTS.gap * 100 },
-    },
+    dynamics: behaviorDynamics(a.raw, b.raw),
+    attachTag: attachPairTag(a.attachment.key, b.attachment.key),
     gap,
-    volition: volitionGap(a.comparable, b.comparable),
-    // 자녀 단계가 서로 다르면 K문항의 문장이 갈라져 비교 근거가 사라진다. 억지로 계산해서
-    // 보여주는 대신 게이지를 빼고 이유를 말한다.
-    romance: a.setup.k === b.setup.k ? romanceRatio(a.comparable, b.comparable) : null,
+    // 노출 순서까지 여기서 정해둔다 — 화면이 정렬을 다시 하면 §8.2 규칙이 두 군데로 흩어진다.
+    gapOrdered: shownGaps.slice().sort(byDiffAsc),
+    gapHidden: gap.items.filter((i) => !i.shown),
+    // 환경축은 항목이 많아 전부 보여주면 정보 과부하가 된다. 격차가 있는 것만 위에서부터.
+    envTop: env.filter((i) => i.levelKey !== "low").sort((x, y) => y.diff - x.diff),
+    env,
+    roleOverlap: roleOverlap(a.setup, b.setup),
     // 플래그가 1개인 쪽이 있으면 결과에 오차 가능 문구를 병기한다.
     lowConfidence: a.validity.count === 1 || b.validity.count === 1,
   };
 }
 
-// §8.1 부부 페르소나. 두 사람이 같은 호칭을 골랐으면(기획서가 다루지 않는 조합) 호칭 대신
-// 순서 표기로 떨어뜨린다 — 결과를 못 보게 막을 이유는 없다.
+// §7.6 결합 리포트 발급 조건. 막아야 하는 사유를 돌려주고, 없으면 null.
+//
+// 자녀 단계 불일치를 응답 품질보다 먼저 본다. 둘 다 걸린 경우 "다시 천천히 답해 주세요"를
+// 먼저 안내하면, 문항을 다시 다 풀고 나서도 축이 여전히 어긋나 또 막힌다. 축 불일치는
+// 재응답으로 풀리지 않는 문제라 그쪽을 먼저 알려주는 것이 사용자에게 실제로 도움이 된다.
+export function coupleReportBlock(a, b) {
+  // 자녀 단계는 객관적 사실이라 두 사람이 다를 수 없다. 다르면 K문항의 문장 자체가
+  // 갈라져 비교 근거가 사라진다.
+  if (a.setup.k !== b.setup.k) return "childStage";
+  if (a.validity.verdict === "blocked" || b.validity.verdict === "blocked") return "validity";
+  return null;
+}
+
+// §8.1 부부 페르소나. 두 사람이 같은 호칭을 골랐으면(동성 부부 등 — 오류가 아니다)
+// 인칭을 중립 표기로 떨어뜨린다.
 export function personaName(a, b) {
   const typeA = COUPLE_TYPES[a.typeKey];
   const typeB = COUPLE_TYPES[b.typeKey];
@@ -153,23 +232,22 @@ export function personaName(a, b) {
   return `${nameA} × ${nameB} · ${stage}`;
 }
 
-export function conflictPairText(a, b) {
-  return `${CONFLICT_LABELS[a.conflict.style]} × ${CONFLICT_LABELS[b.conflict.style]}`;
-}
-
 // ---------------------------------------------------------------- 배우자 코드 (백엔드 없음)
 
 // 필드 순서가 곧 코드의 자리다. 순서를 바꾸거나 항목을 끼워넣으면 이미 공유된 링크가
 // 조용히 다른 값으로 해석된다 — 늘리려면 VERSION을 올리고 분기해야 한다.
-const VERSION = "1";
+// v1(기획서 v3.0 기준)은 앵커 개별 응답값 3개를 실었다. v2는 앵커를 개념 점수 3개 +
+// 내부 일관성 비트로 바꾸고 K1~K5를 추가했다.
+const VERSION = "2";
 const PAYLOAD_FIELDS = [
   "t", "r", "k",
   "D", "I", "S", "C",
   "ANX", "AVO",
   "SC", "OC",
   "AN1", "AN2", "AN3",
+  "anchorFit",
   "R5", "R6",
-  "K2", "K4",
+  "K1", "K2", "K3", "K4", "K5",
   "flags",
 ];
 
@@ -182,6 +260,15 @@ function checksum(body) {
 }
 
 export function encodePartner(result) {
+  // 개념 점수는 0.5 단위라 그대로는 base36 한 자리에 안 들어간다. 두 문항의 합(2~10)으로
+  // 실어 보내고 받는 쪽에서 다시 반으로 나눈다 — 합만으로는 원 문항값을 되돌릴 수 없다.
+  const anchorSum = {};
+  let anchorFit = 0;
+  ANCHOR_CONCEPTS.forEach(({ key }, i) => {
+    anchorSum[key] = result.anchors[key].score * 2;
+    if (result.anchors[key].consistent) anchorFit |= 1 << i;
+  });
+
   const values = {
     t: T_AXIS.findIndex((x) => x.code === result.setup.t),
     r: R_AXIS.findIndex((x) => x.code === result.setup.r),
@@ -194,6 +281,8 @@ export function encodePartner(result) {
     AVO: result.raw.AVO,
     SC: result.raw.SC,
     OC: result.raw.OC,
+    ...anchorSum,
+    anchorFit,
     ...result.comparable,
     flags: result.validity.count,
   };
@@ -237,11 +326,20 @@ export function decodePartner(code) {
     const n = codes.length;
     if (raw[factor] < n || raw[factor] > n * 5) return null;
   }
-  const comparable = {
-    AN1: values.AN1, AN2: values.AN2, AN3: values.AN3,
-    R5: values.R5, R6: values.R6, K2: values.K2, K4: values.K4,
-  };
-  if (Object.values(comparable).some((v) => v < 1 || v > 5)) return null;
+
+  const anchors = {};
+  for (let i = 0; i < ANCHOR_CONCEPTS.length; i++) {
+    const { key } = ANCHOR_CONCEPTS[i];
+    const sum = values[key];
+    if (sum < 2 || sum > 10) return null;
+    anchors[key] = { score: sum / 2, consistent: Boolean(values.anchorFit & (1 << i)) };
+  }
+
+  const comparable = {};
+  for (const code of ["R5", "R6", "K1", "K2", "K3", "K4", "K5"]) {
+    if (values[code] < 1 || values[code] > 5) return null;
+    comparable[code] = values[code];
+  }
 
   const norm = {};
   for (const [factor, codes] of Object.entries(FACTOR_ITEMS)) {
@@ -249,7 +347,7 @@ export function decodePartner(code) {
   }
   const behavior = resolveBehavior(norm);
   const attachment = resolveAttachment(raw.ANX, raw.AVO);
-  const conflict = resolveConflict(norm.SC, norm.OC);
+  const conflict = resolveConflict(raw.SC, raw.OC);
 
   return {
     setup,
@@ -259,7 +357,12 @@ export function decodePartner(code) {
     attachment,
     conflict,
     typeKey: `${behavior.primary}-${attachment.key}`,
+    anchors,
     comparable,
-    validity: { count: values.flags, flags: [], verdict: values.flags >= 2 ? "blocked" : values.flags === 1 ? "warn" : "ok" },
+    validity: {
+      count: values.flags,
+      flags: [],
+      verdict: values.flags >= 2 ? "blocked" : values.flags === 1 ? "warn" : "ok",
+    },
   };
 }

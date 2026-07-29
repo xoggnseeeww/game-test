@@ -9,6 +9,7 @@ import {
   ATTACH_ITEMS,
   CONFLICT_ITEMS,
   ANCHOR_ITEMS,
+  ANCHOR_CONCEPTS,
   QC_ITEMS,
   ROLE_ITEMS,
   CHILD_ITEMS,
@@ -17,6 +18,8 @@ import {
   K_AXIS,
   COUPLE_TYPES,
   COUPLE_SLUG_TO_KEY,
+  ATTACH_TYPES,
+  CONFLICT_STYLES,
   ROLE_NARRATIVE,
   CHILD_NARRATIVE,
   DOS_BEHAVIOR,
@@ -24,7 +27,6 @@ import {
   DONTS_BEHAVIOR,
   DONTS_ATTACH,
   CONFLICT_SCRIPTS,
-  CONFLICT_LABELS,
 } from "../js/tests/couple/data.js";
 import {
   REVERSE_CODES,
@@ -34,12 +36,14 @@ import {
   normalize,
   stepOf,
   validityCheck,
+  reverseMismatchCount,
+  anchorScores,
   resolveBehavior,
   resolveAttachment,
   resolveConflict,
   computeCouple,
 } from "../js/tests/couple/score.js";
-import { assembleQuestionnaire, anchorStartIndex } from "../js/tests/couple/assemble.js";
+import { assembleQuestionnaire, NOTICE_POSITION } from "../js/tests/couple/assemble.js";
 
 const SETUP = { t: "T-H", r: "R-E", k: "K-1" };
 const IDENTITY = { shuffleFn: (a) => a };
@@ -73,11 +77,21 @@ test("문항 수가 모듈 합계와 일치한다", () => {
   assert.equal(BEHAVIOR_ITEMS.length, 16);
   assert.equal(ATTACH_ITEMS.length, 8);
   assert.equal(CONFLICT_ITEMS.length, 6);
-  assert.equal(ANCHOR_ITEMS.length, 3);
+  // 앵커는 개념 3개 × 2문항. 서비스 차별점인 인지 격차를 단일 문항에 걸어두지 않는다.
+  assert.equal(ANCHOR_ITEMS.length, ANCHOR_CONCEPTS.length * 2);
   assert.equal(QC_ITEMS.length, 2);
   assert.equal(ROLE_ITEMS.length, 6);
   assert.equal(CHILD_ITEMS.length, 5);
-  assert.equal(ITEM_TOTAL, 46);
+  assert.equal(ITEM_TOTAL, 49);
+});
+
+test("앵커는 개념마다 정확히 2문항이고 역채점이 섞이지 않는다", () => {
+  for (const { key } of ANCHOR_CONCEPTS) {
+    const codes = ANCHOR_ITEMS.filter((i) => i.concept === key).map((i) => i.code);
+    assert.deepEqual(codes.sort(), [`${key}a`, `${key}b`]);
+  }
+  // 두 사람의 응답을 직접 빼는 용도라 방향 일관성이 무엇보다 중요하다.
+  for (const item of ANCHOR_ITEMS) assert.ok(!REVERSE_CODES.has(item.code), `${item.code}`);
 });
 
 test("요인마다 문항 수가 균등하다", () => {
@@ -95,6 +109,27 @@ test("역채점 코드가 전부 실제 문항에 있고, 요인마다 최소 �
   for (const code of REVERSE_CODES) assert.ok(all.includes(code), `${code}는 문항 뱅크에 없다`);
   for (const [factor, codes] of Object.entries(FACTOR_ITEMS)) {
     assert.ok(codes.some((c) => REVERSE_CODES.has(c)), `${factor}에 역채점 문항이 없다`);
+  }
+});
+
+test("D 요인과 갈등 자기주장성 문항이 같은 장면을 묻지 않는다", () => {
+  // D3와 SC1이 사실상 같은 문장이면 (1)"주도형이라 관철형"이라는 동어반복 리포트가 나오고
+  // (2)D 요인이 '갈등 상황에서의 강경함'에 오염되며 (3)한 문항의 오차가 두 축에 함께 반영된다.
+  const conflictWords = ["싸움", "갈등", "밀어붙", "설득", "굽히지"];
+  for (const item of BEHAVIOR_ITEMS.filter((i) => i.factor === "D")) {
+    for (const w of conflictWords) {
+      assert.ok(!item.text.includes(w), `${item.code}에 갈등 장면 표현이 있다: "${w}"`);
+    }
+  }
+});
+
+test("일관성 검사 문항은 비교 대상의 근접 패러프레이즈다", () => {
+  // 가치 판단("대화 시간을 소중하게 생각한다")과 행동 성향(I1)을 비교하면 성실한 응답자가
+  // 플래그를 받는다. 같은 상황·같은 행동을 묻되 표현만 다른 문장이어야 검사가 기능한다.
+  const qc2 = QC_ITEMS.find((i) => i.code === "QC2").text;
+  const i1 = BEHAVIOR_ITEMS.find((i) => i.code === "I1").text;
+  for (const w of ["배우자", "있었던 일", "이야기"]) {
+    assert.ok(qc2.includes(w) && i1.includes(w), `QC2·I1이 "${w}"를 공유하지 않는다`);
   }
 });
 
@@ -133,13 +168,36 @@ test("어떤 축 조합이든 문항 수와 코드 구성이 같다", () => {
   }
 });
 
-test("앵커 문항은 맨 뒤에 연속 배치된다", () => {
-  const items = assembleQuestionnaire(SETUP, IDENTITY);
-  const start = anchorStartIndex(items);
-  assert.equal(start, items.length - ANCHOR_ITEMS.length);
-  // 앞 문항들에 답하며 자기 상황을 떠올린 뒤에 답해야 회상 정확도가 올라간다(§3.2).
-  assert.ok(start >= 35, `앵커가 너무 앞(${start + 1}번째)에 있다`);
-  for (const item of items.slice(start)) assert.equal(item.factor, "AN");
+test("앵커는 후반부에 흩어져 배치된다", () => {
+  // 한 덩어리로 붙어 나오면 "여기가 배우자와 비교되는 구간"임을 알아차리고 그 구간에서만
+  // 방어적으로 답하게 된다 — 앵커의 존재 이유가 정직한 비교인데 배치가 그걸 방해한다.
+  for (let trial = 0; trial < 100; trial++) {
+    const items = assembleQuestionnaire(SETUP);
+    const at = items.map((it, i) => (it.factor === "AN" ? i + 1 : null)).filter(Boolean);
+    assert.equal(at.length, ANCHOR_ITEMS.length);
+    assert.ok(at[0] >= 34, `앵커가 너무 앞(${at[0]}번째)에서 시작한다`);
+    for (let i = 1; i < at.length; i++) {
+      assert.ok(at[i] - at[i - 1] >= 3, `앵커 ${at[i - 1]}·${at[i]}가 붙어 있다`);
+    }
+    // 같은 개념의 a·b는 서로 멀리 — 앞 문항을 기억하고 똑같이 맞추는 응답을 억제한다.
+    for (const { key } of ANCHOR_CONCEPTS) {
+      const pair = items
+        .map((it, i) => (it.concept === key && it.factor === "AN" ? i : null))
+        .filter((x) => x !== null);
+      assert.equal(pair.length, 2, `${key}의 문항이 2개가 아니다`);
+      assert.ok(pair[1] - pair[0] >= 4, `${key}의 두 문항이 ${pair[1] - pair[0]}문항 간격으로 붙어 있다`);
+    }
+  }
+});
+
+test("비공개 재고지 자리는 앵커 문항이 아니다", () => {
+  // 특정 문항 바로 앞에 안내를 붙이면 그 문항이 민감하다는 신호가 되어, 그 구간에서만
+  // 방어적으로 답하게 만든다(§6.5.2 v3.2).
+  for (let trial = 0; trial < 100; trial++) {
+    const items = assembleQuestionnaire(SETUP);
+    assert.notEqual(items[NOTICE_POSITION - 1].factor, "AN", `${NOTICE_POSITION}번이 앵커다`);
+    assert.notEqual(items[NOTICE_POSITION].factor, "AN", `재고지 바로 다음이 앵커다`);
+  }
 });
 
 test("품질검사 문항은 중반부에 들어간다", () => {
@@ -152,20 +210,18 @@ test("품질검사 문항은 중반부에 들어간다", () => {
 
 test("같은 요인 문항이 연달아 나오지 않는다", () => {
   // 실제 셔플로 여러 번 돌려본다 — 조립이 특정 순서에서만 규칙을 지키면 의미가 없다.
-  // 앵커(AN)는 일부러 뒤에 몰아넣은 것이고, 품질검사(QC)는 요인이 아니라 검사 장치라 뺀다.
+  // 품질검사(QC)는 요인이 아니라 검사 장치라 뺀다. 앵커는 요인 이격 대상이 아니라
+  // 별도 규칙(위 검사)으로 배치된다.
   for (let trial = 0; trial < 200; trial++) {
     const items = assembleQuestionnaire(SETUP);
-    for (let i = 1; i < items.length; i++) {
-      const [prev, cur] = [items[i - 1].factor, items[i].factor];
-      if (prev === "AN" || cur === "AN" || prev === "QC" || cur === "QC") continue;
-      assert.notEqual(cur, prev, `연속된 ${cur} 문항 (시행 ${trial})`);
+    const scored = items.filter((i) => i.factor !== "AN" && i.factor !== "QC");
+    for (let i = 1; i < scored.length; i++) {
+      assert.notEqual(scored[i].factor, scored[i - 1].factor, `연속된 ${scored[i].factor} 문항 (시행 ${trial})`);
     }
   }
 });
 
 test("역채점 문항이 연달아 나오지 않는다", () => {
-  // 역채점이 붙어 나오면 "이번엔 반대로"라는 감각이 이어져서, 잡으려던 묵종 편향을
-  // 오히려 못 잡는다.
   for (let trial = 0; trial < 200; trial++) {
     const items = assembleQuestionnaire(SETUP);
     for (let i = 1; i < items.length; i++) {
@@ -206,10 +262,20 @@ test("모두 3점으로 답하면 모든 요인이 50점이 된다", () => {
   }
 });
 
+test("앵커 개념 점수는 두 문항 평균이고 0.5 단위다", () => {
+  const a = anchorScores(answersOf(3, { AN1a: 5, AN1b: 4, AN2a: 1, AN2b: 1, AN3a: 5, AN3b: 1 }));
+  assert.equal(a.AN1.score, 4.5);
+  assert.equal(a.AN2.score, 1);
+  // 두 문항이 4점이나 벌어지면 본인 응답 자체가 흔들린 것으로 본다
+  assert.equal(a.AN1.consistent, true);
+  assert.equal(a.AN3.consistent, false);
+});
+
 // ---------------------------------------------------------------- §5.0 유효성
 
 test("성실한 응답에는 플래그가 서지 않는다", () => {
   assert.equal(validityCheck(variedAnswers(), 400000).count, 0);
+  assert.equal(reverseMismatchCount(variedAnswers()), 0);
 });
 
 test("지시 이행 문항이 틀리면 플래그가 선다", () => {
@@ -218,36 +284,40 @@ test("지시 이행 문항이 틀리면 플래그가 선다", () => {
   assert.equal(bad.verdict, "warn");
 });
 
-test("일관성·직선응답·속도 검사가 각각 동작한다", () => {
-  assert.equal(validityCheck(variedAnswers({ QC2: 5, I1: 1 }), 400000).count, 1);
+test("역채점 정합성 검사가 2개 요인 이상에서만 플래그를 준다", () => {
+  // 정방향은 전부 5, 역채점도 5로 답하면(=읽지 않고 한쪽으로 찍기) 변환값이 1이 되어
+  // 정방향 평균 5와 4점 벌어진다.
+  const one = variedAnswers({ D1: 5, D2: 5, D3: 5, D4: 5 });
+  assert.equal(reverseMismatchCount(one), 1);
+  assert.ok(!validityCheck(one, 400000).flags.some((f) => f.includes("엇갈립니다")));
 
-  // 전부 같은 값으로 찍으면 직선 응답 + QC1 불일치가 겹쳐 결과가 나오지 않는다.
+  const two = variedAnswers({ D1: 5, D2: 5, D3: 5, D4: 5, I1: 5, I2: 5, I3: 5, I4: 5 });
+  assert.equal(reverseMismatchCount(two), 2);
+  assert.ok(validityCheck(two, 400000).flags.some((f) => f.includes("엇갈립니다")));
+});
+
+test("직선응답·속도 검사가 각각 동작한다", () => {
   const straight = validityCheck(answersOf(4), 400000);
   assert.ok(straight.flags.some((f) => f.includes("같은 값")));
-  assert.ok(straight.count >= 2);
   assert.equal(straight.verdict, "blocked");
 
-  const fast = validityCheck(variedAnswers(), 60000);
-  assert.equal(fast.count, 1);
-  assert.equal(fast.verdict, "warn");
-
+  // 130초 미만이면 플래그(문항당 2.6초 미만)
+  assert.equal(validityCheck(variedAnswers(), 129000).count, 1);
+  assert.equal(validityCheck(variedAnswers(), 131000).count, 0);
   // 소요시간을 모르면 속도 검사는 건너뛴다
   assert.equal(validityCheck(variedAnswers(), null).count, 0);
 });
 
 // ---------------------------------------------------------------- §5.3 행동성향
 
-test("유형 라벨은 1위 요인 하나로만 정해지고 확신도가 따로 나온다", () => {
-  const clear = resolveBehavior({ D: 75, I: 50, S: 50, C: 50 });
-  assert.equal(clear.primary, "D");
-  assert.equal(clear.confidence, "clear");
-
-  // 원점수 1점 차이 = 6.25점
-  const moderate = resolveBehavior({ D: 56.25, I: 50, S: 50, C: 50 });
-  assert.equal(moderate.confidence, "moderate");
-
-  const edge = resolveBehavior({ D: 50, I: 50, S: 50, C: 43.75 });
-  assert.equal(edge.confidence, "edge");
+test("확신도는 원점수 1점 차이를 경계로 흡수한다", () => {
+  // 정규화 점수가 6.25점 단위라 "1칸 이상이면 보통"으로 두면 문항 하나에 4점 대신 5점을
+  // 누른 것까지 단정적으로 서술하게 된다. 가장 불안정한 사례를 확신 있게 전달하는 셈이다.
+  const step = 6.25;
+  assert.equal(resolveBehavior({ D: 50 + step, I: 50, S: 50, C: 50 }).confidence, "edge");
+  assert.equal(resolveBehavior({ D: 50 + step * 2, I: 50, S: 50, C: 50 }).confidence, "moderate");
+  assert.equal(resolveBehavior({ D: 50 + step * 3, I: 50, S: 50, C: 50 }).confidence, "clear");
+  assert.equal(resolveBehavior({ D: 50, I: 50, S: 50, C: 50 }).confidence, "edge");
 });
 
 test("동점은 D > C > S > I 순서로 갈린다", () => {
@@ -260,20 +330,27 @@ test("동점은 D > C > S > I 순서로 갈린다", () => {
 // ---------------------------------------------------------------- §5.4 애착
 
 test("애착 4분류는 중앙값 기준 2×2로 갈린다", () => {
-  assert.equal(resolveAttachment(4, 4).key, "Se");
-  assert.equal(resolveAttachment(20, 4).key, "An");
-  assert.equal(resolveAttachment(4, 20).key, "Av");
-  assert.equal(resolveAttachment(20, 20).key, "Fe");
-  // 원점수 12점(=50.0점)은 "높음" 쪽에 붙는다
-  assert.equal(resolveAttachment(12, 4).key, "An");
+  assert.equal(resolveAttachment(4, 4).key, "AT1");
+  assert.equal(resolveAttachment(20, 4).key, "AT2");
+  assert.equal(resolveAttachment(4, 20).key, "AT3");
+  assert.equal(resolveAttachment(20, 20).key, "AT4");
+  // 라벨은 중앙값(12점)을 포함해 "높음"으로 확정한다 — 16유형 체계가 라벨을 반드시
+  // 하나 요구하므로, 이 규칙이 없으면 경계 구간이 구현자 임의 판단에 맡겨진다.
+  assert.equal(resolveAttachment(12, 4).key, "AT2");
 });
 
-test("중앙값 ±1점은 혼합으로 표시된다", () => {
+test("중앙값 ±1점은 라벨을 주되 확신도를 경계로 표시한다", () => {
   for (const raw of [11, 12, 13]) {
-    assert.equal(resolveAttachment(raw, 4).anx.mixed, true, `원점수 ${raw}`);
+    const r = resolveAttachment(raw, 4);
+    assert.equal(r.anx.edge, true, `원점수 ${raw}`);
+    assert.equal(r.confidence, "edge", `원점수 ${raw}`);
+    assert.ok(r.key, "경계 구간에서도 라벨은 항상 하나 결정된다");
   }
-  assert.equal(resolveAttachment(10, 4).anx.mixed, false);
-  assert.equal(resolveAttachment(14, 4).anx.mixed, false);
+  assert.equal(resolveAttachment(10, 4).anx.edge, false);
+  assert.equal(resolveAttachment(14, 4).anx.edge, false);
+  // 유형 전체의 확신도는 두 축 중 더 낮은 쪽을 따른다
+  assert.equal(resolveAttachment(4, 12).confidence, "edge");
+  assert.equal(resolveAttachment(4, 20).confidence, "clear");
   // 혼합 구간의 정규화 점수는 43.75~56.25
   assert.equal(resolveAttachment(11, 4).anx.norm, 43.75);
   assert.equal(resolveAttachment(13, 4).anx.norm, 56.25);
@@ -281,24 +358,30 @@ test("중앙값 ±1점은 혼합으로 표시된다", () => {
 
 // ---------------------------------------------------------------- §5.5 갈등
 
-test("갈등 5스타일이 2축 좌표에서 나온다", () => {
-  assert.equal(resolveConflict(100, 0).style, "compete");
-  assert.equal(resolveConflict(0, 100).style, "accommodate");
-  assert.equal(resolveConflict(0, 0).style, "avoid");
-  assert.equal(resolveConflict(100, 100).style, "collaborate");
-  assert.equal(resolveConflict(50, 50).style, "compromise");
+test("갈등 5스타일이 원점수 절단점에서 갈린다", () => {
+  // 정규화 점수 40/60은 3문항 척도에서 어떤 응답 조합으로도 도달할 수 없는 값이라,
+  // 절단점을 원점수(≤7 낮음 / 8~10 중간 / ≥11 높음)로 정의한다.
+  assert.equal(resolveConflict(15, 3).style, "CS1"); // 관철형
+  assert.equal(resolveConflict(3, 15).style, "CS2"); // 맞춰주기형
+  assert.equal(resolveConflict(3, 3).style, "CS3"); // 보류형
+  assert.equal(resolveConflict(15, 15).style, "CS4"); // 조율형
+  assert.equal(resolveConflict(9, 9).style, "CS5"); // 절충형
+  // 한 축만 중간이어도 절충형이다 — "양축이 모두 중간"이 아니다
+  assert.equal(resolveConflict(15, 9).style, "CS5");
+  // 절단점 경계값 자체
+  assert.equal(resolveConflict(7, 3).style, "CS3");
+  assert.equal(resolveConflict(11, 3).style, "CS1");
 });
 
-test("절단점에서 한 칸 이내면 경계로 표시된다", () => {
-  // 3문항 척도의 한 칸은 8.33점이다. 원점수 1점 차이로 스타일이 뒤집히는 값들은
-  // 전부 경계로 잡혀야 한다 — 기획서에 적힌 6.25(4문항 척도의 칸)를 쓰면 절반이 샌다.
-  const step = 100 / 12;
+test("절단점 바로 옆 원점수는 경계로 표시된다", () => {
+  // 원점수 1점 차이로 스타일이 뒤집히는 자리는 전부 경계로 잡혀야 한다.
   for (const raw of [7, 8, 10, 11]) {
-    const v = normalize(raw, 3);
-    assert.equal(resolveConflict(v, 50).confidence, "edge", `SC 원점수 ${raw}`);
+    assert.equal(resolveConflict(raw, 9).confidence, "edge", `SC 원점수 ${raw}`);
+    assert.equal(resolveConflict(9, raw).confidence, "edge", `OC 원점수 ${raw}`);
   }
-  assert.equal(resolveConflict(100, 100).confidence, "clear");
-  assert.ok(step > 6.25);
+  for (const raw of [3, 6, 12, 15]) {
+    assert.equal(resolveConflict(raw, 9).confidence, "clear", `SC 원점수 ${raw}`);
+  }
 });
 
 // ---------------------------------------------------------------- 결과 콘텐츠
@@ -310,6 +393,22 @@ test("16유형 표와 슬러그가 서로 빠짐없이 대응한다", () => {
   for (const [key, t] of Object.entries(COUPLE_TYPES)) {
     assert.equal(COUPLE_SLUG_TO_KEY[t.slug], key);
     assert.match(t.slug, /^[a-z0-9-]+$/, `${key}의 슬러그가 주소 규칙에 안 맞는다`);
+    // 유형 코드에 원 척도 약어를 쓰지 않는다(§2.1 B등급 — 유형 코드 전면 재작성)
+    assert.match(key, /^[DISC]-AT[1-4]$/, `${key}가 자사 코드 체계를 따르지 않는다`);
+  }
+});
+
+test("사용자에게 보이는 문구에 원 척도 유형명이 없다", () => {
+  // §2.1 B등급 방침("유형 코드 전면 재작성")과 §8.5(자기비난 유발 표현 금지)를 함께 지킨다.
+  // 원 척도의 표준 번역어를 그대로 쓰면 명칭만 바꾼 껍데기가 된다.
+  const banned = ["집착형", "두려움형", "회피형", "안정형 애착", "경쟁형", "순응형", "협력형", "타협형"];
+  const surfaces = [
+    ...Object.values(COUPLE_TYPES).flatMap((t) => [t.name, t.desc]),
+    ...Object.values(ATTACH_TYPES).flatMap((t) => [t.name, t.desc]),
+    ...Object.values(CONFLICT_STYLES).flatMap((t) => [t.name, t.desc]),
+  ];
+  for (const text of surfaces) {
+    for (const w of banned) assert.ok(!text.includes(w), `"${w}"가 노출 문구에 있다: ${text}`);
   }
 });
 
@@ -317,6 +416,7 @@ test("가능한 모든 유형 조합에 리포트 문구가 있다", () => {
   // 문구 뱅크가 비면 화면에 undefined가 그대로 찍힌다 — 에러가 안 나서 못 알아챈다.
   for (const key of Object.keys(COUPLE_TYPES)) {
     const [primary, attach] = key.split("-");
+    assert.ok(ATTACH_TYPES[attach], `${key}의 애착 유형 정의`);
     assert.ok(DOS_BEHAVIOR[primary] && DOS_BEHAVIOR[primary].length, `${key} Do 문구`);
     assert.ok(DONTS_BEHAVIOR[primary] && DONTS_BEHAVIOR[primary].length, `${key} Don't 문구`);
     assert.ok(DOS_ATTACH[attach], `${key} 애착 Do 문구`);
@@ -324,7 +424,7 @@ test("가능한 모든 유형 조합에 리포트 문구가 있다", () => {
     for (const r of R_AXIS) assert.ok(ROLE_NARRATIVE[primary][r.code], `${key} × ${r.code} 서사`);
   }
   for (const k of K_AXIS) assert.ok(CHILD_NARRATIVE[k.code], `${k.code} 서사`);
-  for (const style of Object.keys(CONFLICT_LABELS)) assert.ok(CONFLICT_SCRIPTS[style], `${style} 스크립트`);
+  for (const style of Object.keys(CONFLICT_STYLES)) assert.ok(CONFLICT_SCRIPTS[style], `${style} 스크립트`);
 });
 
 test("결과가 유형 라벨·연속 프로필·확신도를 항상 함께 낸다", () => {
@@ -335,7 +435,10 @@ test("결과가 유형 라벨·연속 프로필·확신도를 항상 함께 낸�
   assert.ok(COUPLE_TYPES[r.typeKey], `${r.typeKey}가 16유형 표에 없다`);
   for (const factor of Object.keys(FACTOR_ITEMS)) assert.equal(typeof r.norm[factor], "number");
   assert.ok(["clear", "moderate", "edge"].includes(r.behavior.confidence));
+  assert.ok(["clear", "edge"].includes(r.attachment.confidence));
   assert.equal(r.validity.verdict, "ok");
-  // 부부 비교에 쓰는 값은 양쪽 문장이 같은 것만 담는다 — R1~R4가 새면 안 된다
-  assert.deepEqual(Object.keys(r.comparable).sort(), ["AN1", "AN2", "AN3", "K2", "K4", "R5", "R6"]);
+  // 부부 비교에 쓰는 값은 양쪽 문장이 같은 것만 담는다 — R1~R4가 새면 안 된다.
+  // 앵커는 개별 응답값이 아니라 개념 점수로만 넘어간다.
+  assert.deepEqual(Object.keys(r.comparable).sort(), ["K1", "K2", "K3", "K4", "K5", "R5", "R6"]);
+  assert.deepEqual(Object.keys(r.anchors).sort(), ["AN1", "AN2", "AN3"]);
 });

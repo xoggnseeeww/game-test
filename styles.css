@@ -1551,28 +1551,6 @@ body {
 .cp-script-title { font-size: 13px; font-weight: 800; color: var(--accent-ink); margin-bottom: 6px; }
 .cp-script p { margin: 0; font-size: 13px; line-height: 1.75; color: #4A4750; }
 
-.cp-gauge-track {
-  display: flex;
-  height: 34px;
-  border-radius: 10px;
-  overflow: hidden;
-  margin-bottom: 10px;
-}
-
-.cp-gauge-track span {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: 800;
-  color: #fff;
-  white-space: nowrap;
-  overflow: hidden;
-}
-
-.cp-gauge-parent { background: var(--accent-ink); }
-.cp-gauge-romance { background: var(--accent); }
-
 .cp-invite-cta .cta-btn { margin-top: 4px; }
 
 .cp-invite-link {
