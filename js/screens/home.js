@@ -11,7 +11,6 @@ export function renderHome() {
           <div class="logo-badge">과</div>
           <div class="logo-text">과몰입구역</div>
         </div>
-        <div style="width:34px; height:34px; border-radius:11px; background:#fff; box-shadow:0 2px 8px rgba(0,0,0,.06); display:flex; align-items:center; justify-content:center; color:#75727B; font-size:16px;">☰</div>
       </div>
       ${adSlotMarkup("banner")}
       <div class="hero">
