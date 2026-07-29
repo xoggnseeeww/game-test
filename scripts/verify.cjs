@@ -672,6 +672,16 @@ async function playNumpathRun(page) {
   await page.click("#cp-back");
   await page.waitForFunction((prev) => document.querySelector("#cp-text")?.textContent !== prev, cq2, { timeout: 3000 });
   check("부부 체크 뒤로가기 → 직전 문항으로 한 단계만 복귀", (await page.textContent("#cp-text")) === cq1);
+  // 되돌아간 문항에는 직전에 고른 선택지가 그대로 표시돼 있어야 한다. 예전에는 뒤로 갈 때
+  // 답을 지워서, 뭘 골랐는지 못 보고 다시 답해야 했다(선택 표시 코드가 죽은 분기였다).
+  const cpBackPicked = await page.$$eval(".cp-likert-btn", (btns) =>
+    btns.map((b, i) => (b.classList.contains("picked-most") ? i + 1 : 0)).filter(Boolean)
+  );
+  check(
+    "뒤로 간 문항에 직전 선택이 그대로 표시된다",
+    cpBackPicked.length === 1 && cpBackPicked[0] === 2,
+    `picked=[${cpBackPicked}]`
+  );
 
   // 비공개 재고지는 후반부 구간 진입 시점에 딱 한 번만 나온다(§6.5.2 v3.2).
   check("비공개 재고지가 초반 문항에서는 숨겨짐", !(await page.isVisible("#cp-anchor-notice")));

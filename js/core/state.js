@@ -30,6 +30,9 @@ export const state = {
     items: null,
     answers: {},
     index: 0,
+    // 문항을 끝까지 마쳤는가. answers 개수로 대신 세면 안 된다 — 뒤로 가서 답을 고쳐보는
+    // 동안에도 답은 전부 차 있어서, 결과 화면 guard가 그냥 통과해버린다.
+    completed: false,
     startedAt: null,
     elapsedMs: null,
     partner: null,

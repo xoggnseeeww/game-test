@@ -81,15 +81,18 @@ export function resetCouple() {
     items: null,
     answers: {},
     index: 0,
+    completed: false,
     startedAt: null,
     elapsedMs: null,
     partner: state.couple ? state.couple.partner : null,
   };
 }
 
+// 문항을 끝까지 마쳤을 때만 true. 진행 상태를 answers 개수로 세지 않는 이유는
+// state.js의 `completed` 주석 참고 — 뒤로 가서 답을 다시 보는 중에도 답은 전부 차 있다.
 export function coupleReady() {
   const c = state.couple;
-  return Boolean(c.items && c.items.length && Object.keys(c.answers).length >= c.items.length);
+  return Boolean(c.completed && c.items && Object.keys(c.answers).length >= c.items.length);
 }
 
 // 응답 품질 플래그가 2개 이상이면 결과를 내지 않는다(§5.0). 배우자 초대 링크도 같은 기준으로
@@ -216,6 +219,7 @@ export function renderCoupleSetup() {
     state.couple.items = assembleQuestionnaire(picked);
     state.couple.answers = {};
     state.couple.index = 0;
+    state.couple.completed = false;
     state.couple.startedAt = null;
     state.couple.elapsedMs = null;
     go("couple-question");
@@ -262,6 +266,7 @@ export function renderCoupleQuestion() {
 
   function finish() {
     state.couple.elapsedMs = Date.now() - state.couple.startedAt;
+    state.couple.completed = true;
     go("couple-ad");
   }
 
@@ -295,12 +300,13 @@ export function renderCoupleQuestion() {
     }
   }
 
+  // 뒤로 가도 답을 지우지 않는다. ${ITEM_TOTAL}문항짜리 검사에서 직전에 뭘 골랐는지 못 보고
+  // 다시 답해야 하는 건 그 자체로 오답을 부른다. 예전에는 여기서 답을 지웠는데,
+  // "답이 다 찼으면 완료"라고 진행 상태를 세고 있어서 지우지 않으면 결과 화면 guard가
+  // 통과해버렸기 때문이다 — 진행 상태를 `completed` 플래그로 옮기면서 그럴 이유가 없어졌다.
   app.querySelector("#cp-back").addEventListener("click", () => {
     if (state.couple.index > 0) {
       state.couple.index -= 1;
-      // 되돌아간 문항의 답은 지운다. 남겨두면 "이미 답했다"는 표시와 실제 진행 상태가
-      // 어긋나서, 마지막 문항에서 뒤로 갔다 오면 완료로 착각하는 경우가 생긴다.
-      delete state.couple.answers[items[state.couple.index].code];
       renderCurrent();
     } else {
       go("couple-setup");

@@ -210,6 +210,9 @@ couple-guide  /test/couple/guide  — 이용 안내. guard 없음, 인트로·�
 - **초대받은 쪽은 문항을 마치면 개인 결과가 아니라 결합 결과로 간다.** 초대 링크의 목적이
   "합쳐 보기"인데 개인 결과에서 멈추면 스스로 다시 찾아가야 한다 — `couple-ad`의 continue가
   `state.couple.partner` 유무로 목적지를 고른다.
+- **뒤로가기는 답을 지우지 않는다.** 되돌아간 문항에 직전 선택이 그대로 표시된다. 진행 상태는
+  `state.couple.completed` 플래그로 따로 들고 있어서, 답을 고치러 뒤로 간 동안에도 결과 화면
+  guard(`coupleReady()`)는 열리지 않는다 → `docs/DECISIONS.md` D-44
 - `couple-shared`(`/test/couple/result/<슬러그>`)는 16유형 소개 페이지. 공유 버튼은 **이 주소만**
   내보낸다 — 배우자 코드가 담긴 주소를 공유 버튼에 걸면 아무에게나 내 점수가 실린 링크가 나간다.
 

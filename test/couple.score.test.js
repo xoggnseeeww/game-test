@@ -473,3 +473,28 @@ test("결과가 유형 라벨·연속 프로필·확신도를 항상 함께 낸�
   assert.deepEqual(Object.keys(r.comparable).sort(), ["K1", "K2", "K3", "K4", "K5", "R5", "R6"]);
   assert.deepEqual(Object.keys(r.anchors).sort(), ["AN1", "AN2", "AN3"]);
 });
+
+// 진행 상태를 "답이 다 찼는가"로 세면, 마지막 문항에서 뒤로 간 순간에도 답은 전부 차 있어서
+// 결과 화면 guard가 통과해버린다. 예전에는 그걸 막으려고 뒤로 갈 때 답을 지웠는데,
+// 그러면 직전에 뭘 골랐는지 못 보고 다시 답하게 된다. 그래서 완료 여부를 별도 플래그로 든다.
+test("결과 화면 guard는 답 개수가 아니라 완료 플래그를 본다", async () => {
+  const { state } = await import("../js/core/state.js");
+  const { coupleReady } = await import("../js/tests/couple/screens.js");
+
+  const items = ANCHOR_ITEMS.map((it) => ({ code: it.code }));
+  const answers = {};
+  for (const it of items) answers[it.code] = 3;
+
+  state.couple.items = items;
+  state.couple.answers = answers;
+
+  state.couple.completed = false;
+  assert.equal(coupleReady(), false, "답만 다 차면 통과하면 안 된다");
+
+  state.couple.completed = true;
+  assert.equal(coupleReady(), true);
+
+  // 완료했더라도 문항지가 없으면(=새로고침으로 state가 날아간 뒤) 결과를 그릴 수 없다.
+  state.couple.items = null;
+  assert.equal(coupleReady(), false);
+});
