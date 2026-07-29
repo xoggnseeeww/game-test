@@ -3,20 +3,24 @@
 > 이 파일은 1~2k 토큰 이하를 유지한다 — "언젠가 할 일"이 아니라 "지금 유효한 작업"만.
 
 ## 현재 작업
-없음. 2026-07-28: 광고 수익화 작업 3건(광고 게이트 추가·AdFit SPA 재스캔 수정·슬롯 밀도 확대+문항 화면
-in-place 렌더 전환) + DISC 검사 사용자 노출 명칭을 "직장인 유형검사"로 변경 + 병렬 세션 작업(딜레마 4택
-재설계·데이터팬트리 연동) + 홈 화면 기능 없는 헤더 ☰ 버튼 제거 전부 메인 머지 완료.
-상세 이력은 `PROGRESS.md` 2026-07-28 항목 참고 — 특히 광고 게이트 화면 2개(`reaction-ad`/`dilemma-ad`),
-광고 로더 메커니즘(`refreshAds()`), 문항 화면 in-place 렌더 전환의 배경은 거기 있다.
-관련 결정: `docs/DECISIONS.md` D-24(딜레마 4택)·D-25(광고 게이트)·D-26(슬롯 밀도+in-place 렌더)·
-D-27(DISC → "직장인 유형검사" 명칭).
+없음. 2026-07-28: 독립 미니게임 **NumPath: Stack & Clear**(숫자 경로 퍼즐) 추가 + main 머지 완료.
+`js/games/numpath/`(engine·generate·solve·audio·play·screens·index) 신설, 라우터에
+`registerGame`/`listGames` 신규 도입(`registerTest`/`listTests`와 대칭), `/game/numpath/*` 4화면.
+`renderGameList()`가 이제 `listGames()`로 카드를 자동 생성해 "미니게임 목록이 비어 있음" 항목이
+해소됨. 리뷰 중 `starsFor()`의 2성 등급이 모든 레벨에서 도달 불가능하던 버그를 찾아 같이 수정.
+`npm test` 61/61, `scripts/verify.cjs` 64/64(로컬, 여러 차례 재현) 통과.
+관련 결정: `docs/decisions/2027-h1.md` D-28(독립 게임 레지스트리)·D-29(공유 URL, D-7과 반대
+방향)·D-30(타일 모델)·D-31(1차 범위 축소). 상세는 `docs/numpath-architecture.md`.
+`docs/architecture.md`가 15KB를 넘겨 자동 분리 규칙에 따라 `docs/adhd-architecture.md` ·
+`docs/disc-architecture.md` · `docs/numpath-architecture.md`로 나뉘었다 — 이제부터 ADHD/DISC
+상세를 찾을 땐 architecture.md가 아니라 이 세 파일을 본다.
+
+이전(2026-07-28 앞부분, 메인 머지 완료): 광고 수익화 3건·DISC 명칭 변경·딜레마 4택 재설계·
+데이터팬트리 연동·홈 화면 기능 없는 헤더 ☰ 버튼 제거. 상세는 `PROGRESS.md` 2026-07-28 항목,
+관련 결정은 `docs/DECISIONS.md` D-24~D-27.
 
 ## 다음 작업 우선순위
-1. **미니게임 목록이 비어 있음** — `/game`이 "준비 중" 빈 화면인데, 딜레마 게임은 이미 동작한다.
-   딜레마 게임을 `/game` 목록에 노출하거나 홈 문구를 조정 / 관련 파일: `js/screens/home.js` `renderGameList()`
-   ※ 게임은 테스트 하위 경로에 속해 있다(`docs/DECISIONS.md` D-4). 목록에 넣더라도 경로는 바꾸지 않는다 — id·경로 변경 금지(D-16)
-   ⚠️ **반응속도 게임은 여기 넣지 않는다** — 이제 ADHD 문항을 다 풀어야만 들어갈 수 있는 필수 단계라(D-19),
-   미니게임 목록에서 단독으로 열도록 노출하면 guard가 사용자를 ADHD 인트로로 되돌려버려 혼란만 준다.
+없음.
 
 ## 배포 후 확인 필요
 > 샌드박스는 아웃바운드가 프록시로 막혀 아래를 **확인하지 못했다.** "확인됨"으로 간주하지 말 것.
@@ -32,6 +36,13 @@ D-27(DISC → "직장인 유형검사" 명칭).
   ② 그 요청이 200인가(Network) ③ 둘 다 정상이면 코드가 아니라 **AdFit 쪽 노출 유예/미충족**이다(승인 직후 몇 시간~1일, 트래픽 부족 시 미충족)
 - **OG 이미지 실제 미리보기** — 카카오톡/트위터/페이스북 디버거로 `https://fun.data-pantry.com/assets/og-image.png`가 실제로 불러와지는지, 카드가 `summary_large_image`로 정상 렌더되는지 배포 후 확인 필요 (샌드박스는 절대경로 이미지 요청을 외부에서 검증 못 함)
 - **데이터팬트리 헤더 FUN 버튼** — `data-pantry-web-site` 저장소의 헤더에 새 링크를 추가했음. 두 사이트가 각각 배포된 뒤 실제로 FUN 버튼 → `fun.data-pantry.com` 이동이 되는지, 이 사이트 하단 `by 데이터팬트리` 링크 → `data-pantry.com` 이동이 되는지 상호 확인 필요
+- **NumPath Web Audio 실기기 동작** — 헤드리스엔 오디오 출력이 없어 확인 못함. iOS Safari의 첫
+  제스처 전 `AudioContext` suspended 상태에서 타일 클릭으로 정말 resume되는지, 무음 스위치일 때
+  거슬리지 않는지 확인 필요
+- **NumPath 광고 슬롯 실제 노출** — 기존 항목과 같은 이유(`t1.daumcdn.net` 차단)로 `/game/numpath/*`
+  4화면·광고 게이트(`numpath-ad`)의 300×250 포함해서 실기기 확인 필요
+- **NumPath 5×5 보드 터치 히트 영역** — 고레벨(레벨 4) 그리드의 타일이 실제 손가락으로 누르기에
+  충분한 크기인지 실기기에서 확인 필요
 - **홈 화면 헤더 레이아웃** — 기능 없던 우측 상단 ☰ 아이콘 제거 후 로고만 남은 좌측 정렬이 실제 배포본에서도 깨지지 않는지 확인 필요
 
 ## 알려진 이슈
