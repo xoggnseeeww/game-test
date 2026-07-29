@@ -30,14 +30,24 @@ export function renderNumpathPlay() {
         <div class="back-title">NumPath</div>
         <button class="exit-btn" aria-label="홈으로 가기">🏠</button>
       </div>
+      <div class="np-goal">
+        <div class="np-goal-row">
+          <div class="np-goal-block">
+            <span class="np-goal-label">현재값</span>
+            <span class="np-goal-value" id="np-current"></span>
+          </div>
+          <div class="np-goal-arrow">→</div>
+          <div class="np-goal-block">
+            <span class="np-goal-label">목표값</span>
+            <span class="np-goal-value np-goal-value--target" id="np-target"></span>
+          </div>
+        </div>
+        <p class="np-goal-hint">현재값이 목표값과 정확히 같아지면 클리어!</p>
+      </div>
       <div class="np-hud">
         <div class="np-hud-row">
-          <div class="np-hud-item"><span class="np-hud-label">STAGE</span><span class="np-hud-value" id="np-stage"></span></div>
-          <div class="np-hud-item"><span class="np-hud-label">TARGET</span><span class="np-hud-value" id="np-target"></span></div>
-        </div>
-        <div class="np-hud-row">
-          <div class="np-hud-item"><span class="np-hud-label">CURRENT</span><span class="np-hud-value np-hud-value--accent" id="np-current"></span></div>
-          <div class="np-hud-item"><span class="np-hud-label">MOVES</span><span class="np-hud-value" id="np-moves"></span></div>
+          <div class="np-hud-item"><span class="np-hud-label">스테이지</span><span class="np-hud-value" id="np-stage"></span></div>
+          <div class="np-hud-item"><span class="np-hud-label">이동 횟수</span><span class="np-hud-value" id="np-moves"></span></div>
         </div>
       </div>
       <div class="np-board" id="np-board"></div>
