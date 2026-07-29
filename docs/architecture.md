@@ -21,10 +21,10 @@
 브라우저 네이티브 ES 모듈. 번들러가 없으므로 **import 경로는 실제 파일 경로 그대로**이며 확장자 `.js`가 필수다.
 
 ```
-js/main.js              부팅. registerScreens / registerTest 호출 후 start()
+js/main.js              부팅. registerScreens / registerTest / registerGame 호출 후 start()
 js/core/
-  router.js             화면 레지스트리 · 경로 해석 · guard · teardown · 테마 · history · 렌더 후 refreshAds()
-  state.js              단일 상태 객체 (테스트별 네임스페이스)
+  router.js             화면 레지스트리 · 테스트/게임 레지스트리 · 경로 해석 · guard · teardown · 테마 · history · 렌더 후 refreshAds()
+  state.js              단일 상태 객체 (테스트별·게임별 네임스페이스)
   dom.js                el() · bindNav() · showModal() · bindAdGate()(광고 게이트 카운트다운)
   share.js              공유 URL · navigator.share · 결과 카드 캔버스
   util.js               shuffle · normalizePath · roundRect · localStorage 방어 래퍼
@@ -35,12 +35,21 @@ js/tests/<id>/
   score.js              채점 (DOM을 모른다 → node --test로 직접 검증 가능)
   screens.js            렌더 함수
   index.js              디스크립터: <id>Test(메타) + <id>Screens(화면 배열)
+js/games/<id>/          테스트에 속하지 않는 독립 미니게임(예: numpath)
+  data.js               레벨 커브 · 상수 (단일 소스)
+  engine.js             순수 게임 로직 — 이동/Undo/클리어 판정 (DOM을 모른다)
+  generate.js            역산(reverse engineering) 퍼즐 생성기 (DOM을 모른다)
+  solve.js               DFS 솔버 — 해 개수 · 최적 이동수 (DOM을 모른다)
+  audio.js               Web Audio 효과음 (외부 파일 없음)
+  play.js                플레이 화면 — in-place 렌더 필요해서 screens.js와 분리
+  screens.js            인트로 · 광고 게이트 · 결과 화면
+  index.js               디스크립터: <id>Game(메타) + <id>Screens(화면 배열)
 ```
 
-**의존 방향**: `tests/*` → `core/*`. `core`는 테스트를 모른다.
-`screens/home.js`는 `listTests()`로 등록된 테스트를 조회할 뿐, 개별 테스트를 import 하지 않는다 — **테스트를 추가해도 홈 화면 파일은 안 고친다.**
+**의존 방향**: `tests/*`·`games/*` → `core/*`. `core`는 테스트도 게임도 모른다.
+`screens/home.js`는 `listTests()`/`listGames()`로 등록된 것을 조회할 뿐, 개별 테스트·게임을 import 하지 않는다 — **테스트나 게임을 추가해도 홈 화면 파일은 안 고친다.**
 
-**`score.js`가 DOM을 모른다는 점이 중요하다.** 채점 로직만 순수 함수로 떼어놨기 때문에 `node --test`에서 브라우저 없이 검증된다(§8).
+**`score.js`/`engine.js`/`generate.js`/`solve.js`가 DOM을 모른다는 점이 중요하다.** 로직만 순수 함수로 떼어놨기 때문에 `node --test`에서 브라우저 없이 검증된다(§8).
 
 ## 2. 라우터 계약 (화면 디스크립터)
 
@@ -66,6 +75,11 @@ js/tests/<id>/
 **공유 주소 해석**: `parseSharedPath()`가 `/test/<testId>/result/<slug>`를 등록된 테스트의 `slugToKey`로 푼다.
 슬러그가 없는 `/test/adhd/result`는 여기 안 걸리고 일반 경로로 처리된다.
 
+**`registerGame(descriptor)` / `listGames()`** — `registerTest`/`listTests`와 대칭인 독립 미니게임
+레지스트리. 게임 디스크립터는 `{ id, card }`만 있고 `slugToKey`/`sharedScreen`이 없다 — 게임은
+결과별 슬러그 공유가 아니라 게임 주소 자체를 공유한다(§7). 반응속도·딜레마 게임은 테스트 점수에
+반영되는 하위 단계라 여기 등록하지 않는다(`docs/decisions/2026-h2.md` D-4).
+
 ## 3. 화면 표
 
 | 경로 | id | 테마 | guard |
@@ -87,30 +101,29 @@ js/tests/<id>/
 | `/test/disc/dilemma` | `dilemma-intro` | disc | 문항 미완료 → `disc-intro` |
 | `/test/disc/dilemma/play` | `dilemma-play` | disc | 문항 미완료 → `disc-intro` |
 | `/test/disc/dilemma/ad` | `dilemma-ad` | disc | 문항 미완료 → `disc-intro`, 게임 미완료 → `dilemma-intro` |
+| `/game/numpath` | `numpath-intro` | game | — |
+| `/game/numpath/play` | `numpath-play` | game | 런 없음 → `numpath-intro` |
+| `/game/numpath/ad` | `numpath-ad` | game | 런 없음 → `numpath-intro`, 런 미완료 → `numpath-play` |
+| `/game/numpath/result` | `numpath-result` | game | 런 없음 → `numpath-intro`, 런 미완료 → `numpath-play` |
 
 > ADHD 화면 id가 `test-*`인 것은 DISC보다 먼저 만들어졌기 때문이다. **이름을 바꾸지 않는다**(위 §2).
+
+**NumPath는 반응속도·딜레마 게임과 달리 테스트에 속하지 않는 독립 미니게임이다** — `/game/numpath/*`
+경로에 있고 `registerGame()`으로 `/game` 목록에 자동 노출된다(`docs/decisions/2027-h1.md` D-28).
+`numpath-play`는 `theme-game`(반응속도 게임과 같은 초록 팔레트)을 재사용한다 — 새 테마를 만들지 않았다.
 
 **두 테스트 모두 딸린 게임이 결과 화면 뒤의 선택 보너스가 아니라, 마지막 문항 직후 반드시
 거쳐야 하는 필수 단계로 통합돼 있다.** 게임 없이는(직접 URL 접속 포함) 결과를 볼 수 없고,
 별도의 "게임 결과" 화면도 없다 — 게임이 끝나면 광고 게이트를 한 번 거쳐 검사 결과로 이동해
-하나의 결과로 합쳐 보여준다.
+하나의 결과로 합쳐 보여준다. 테스트별 흐름 상세는 각각 `docs/adhd-architecture.md` ·
+`docs/disc-architecture.md`로 분리돼 있다. NumPath(테스트에 속하지 않는 독립 게임)의 흐름·게임
+로직 개요는 `docs/numpath-architecture.md` 참고.
 
-- **DISC**: 문항(12) → 딜레마 게임(8라운드) → 광고 게이트(`dilemma-ad`) → 결과. 12번째
-  문항을 답하면 `dilemma-intro`로 넘어가고, `disc-result`의 guard가 게임 완료를 요구한다.
-  `dilemma-play`의 `finish()`가 `state.disc.dilemma`를 채운 뒤 `dilemma-ad`로 이동하며,
-  게임이 실제로 유형에 영향을 줬을 때만 "⚡ 딜레마 게임 결과 반영됨" 줄이 붙는다
-  (`docs/DECISIONS.md` D-18). 뒤로가기는 두 지점: `dilemma-intro`→`disc-question`(그 guard가
-  이미 "답이 다 차 있으면 마지막 문항으로 되돌림"을 하므로 별도 상태 없이 재사용),
-  `dilemma-play`→`dilemma-intro`(문항 답변은 유지한 채 게임만 재시작).
-- **ADHD**: 문항(12) → 반응속도 게임 → 광고 게이트(`reaction-ad`) → 결과. `test-question`이
-  마지막 문항 응답 직후 `reaction-intro`로 넘어가고, `test-result`의 guard가
-  `state.lastReaction` 없이는 결과를 보여주지 않는다. 게임 통계는 `test-result`에 병합돼
-  하나의 결과로 나온다(`docs/DECISIONS.md` D-19).
-- **광고 게이트(`reaction-ad`/`dilemma-ad`)**: `core/ads.js`의 `adGateMarkup()` + `core/dom.js`의
-  `bindAdGate()`로 구성. 300×250 AdFit 광고 단위(`interstitial`)를 3초 카운트다운 뒤 "결과
-  보러 가기" 버튼이 활성화되는 방식으로, AdFit 웹 SDK에 없는 자동 전환 전면광고를 대신한다.
-  `.exit-btn`(홈)은 카운트다운과 무관하게 항상 즉시 동작 — 강제 시청이 아니라 잠깐 보게
-  하는 정도로, 이탈률을 올리지 않는 선에서 노출 기회를 하나 늘리는 게 목적이다.
+- **광고 게이트(`reaction-ad`/`dilemma-ad`/`numpath-ad`)**: `core/ads.js`의 `adGateMarkup()` +
+  `core/dom.js`의 `bindAdGate()`로 구성. 300×250 AdFit 광고 단위(`interstitial`)를 3초
+  카운트다운 뒤 "결과 보러 가기" 버튼이 활성화되는 방식으로, AdFit 웹 SDK에 없는 자동 전환
+  전면광고를 대신한다. `.exit-btn`(홈)은 카운트다운과 무관하게 항상 즉시 동작 — 강제 시청이
+  아니라 잠깐 보게 하는 정도로, 이탈률을 올리지 않는 선에서 노출 기회를 하나 늘리는 게 목적이다.
 
 ## 4. 상태(state) 모양
 
@@ -125,6 +138,10 @@ state = {
     pending: { most: null },  // DISC는 한 문항이 2단계라 반쯤 답한 상태도 state에 있어야 한다
     dilemma: null,
   },
+  numpath: {
+    run: null,   // { seed, stageIndex, stars: [] } — 퍼즐 보드 자체는 안 들고 있다(위 참고)
+    muted: false,
+  },
 }
 ```
 
@@ -134,8 +151,9 @@ state = {
 
 `disc.pending`이 state에 있는 이유: `render()`가 매번 DOM을 버리므로, 반쪽 답을 지역 변수에 두면 뒤로가기·popstate에서 사라진다.
 
-## 5. 테스트 추가 절차
+## 5. 테스트/게임 추가 절차
 
+### 테스트
 1. `js/tests/<id>/` 폴더 생성 — `data.js` / `score.js` / `screens.js` / `index.js`
 2. `index.js`에서 `<id>Test`(메타: `id`, `slugToKey`, `sharedScreen`, `card`)와 `<id>Screens`(화면 배열) export
 3. `js/main.js`에서 `registerTest(<id>Test)` **와** `registerScreens(<id>Screens)` **둘 다** 호출
@@ -143,31 +161,33 @@ state = {
 
 홈·목록 화면은 고치지 않는다. `renderPsychList()`가 `listTests()`로 카드를 만든다.
 
+### 독립 미니게임 (테스트에 속하지 않는 경우)
+1. `js/games/<id>/` 폴더 생성 — 순수 로직(`data.js`/`engine.js`/생성기·솔버가 있다면 그것도)과
+   화면(`screens.js`, 필요하면 `play.js`로 분리)을 나눈다
+2. `index.js`에서 `<id>Game`(메타: `id`, `card` — `slugToKey`/`sharedScreen` 없음)과
+   `<id>Screens`(화면 배열) export
+3. `js/main.js`에서 `registerGame(<id>Game)` **와** `registerScreens(<id>Screens)` **둘 다** 호출
+   (하나만 하면 목록 카드나 라우팅 한쪽이 조용히 빠진다 — 테스트와 같은 함정)
+4. `npm test` — `test/modules.test.js`에 새 `<id>Screens`를 import 목록에 추가해야 화면 id·경로
+   중복 검사가 이 게임도 본다
+
+홈·목록 화면은 고치지 않는다. `renderGameList()`가 `listGames()`로 카드를 만든다. 반응속도·딜레마
+게임처럼 테스트 점수에 반영되는 하위 단계는 `registerGame()`하지 않는다(D-4) — guard가 테스트
+진행 상태를 요구해서, 독립 게임으로 노출하면 사용자를 테스트 인트로로 되돌려버린다.
+
 ## 6. 채점 파이프라인
 
-### ADHD (`js/tests/adhd/score.js`)
-```
-답변 수집   → 역채점 문항은 (4 - value)로 저장
-게임 보너스 → gameBonuses(state.lastReaction) → { impulse: 0~4, focus: 0~4 }
-퍼센트      → toPct(raw + bonus), 분모 16 (= 축당 4문항 × 4점)
-프로필 키   → 축별 >= AXIS_HIGH_THRESHOLD(60) → "010" 같은 3비트
-유형        → RESULT_TYPES[key] (8종)
-```
-- `energy` 축에는 게임 보너스가 없다(근거 부재 — `docs/DECISIONS.md` D-6)
-- 이미 100%인 축에는 보너스가 실제로 반영되지 않으므로 `visibleBonus`로 표시를 거른다
-
-### DISC (`js/tests/disc/score.js`)
-- **ipsative(강제선택)**: 상황마다 4개 선택지 중 "가장 나 같은 것"과 "아닌 것"을 고른다 → 축별 원점수 합은 **항상 0**
-- 유형은 12종 (순수형 4 + 조합형 8). **대척점 조합(DS·SD·IC·CI)은 어떤 입력에도 나오지 않는다**
-- 동점이면 결정론적으로 같은 답을 준다
-- 딜레마 게임: 문항과 같은 형식(상황 8개 × D/I/S/C 4지선다, most만 — least 단계는 없음).
-  8라운드 중 한 축이 절반(4개) 이상이면 +1, 3/4(6개) 이상이면 +2. 고르게 흩어지면 보너스 없음.
-  클릭 타이밍은 더 이상 안 본다(`docs/DECISIONS.md` D-24 — 예전엔 2택 선택지 + 지연시간
-  추론이었는데 지연시간 신호가 잘 흔들려서 4택으로 바꿨다)
+ADHD·DISC 채점 파이프라인 상세는 각각 `docs/adhd-architecture.md` · `docs/disc-architecture.md`로
+분리돼 있다(15KB 자동 분리 규칙 — 본문 상단 참고). NumPath는 성향 채점이 아니라 퍼즐 생성·솔버
+로직이라 `docs/numpath-architecture.md`의 "게임 로직 개요"에 있다.
 
 ## 7. 공유 · 결과 카드 (`js/core/share.js`)
 
 - 공유 URL은 **결과별 슬러그 주소** `${origin}/test/<testId>/result/<slug>` — 페이지 자체 주소를 공유하면 친구는 빈 테스트만 본다(`docs/DECISIONS.md` D-7)
+  - **예외: NumPath는 슬러그 없는 게임 주소(`${origin}/game/numpath`)를 그대로 공유한다.** D-7이
+    막은 건 "친구가 열면 빈 화면만 보이는" 경우였다 — 심리테스트는 공유할 게 "내 결과"라 슬러그가
+    필요하지만, 게임은 공유할 게 "같은 게임"이라 인트로로 착지하는 게 정확한 동작이다
+    (`docs/decisions/2027-h1.md` D-29).
 - 공유 버튼: `navigator.share`(모바일 네이티브 공유시트) → 없으면 클립보드 복사 폴백. 카카오 전용 SDK는 쓰지 않는다(D-8)
 - 결과 카드는 canvas에 직접 그린다. `document.fonts.ready`를 먼저 기다려야 폰트가 적용된다(CDN 차단 환경에선 sans-serif 폴백)
 - 이미지 저장은 canvas → blob → `<a download>`. **자동 첨부가 아니라 다운로드**다
@@ -182,5 +202,7 @@ state = {
 | `test/disc.score.test.js` | DISC 채점 불변식 (합 0, 순서 무관, 결정론, 대척점 배제, 12유형 도달, 슬러그 왕복) |
 | `test/adhd.score.test.js` | 반응 코멘트가 억제 실패×누락 9개 조합 모두 다른 문장을 주는가 / 게임 보너스 임계값 / 이미 100%인 축엔 보너스가 안 보이는가 |
 | `test/copy.test.js` | 화면 문구의 개수가 데이터에서 파생되는가 (`docs/ERRORS.md` E-1) |
+| `test/numpath.engine.test.js` | 순차 연산 · 이동 판정(나눗셈 정수·뺄셈 양수) · Undo 왕복 불변식 · 클리어/막힘/이동초과 판정 |
+| `test/numpath.generate.test.js` | 시드 재현성 · 레벨마다 생성된 퍼즐이 항상 solve() 가능한가(교차 검증) · 별 등급 임계값 |
 
 **여기서 안 잡히는 것**: 라우팅·이벤트 바인딩·타이머·레이아웃 → `scripts/verify.cjs`(헤드리스 브라우저)의 몫이다.

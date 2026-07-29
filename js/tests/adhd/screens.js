@@ -78,6 +78,7 @@ export function renderQuestion() {
         <div class="progress-count" id="q-count"></div>
         <button class="exit-btn" aria-label="홈으로 가기">🏠</button>
       </div>
+      ${adSlotMarkup("banner", "margin-top:10px; margin-bottom:4px;")}
       <div class="question-block">
         <div class="qno" id="q-no"></div>
         <h2 id="q-text"></h2>

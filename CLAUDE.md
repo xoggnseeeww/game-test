@@ -20,6 +20,11 @@
 - 호스팅: Cloudflare Pages — 빌드 명령 없음, 출력 디렉터리 = 레포 루트
 - SPA 폴백: `_redirects` (`/*  /index.html  200`) — 없으면 하위 경로 직접 접속이 404
 - 영속 데이터: **없음** (예전엔 `localStorage["gt_reaction_best"]`로 반응속도 최고기록을 저장했으나 D-20에서 제거) / 시크릿·환경변수·백엔드 **없음**
+- 방문 분석: Cloudflare Web Analytics — `data-pantry.com` 존에 automatic setup으로 이미 등록돼 있고,
+  `fun.data-pantry.com`은 같은 존의 서브도메인이라 **코드 변경 없이 자동으로 같이 잡힌다**(2026-07-28 확인).
+  **이 레포에 분석 스크립트를 추가하지 말 것** — 페이지당 스니펫은 하나만 허용되는데 이미 상위 존에서
+  주입되고 있어서, 여기 또 넣으면 충돌한다. 대시보드는 Cloudflare 계정의 Web Analytics → `data-pantry.com`
+  → Manage site에서 경로별로 필터링해서 본다.
 
 ## 기술 스택
 빌드 없는 정적 SPA. 브라우저 네이티브 ES 모듈(`<script type="module">`), 런타임 의존성 0.
@@ -30,12 +35,13 @@
 ```
 index.html            진입점 (메타·OG·referrer 정책은 전 주소 공통 — 페이지별 미리보기 불가)
 assets/                favicon(svg) · apple-touch-icon(png) · og-image(png, 1200×630)
-js/main.js            부팅: 화면·테스트를 라우터에 등록
-js/core/              router(레지스트리·guard·teardown) · state · dom · share · util · ads
-js/screens/home.js    홈 · 심리테스트 목록(등록된 테스트에서 자동 생성) · 미니게임 목록
+js/main.js            부팅: 화면·테스트·게임을 라우터에 등록
+js/core/              router(레지스트리·guard·teardown·게임 레지스트리) · state · dom · share · util · ads
+js/screens/home.js    홈 · 심리테스트 목록(등록된 테스트에서 자동 생성) · 미니게임 목록(등록된 게임에서 자동 생성)
 js/tests/<id>/        테스트 1개 = 폴더 1개: data · score · screens · index(디스크립터)
                       현재 adhd(+반응속도 게임), disc(+딜레마 게임)
-test/                 node --test 스위트 (채점 로직 · 모듈 import/export 정합성)
+js/games/<id>/        테스트에 속하지 않는 독립 미니게임 1개 = 폴더 1개. 현재 numpath
+test/                 node --test 스위트 (채점 로직 · 게임 로직 · 모듈 import/export 정합성)
 styles.css            전체 스타일. 브랜드 색은 CSS custom properties + theme-* 클래스
 _redirects            Cloudflare Pages SPA 폴백
 serve.py              로컬 개발 서버 (SPA 폴백 포함, 개발 전용)
@@ -46,7 +52,10 @@ docs/design-draft.html  최초 디자인 목업. 배포·동작과 무관 (.clau
 ## 상세 문서
 | 문서 | 내용 |
 |------|------|
-| `docs/architecture.md` | 모듈맵 · 라우터 계약 · 화면 표 · 채점 파이프라인 |
+| `docs/architecture.md` | 모듈맵 · 라우터 계약 · 화면 표 (15KB 넘겨 테스트/게임별 상세는 아래로 분리됨) |
+| `docs/adhd-architecture.md` | ADHD 흐름 · 채점 파이프라인 |
+| `docs/disc-architecture.md` | DISC 흐름 · 채점 파이프라인 |
+| `docs/numpath-architecture.md` | NumPath 흐름 · 게임 로직(타일 모델 · 생성기 · 솔버 · 별 판정) 개요 |
 | `docs/ERRORS.md` | 오류 패턴 (같은 증상이 재발할 때) |
 | `docs/DECISIONS.md` | 설계 결정 · 기각안 · 되돌림 |
 
@@ -70,6 +79,7 @@ docs/design-draft.html  최초 디자인 목업. 배포·동작과 무관 (.clau
 > 라우터·목록 카드처럼 **레지스트리가 흡수한 결합은 여기서 뺐다** — 매트릭스를 늘리기 전에 결합을 없앨 수 있는지 먼저 본다.
 
 - 새 테스트 추가 → `js/main.js`에 `registerTest` + `registerScreens` **둘 다**. 하나만 하면 목록 카드나 공유 URL 한쪽이 조용히 빠진다
+- 새 독립 미니게임 추가(테스트에 속하지 않는 경우) → `js/main.js`에 `registerGame` + `registerScreens` **둘 다**, `test/modules.test.js`의 화면 목록에도 새 `<id>Screens` 추가. 반응속도·딜레마처럼 테스트 하위 단계인 게임은 여기 해당 안 됨(D-4)
 - 결과 유형 추가/삭제 → 같은 `data.js`의 슬러그 맵도 갱신 (없으면 공유 URL이 조용히 홈으로 폴백) — DISC는 `slug` 필드가 단일 소스라 자동
 - 문항 수 변경 → 해당 `score.js`의 만점 분모가 문항 수에서 파생되는지 확인 (ADHD `toPct` 분모 `16` = 축당 4문항 × 4점)
 - `AXIS_HIGH_THRESHOLD` 변경 → `axisIntensityText()`의 구간 경계(`60`)도 같이 조정

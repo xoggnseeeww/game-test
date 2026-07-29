@@ -15,6 +15,7 @@ export const app = typeof document !== "undefined" ? document.getElementById("ap
 
 const screens = new Map();
 const tests = new Map();
+const games = new Map();
 let pathIndex = null;
 
 export function registerScreens(defs) {
@@ -32,6 +33,17 @@ export function registerTest(descriptor) {
 
 export function listTests() {
   return [...tests.values()];
+}
+
+// 독립 미니게임 하나의 메타데이터: { id, card }. 테스트와 달리 결과가 점수에 반영되는
+// 하위 단계가 아니라 그 자체로 콘텐츠라 slugToKey/sharedScreen이 없다 — 공유는 게임
+// 주소 자체로 한다(딜레마·반응속도 게임처럼 테스트 하위에 있는 것과는 다른 성격).
+export function registerGame(descriptor) {
+  games.set(descriptor.id, descriptor);
+}
+
+export function listGames() {
+  return [...games.values()];
 }
 
 // 예전 SCREEN_TO_PATH는 ROUTES를 그냥 뒤집는 방식이라, 두 주소가 같은 화면을 가리키면

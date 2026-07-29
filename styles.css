@@ -1054,10 +1054,281 @@ body {
   color: #75727B;
 }
 
+/* NumPath: Stack & Clear. theme-game(반응속도 게임과 같은 초록 팔레트)을 그대로 재사용한다 —
+   var(--accent) 등이 body.theme-game 아래서 이미 초록으로 바뀌어 있다. */
+
+/* 목표값이 HUD의 다른 통계(스테이지·이동 횟수)와 같은 무게로 묻히지 않게, "현재값 → 목표값"을
+   전용 배너로 분리해 화면에서 가장 크고 진한 요소로 둔다. */
+.np-goal {
+  margin: 16px 20px 0;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.05);
+  padding: 16px;
+  text-align: center;
+}
+
+.np-goal-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+.np-goal-block {
+  min-width: 84px;
+}
+
+.np-goal-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  color: #B4B0A8;
+}
+
+.np-goal-value {
+  display: block;
+  margin-top: 3px;
+  font-size: 30px;
+  font-weight: 800;
+  color: #17171A;
+}
+
+.np-goal-value--target {
+  color: var(--accent);
+}
+
+.np-goal-arrow {
+  font-size: 20px;
+  font-weight: 800;
+  color: #D3CFC7;
+}
+
+.np-goal-hint {
+  margin: 10px 0 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent-ink);
+}
+
+.np-hud {
+  margin: 12px 20px 0;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.05);
+  padding: 4px 0;
+}
+
+.np-hud-row {
+  display: flex;
+}
+
+.np-hud-item {
+  flex: 1;
+  text-align: center;
+  padding: 10px 4px;
+}
+
+.np-hud-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  color: #B4B0A8;
+}
+
+.np-hud-value {
+  display: block;
+  margin-top: 2px;
+  font-size: 18px;
+  font-weight: 800;
+  color: #17171A;
+}
+
+.np-board {
+  display: grid;
+  gap: 8px;
+  margin: 18px 20px;
+}
+
+.np-tile {
+  aspect-ratio: 1;
+  border: none;
+  border-radius: 14px;
+  background: #fff;
+  color: #3B3941;
+  font-size: clamp(14px, 4.2vw, 20px);
+  font-weight: 800;
+  font-family: inherit;
+  box-shadow: 0 2px 6px rgba(0,0,0,.06);
+  cursor: pointer;
+  transition: transform .18s ease, opacity .25s ease, background .18s ease, box-shadow .18s ease;
+}
+
+.np-tile--start {
+  background: var(--accent);
+  color: #fff;
+}
+
+.np-tile--block {
+  background: #D9D5CC;
+  color: #B4B0A8;
+  cursor: default;
+  box-shadow: none;
+}
+
+.np-tile--multiplier {
+  box-shadow: 0 0 0 2px var(--accent) inset, 0 2px 6px rgba(0,0,0,.06);
+  color: var(--accent-ink);
+}
+
+.np-tile--reachable {
+  box-shadow: 0 0 0 2px var(--accent-dim) inset, 0 2px 6px rgba(0,0,0,.06);
+}
+
+.np-tile--current {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  box-shadow: 0 0 0 3px var(--accent) inset;
+  transform: scale(1.06);
+}
+
+/* 통과한 타일이 함몰되며 사라지는 느낌 — 캔버스 입자 효과 대신 CSS 트랜지션으로 근사한다. */
+.np-tile--void {
+  background: #EDEAE3;
+  color: #D3CFC7;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,.12);
+  transform: scale(.82) rotate(-4deg);
+  opacity: .45;
+  cursor: default;
+}
+
+.np-board--locked {
+  pointer-events: none;
+  opacity: .92;
+}
+
+.np-msg {
+  min-height: 20px;
+  margin: 2px 20px 0;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #75727B;
+}
+
+.np-msg--visible {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  border-radius: 12px;
+  padding: 10px 14px;
+}
+
+.np-msg--clear {
+  background: var(--accent);
+  color: #fff;
+}
+
+.np-controls {
+  display: flex;
+  gap: 8px;
+  padding: 14px 20px 0;
+}
+
+.np-ctrl-btn {
+  flex: 1;
+  background: #fff;
+  color: #3B3941;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 13px 8px;
+  border-radius: 14px;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,.05);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.np-ctrl-btn[disabled] {
+  opacity: .45;
+  cursor: default;
+}
+
+.np-mute-btn {
+  flex: 0 0 auto;
+  width: 46px;
+  padding: 13px 0;
+}
+
+.np-stage-stars {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255,255,255,.18);
+}
+
+.np-stage-star {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--on-cover-body);
+}
+
+.np-stage-star-label {
+  color: var(--on-cover);
+  letter-spacing: .04em;
+}
+
+/* 인트로 화면의 타일 안내표 — 실제 게임판과 같은 .np-tile 클래스를 그대로 써서, 시작 전에
+   본 모양이 플레이 중에도 똑같이 보인다(따로 아이콘을 새로 그릴 필요가 없다). */
+.np-legend {
+  margin: 4px 20px 0;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.05);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.np-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.np-legend-item .np-tile {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  aspect-ratio: unset;
+  font-size: 13px;
+  cursor: default;
+}
+
+.np-legend-item span {
+  font-size: 13px;
+  font-weight: 700;
+  color: #3B3941;
+  line-height: 1.4;
+}
+
+.np-legend-item b {
+  color: #17171A;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .result-card,
   .result-card .emoji {
     animation: none;
+  }
+
+  .np-tile {
+    transition: none;
   }
 }
 

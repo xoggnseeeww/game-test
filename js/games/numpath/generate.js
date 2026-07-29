@@ -1,0 +1,217 @@
+// 역산 생성기(Reverse Engineering Generation): 경로 먼저 → 수식 배치 → 더미/기믹 채우기 →
+// solve()로 검증. 이 파일은 DOM을 모른다 — engine.js와 같은 이유로 node --test가 직접 검증한다.
+//
+// 시드를 넣으면 항상 같은 보드가 나와야 하므로(데일리 모드가 나중에 이 위에 얹힌다),
+// Math.random을 쓰지 않는다. core/util.js의 shuffle()은 비시드라 여기서는 쓰지 않고,
+// 시드 PRNG·시드 셔플을 이 파일 안에 따로 둔다 — 게임 전용 함수로 core를 오염시키지 않기 위해서다.
+import { DIRS, posKey, applyOp } from "./engine.js";
+import { solve } from "./solve.js";
+import { levelFor } from "./data.js";
+
+const GENERATION_ATTEMPTS = 200;
+const MULTIPLIER_PROBABILITY = 0.35;
+
+export function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function rng() {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function randInt(rng, min, max) {
+  return min + Math.floor(rng() * (max - min + 1));
+}
+
+function pick(rng, arr) {
+  return arr[Math.floor(rng() * arr.length)];
+}
+
+function seededShuffle(rng, arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function divisorsOf(n) {
+  const out = [];
+  for (let d = 2; d <= n; d++) if (n % d === 0) out.push(d);
+  return out;
+}
+
+function isOpFeasible(op, value) {
+  if (op === "-") return value > 1;
+  if (op === "/") return divisorsOf(value).length > 0;
+  return true;
+}
+
+function pickOperand(rng, op, value) {
+  if (op === "+") return randInt(rng, 1, 9);
+  if (op === "-") return randInt(rng, 1, Math.min(9, value - 1));
+  if (op === "*") return randInt(rng, 2, 4);
+  return pick(rng, divisorsOf(value));
+}
+
+// 더미 타일은 경로 밖이라 특정 값을 전제로 배치할 필요가 없다 — 플레이 중 canEnter()가
+// 그때그때 현재값을 기준으로 진입 가능 여부를 판정한다. 그래서 여기 operand는 값 무관 범위다.
+function decoyOperand(rng, op) {
+  if (op === "*") return randInt(rng, 2, 4);
+  if (op === "/") return randInt(rng, 2, 9);
+  return randInt(rng, 1, 9);
+}
+
+// 무작위 시작 칸에서 백트래킹으로 self-avoiding 경로를 찾는다. 그리드가 작고(3×3~5×5)
+// pathLen이 짧아서(4~8) 대부분 즉시 성공하지만, 만약을 대비해 여러 시작점을 시도한다.
+function buildPath(rng, size, pathLen) {
+  const starts = [];
+  for (let r = 0; r < size; r++) for (let c = 0; c < size; c++) starts.push({ r, c });
+
+  for (const start of seededShuffle(rng, starts)) {
+    const path = walkFrom(rng, size, pathLen, start);
+    if (path) return path;
+  }
+  return null;
+}
+
+function walkFrom(rng, size, pathLen, start) {
+  const path = [start];
+  const visited = new Set([posKey(start.r, start.c)]);
+
+  function backtrack() {
+    if (path.length - 1 === pathLen) return true;
+    const { r, c } = path[path.length - 1];
+    const candidates = seededShuffle(
+      rng,
+      DIRS.map(([dr, dc]) => ({ r: r + dr, c: c + dc }))
+    ).filter(({ r: nr, c: nc }) => nr >= 0 && nr < size && nc >= 0 && nc < size && !visited.has(posKey(nr, nc)));
+
+    for (const next of candidates) {
+      visited.add(posKey(next.r, next.c));
+      path.push(next);
+      if (backtrack()) return true;
+      path.pop();
+      visited.delete(posKey(next.r, next.c));
+    }
+    return false;
+  }
+
+  return backtrack() ? path : null;
+}
+
+// 경로 칸에 숫자/연산자를 순차 배치하며 목표값을 산출한다. 매 단계 양의 정수를 유지한다
+// (÷는 그 시점 값의 약수만, −는 0 이하로 못 내려간다) — 이게 (b)/(c) 설계 결정이다.
+function assignPathValues(rng, path, level) {
+  const startValue = randInt(rng, 1, 9);
+  let value = startValue;
+  const assignments = [];
+  let multiplierUsed = 0;
+
+  for (let i = 1; i < path.length; i++) {
+    const canUseMultiplier = level.gimmicks.multiplier > multiplierUsed && rng() < MULTIPLIER_PROBABILITY;
+    let op;
+    let operand;
+    let gimmick = null;
+
+    if (canUseMultiplier) {
+      op = "*";
+      operand = pick(rng, [2, 3]);
+      gimmick = "multiplier";
+      multiplierUsed++;
+    } else {
+      const feasible = level.ops.filter((o) => isOpFeasible(o, value));
+      op = pick(rng, feasible);
+      operand = pickOperand(rng, op, value);
+    }
+
+    value = applyOp(value, op, operand);
+    assignments.push({ op, operand, gimmick });
+  }
+
+  return { startValue, assignments, target: value, multiplierUsed };
+}
+
+function buildBoard(rng, level, path, assignment) {
+  const size = level.size;
+  const board = Array.from({ length: size }, () => Array(size).fill(null));
+  const pathKeys = new Set(path.map(({ r, c }) => posKey(r, c)));
+
+  board[path[0].r][path[0].c] = { type: "start", op: null, operand: null, gimmick: null, value: assignment.startValue };
+  for (let i = 1; i < path.length; i++) {
+    const { r, c } = path[i];
+    const a = assignment.assignments[i - 1];
+    board[r][c] = { type: "tile", op: a.op, operand: a.operand, gimmick: a.gimmick, value: null };
+  }
+
+  const rest = [];
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      if (!pathKeys.has(posKey(r, c))) rest.push({ r, c });
+    }
+  }
+  const shuffledRest = seededShuffle(rng, rest);
+
+  const blockCount = Math.min(level.gimmicks.block, shuffledRest.length);
+  const blockCells = shuffledRest.slice(0, blockCount);
+  for (const { r, c } of blockCells) {
+    board[r][c] = { type: "block", op: null, operand: null, gimmick: null, value: null };
+  }
+
+  const multiplierRemaining = Math.max(0, level.gimmicks.multiplier - assignment.multiplierUsed);
+  const afterBlocks = shuffledRest.slice(blockCount);
+  const multiplierCount = Math.min(multiplierRemaining, afterBlocks.length);
+  const multiplierCells = afterBlocks.slice(0, multiplierCount);
+  for (const { r, c } of multiplierCells) {
+    board[r][c] = { type: "tile", op: "*", operand: pick(rng, [2, 3]), gimmick: "multiplier", value: null };
+  }
+
+  const decoyCells = afterBlocks.slice(multiplierCount);
+  for (const { r, c } of decoyCells) {
+    const op = pick(rng, level.ops);
+    board[r][c] = { type: "tile", op, operand: decoyOperand(rng, op), gimmick: null, value: null };
+  }
+
+  return board;
+}
+
+// 스테이지 하나의 퍼즐을 만든다. 같은 (seed, stageIndex)는 항상 같은 보드를 낸다.
+// 시도 예산 안에서 해 개수가 레벨 상한을 넘지 않는 후보를 찾으면 그걸 쓰고, 예산을 다
+// 썼으면 그때까지 찾은 마지막 후보를 그대로 채택한다(역산이라 해가 최소 1개는 있다).
+export function generatePuzzle(seed, stageIndex) {
+  const level = levelFor(stageIndex);
+  const rng = mulberry32(seed);
+  let candidate = null;
+
+  for (let attempt = 0; attempt < GENERATION_ATTEMPTS; attempt++) {
+    const path = buildPath(rng, level.size, level.pathLen);
+    if (!path) continue;
+
+    const assignment = assignPathValues(rng, path, level);
+    if (assignment.target < level.targetRange[0] || assignment.target > level.targetRange[1]) continue;
+
+    const board = buildBoard(rng, level, path, assignment);
+    const puzzle = {
+      size: level.size,
+      board,
+      start: { r: path[0].r, c: path[0].c, value: assignment.startValue },
+      target: assignment.target,
+      moveLimit: level.pathLen + level.slack,
+    };
+
+    const result = solve(puzzle, { maxSolutions: level.maxSolutions + 1 });
+    if (result.count === 0) continue; // 역산 경로 자체가 해이므로 이론상 도달하지 않는다
+
+    candidate = { puzzle, minMoves: result.minMoves, solutionCount: result.count };
+    if (result.count <= level.maxSolutions) return candidate;
+  }
+
+  if (!candidate) {
+    throw new Error(`NumPath 퍼즐 생성 실패: stage=${stageIndex} seed=${seed} — LEVELS 설정을 확인할 것`);
+  }
+  return candidate;
+}

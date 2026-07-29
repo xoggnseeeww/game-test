@@ -90,6 +90,117 @@ async function playCptGame(page) {
   }
 }
 
+// NumPath 보드를 DOM(data-r/data-c/data-type/data-op/data-operand/data-value)에서 읽어
+// 순수 객체로 재구성한다. 페이지 안 엔진(js/games/numpath/engine.js)을 그대로 가져다 쓰지
+// 않고 아래 solveNumpath()가 완전히 독립된 DFS를 새로 구현하는 이유: 페이지 엔진 자체에
+// 버그가 있으면 페이지 엔진을 재사용한 검증은 그 버그를 같이 통과시켜버린다.
+// 결론이 서로 다르면(예: 여기선 해가 없는데 생성기는 있다고 우겼다) 그게 진짜 버그 신호다.
+async function readNumpathBoard(page) {
+  const size = parseInt(await page.getAttribute(".np-board", "data-size"), 10);
+  const tiles = await page.$$eval(".np-tile", (nodes) =>
+    nodes.map((n) => ({
+      r: parseInt(n.dataset.r, 10),
+      c: parseInt(n.dataset.c, 10),
+      type: n.dataset.type,
+      op: n.dataset.op || null,
+      operand: n.dataset.operand ? parseInt(n.dataset.operand, 10) : null,
+      value: n.dataset.value ? parseInt(n.dataset.value, 10) : null,
+    }))
+  );
+  const board = Array.from({ length: size }, () => Array(size).fill(null));
+  let start = null;
+  for (const t of tiles) {
+    board[t.r][t.c] = t;
+    if (t.type === "start") start = t;
+  }
+  const target = parseInt((await page.textContent("#np-target")).trim(), 10);
+  const moveLimit = parseInt((await page.textContent("#np-moves")).split("/")[1], 10);
+  return { size, board, start, target, moveLimit };
+}
+
+function solveNumpath(puzzle) {
+  const DIRS = [
+    [-1, 0],
+    [1, 0],
+    [0, -1],
+    [0, 1],
+  ];
+  const visited = new Set([`${puzzle.start.r},${puzzle.start.c}`]);
+  let found = null;
+
+  function applyOp(v, op, operand) {
+    if (op === "+") return v + operand;
+    if (op === "-") return v - operand;
+    if (op === "*") return v * operand;
+    if (op === "/") return v / operand;
+    throw new Error(`solveNumpath: 알 수 없는 연산자 ${op}`);
+  }
+
+  function dfs(r, c, value, moves, path) {
+    if (found) return;
+    if (value === puzzle.target) {
+      found = path.slice();
+      return;
+    }
+    if (moves >= puzzle.moveLimit) return;
+    for (const [dr, dc] of DIRS) {
+      const nr = r + dr;
+      const nc = c + dc;
+      if (nr < 0 || nr >= puzzle.size || nc < 0 || nc >= puzzle.size) continue;
+      const key = `${nr},${nc}`;
+      if (visited.has(key)) continue;
+      const cell = puzzle.board[nr][nc];
+      if (!cell || cell.type === "block") continue;
+      const next = applyOp(value, cell.op, cell.operand);
+      if (cell.op === "/" && !Number.isInteger(next)) continue;
+      if (next <= 0) continue;
+      visited.add(key);
+      path.push({ r: nr, c: nc });
+      dfs(nr, nc, next, moves + 1, path);
+      path.pop();
+      visited.delete(key);
+      if (found) return;
+    }
+  }
+
+  dfs(puzzle.start.r, puzzle.start.c, puzzle.start.value, 0, []);
+  return found;
+}
+
+// 한 런 전체를 자체 솔버가 찾은 경로대로 끝까지 클릭해 클리어한다. 스테이지 수는 상수를
+// import하지 않고 HUD 진행률 표시("1 / 6")에서 읽는다 — playCptGame과 같은 이유(D-17).
+async function playNumpathRun(page) {
+  const firstStageText = await page.textContent("#np-stage");
+  const total = parseInt(firstStageText.split("/")[1], 10);
+  if (!Number.isInteger(total) || total <= 0) {
+    throw new Error(`playNumpathRun: 스테이지 수를 못 읽었다 — "${firstStageText}"`);
+  }
+
+  for (let stage = 0; stage < total; stage++) {
+    await page.waitForSelector(".np-board .np-tile");
+    const puzzle = await readNumpathBoard(page);
+    const solutionPath = solveNumpath(puzzle);
+    if (!solutionPath) {
+      throw new Error(`playNumpathRun: 자체 솔버가 스테이지 ${stage}의 해를 못 찾음 — 생성기/엔진 불일치 의심`);
+    }
+    for (const { r, c } of solutionPath) {
+      await page.click(`.np-tile[data-r="${r}"][data-c="${c}"]`);
+    }
+    if (stage < total - 1) {
+      // 다음 스테이지의 target이 우연히 이전 스테이지와 같은 값일 수 있어(둘 다 무작위
+      // 범위 안에서 뽑힌 숫자) target 텍스트로 전환을 기다리면 안 된다 — #np-stage는
+      // 스테이지마다 반드시 1씩 늘어나므로 이걸로 전환 완료를 확인한다.
+      const prevStageText = await page.textContent("#np-stage");
+      await page.waitForFunction(
+        (prev) => document.querySelector("#np-stage")?.textContent !== prev,
+        prevStageText,
+        { timeout: 3000 }
+      );
+    }
+  }
+  return total;
+}
+
 (async () => {
   const browser = await chromium.launch({
     executablePath: findChromium(),
@@ -212,8 +323,8 @@ async function playCptGame(page) {
     `mark=${await loaderMark(page)} (문항 ${adhdTotal - 1}개 통과)`
   );
   check(
-    "ADHD 문항 화면에 광고 슬롯 정확히 1개(중복 누적 없음)",
-    (await page.$$eval(".ad-slot", (l) => l.length)) === 1,
+    "ADHD 문항 화면에 광고 슬롯 정확히 2개(상단+하단, 중복 누적 없음)",
+    (await page.$$eval(".ad-slot", (l) => l.length)) === 2,
     `${await page.$$eval(".ad-slot", (l) => l.length)}개`
   );
   await page.waitForSelector(".option-btn");
@@ -324,8 +435,8 @@ async function playCptGame(page) {
     `mark=${await loaderMark(page)} (문항 ${discTotal - 1}개 통과)`
   );
   check(
-    "DISC 문항 화면에 광고 슬롯 정확히 1개(중복 누적 없음)",
-    (await page.$$eval(".ad-slot", (l) => l.length)) === 1,
+    "DISC 문항 화면에 광고 슬롯 정확히 2개(상단+하단, 중복 누적 없음)",
+    (await page.$$eval(".ad-slot", (l) => l.length)) === 2,
     `${await page.$$eval(".ad-slot", (l) => l.length)}개`
   );
   // 마지막 문항 (1단계 + 2단계) — 끝나면 딜레마 게임으로 넘어간다
@@ -373,6 +484,135 @@ async function playCptGame(page) {
   await goto("/test/disc/dilemma/result");
   check("제거된 딜레마 결과 경로 → 홈 폴백", await page.isVisible(".hero-title"), page.url());
 
+  // === NumPath: 미니게임 목록 노출 · 자체 솔버로 완주 · in-place 스테이지 전환 · Undo/Reset · onLeave ===
+  // 반응속도·딜레마 게임과 달리 registerGame()된 독립 게임이라 /game 목록에 실제로 나와야 한다
+  // (CURRENT_TASK.md "미니게임 목록이 비어 있음" 항목이 이걸로 해소된다).
+  await goto("/game");
+  const gameCards = await page.$$eval(".test-card .name", (n) => n.map((e) => e.textContent.trim()));
+  check("미니게임 목록에 NumPath 카드 노출(빈 상태 아님)", gameCards.includes("NumPath: Stack & Clear"), gameCards.join(" | "));
+
+  await page.click('[data-nav="numpath-intro"]');
+  check("NumPath 인트로 주소", page.url().endsWith("/game/numpath"), page.url());
+  await page.click("#start-btn");
+  await page.click(".modal-btn-primary").catch(() => {});
+  await page.waitForSelector(".np-board .np-tile", { timeout: 5000 });
+  check("NumPath 플레이 진입 → HUD 채워짐", page.url().endsWith("/game/numpath/play"), page.url());
+  const npHudFilled =
+    /\d/.test(await page.textContent("#np-target")) &&
+    /\d/.test(await page.textContent("#np-current")) &&
+    /\d\s*\/\s*\d/.test(await page.textContent("#np-moves"));
+  check("NumPath HUD(TARGET/CURRENT/MOVES) 채워짐", npHudFilled);
+
+  // Undo/Reset: 한 칸 이동 → Undo로 되돌리고 → 다시 이동 → Reset으로 처음 상태까지 되돌린다.
+  {
+    const puzzle0 = await readNumpathBoard(page);
+    const path0 = solveNumpath(puzzle0);
+    if (!path0) throw new Error("NumPath Undo/Reset 검사: 자체 솔버가 스테이지 0의 해를 못 찾음");
+    const startValueText = await page.textContent("#np-current");
+    const first = path0[0];
+
+    await page.click(`.np-tile[data-r="${first.r}"][data-c="${first.c}"]`);
+    const afterMoveValue = await page.textContent("#np-current");
+    const startTileVoidAfterMove = await page.$eval(
+      `.np-tile[data-r="${puzzle0.start.r}"][data-c="${puzzle0.start.c}"]`,
+      (n) => n.classList.contains("np-tile--void")
+    );
+    check(
+      "NumPath 이동 후 CURRENT 값이 바뀌고 이전 칸은 소멸 표시됨",
+      afterMoveValue !== startValueText && startTileVoidAfterMove,
+      `${startValueText} → ${afterMoveValue}`
+    );
+
+    await page.click("#np-undo");
+    const afterUndoValue = await page.textContent("#np-current");
+    const startTileVoidAfterUndo = await page.$eval(
+      `.np-tile[data-r="${puzzle0.start.r}"][data-c="${puzzle0.start.c}"]`,
+      (n) => n.classList.contains("np-tile--void")
+    );
+    check(
+      "NumPath Undo → CURRENT 값·소멸 표시 모두 원복",
+      afterUndoValue === startValueText && !startTileVoidAfterUndo,
+      `${afterMoveValue} → ${afterUndoValue}`
+    );
+
+    await page.click(`.np-tile[data-r="${first.r}"][data-c="${first.c}"]`);
+    await page.click("#np-reset");
+    const afterResetValue = await page.textContent("#np-current");
+    const afterResetMoves = await page.textContent("#np-moves");
+    check(
+      "NumPath Reset → 시작 상태로 완전히 복귀",
+      afterResetValue === startValueText && afterResetMoves.trim().startsWith("0"),
+      `value=${afterResetValue} moves=${afterResetMoves}`
+    );
+  }
+
+  // 스테이지 전환이 in-place인가 — go()로 화면을 다시 그리면 광고 슬롯도 새로 만들어져
+  // refreshAds()가 스테이지마다 실행된다(D-26과 같은 회귀). 로더 표시가 스테이지 전환 뒤에도
+  // 그대로 남아있어야 in-place 렌더가 지켜지고 있다는 뜻이다.
+  await markLoader(page, "numpath-play");
+  // target 텍스트는 스테이지가 바뀌어도 우연히 같은 값일 수 있어(playNumpathRun과 같은 이유)
+  // #np-stage로 전환을 확인한다.
+  const npFirstStageText = await page.textContent("#np-stage");
+  {
+    const puzzleForAdvance = await readNumpathBoard(page);
+    const pathForAdvance = solveNumpath(puzzleForAdvance);
+    if (!pathForAdvance) throw new Error("NumPath in-place 전환 검사: 자체 솔버가 스테이지 0의 해를 못 찾음");
+    for (const { r, c } of pathForAdvance) {
+      await page.click(`.np-tile[data-r="${r}"][data-c="${c}"]`);
+    }
+  }
+  await page.waitForFunction(
+    (prev) => document.querySelector("#np-stage")?.textContent !== prev,
+    npFirstStageText,
+    { timeout: 3000 }
+  );
+  check(
+    "NumPath 스테이지 전환 후에도 광고 로더 태그 유지(in-place, 재마운트 아님)",
+    (await loaderMark(page)) === "numpath-play",
+    `mark=${await loaderMark(page)}`
+  );
+  check("NumPath 스테이지 전환 시 광고 슬롯 정확히 1개(중복 누적 없음)", (await page.$$eval(".ad-slot", (l) => l.length)) === 1);
+
+  // === 스테이지 클리어 직후(다음 스테이지로 넘어가기 전 900ms 지연 중) 이탈해도
+  // 남은 setTimeout이 다른 화면을 밀어버리지 않는가 (E-4와 같은 종류의 버그) ===
+  {
+    const puzzleForLeave = await readNumpathBoard(page);
+    const pathForLeave = solveNumpath(puzzleForLeave);
+    if (!pathForLeave) throw new Error("NumPath onLeave 검사: 자체 솔버가 해를 못 찾음");
+    for (const { r, c } of pathForLeave) {
+      await page.click(`.np-tile[data-r="${r}"][data-c="${c}"]`);
+    }
+    // 클리어 직후, 다음 스테이지 로드를 예약하는 setTimeout이 아직 안 끝난 상태에서 이탈한다.
+    await page.click('[data-nav="numpath-intro"]');
+    await page.waitForTimeout(1500); // 살아남은 타이머가 있으면 이 사이에 화면을 밀어버린다
+    check(
+      "NumPath 클리어 직후 이탈해도 화면이 밀리지 않음 (onLeave)",
+      page.url().endsWith("/game/numpath") && (await page.isVisible(".cover")),
+      page.url()
+    );
+  }
+
+  // === 나머지 런 완주 → 광고 게이트 → 결과 (자체 솔버 재사용) ===
+  await page.click("#start-btn");
+  await page.click(".modal-btn-primary").catch(() => {});
+  await page.waitForSelector(".np-board .np-tile", { timeout: 5000 });
+  await playNumpathRun(page);
+  await page.waitForSelector("#ad-gate-continue", { timeout: 5000 });
+  check("NumPath 런 완주 → 결과가 아니라 광고 게이트로 직행", page.url().endsWith("/game/numpath/ad"), page.url());
+  await page.waitForFunction(() => !document.querySelector("#ad-gate-continue").disabled, { timeout: 6000 });
+  await page.click("#ad-gate-continue");
+  await page.waitForSelector(".result-card", { timeout: 5000 });
+  check("NumPath 결과 주소", page.url().endsWith("/game/numpath/result"), page.url());
+  check(
+    "NumPath 결과에 별 기록 표시",
+    (await page.textContent(".result-card")).includes("⭐"),
+    (await page.textContent(".result-card")).replace(/\s+/g, " ").trim().slice(0, 80)
+  );
+
+  // 다시 시작 → 인트로로 (자동으로 새 런을 시작하지 않는다 — ADHD "테스트 다시하기"와 같은 패턴)
+  await page.click("#retry-btn");
+  check("NumPath 다시하기 → 인트로로(자동 재시작 아님)", page.url().endsWith("/game/numpath"), page.url());
+
   // === 공유 슬러그 주소 (두 테스트 모두) ===
   // 불변식은 "결과 카드가 뜨고 홈이 아니다" — 화면 문구는 테스트마다 다르므로 문구로 검사하지 않는다.
   for (const [p, expected, label] of [
@@ -406,6 +646,9 @@ async function playCptGame(page) {
     ["/test/adhd/reaction/play", ".cover", "반응속도 게임 플레이 (문항 미완료)"],
     ["/test/adhd/reaction/ad", ".cover", "광고 게이트 (게임 미완료, ADHD)"],
     ["/test/disc/dilemma/ad", ".cover", "광고 게이트 (게임 미완료, DISC)"],
+    ["/game/numpath/play", ".cover", "NumPath 플레이 (런 없음)"],
+    ["/game/numpath/ad", ".cover", "NumPath 광고 게이트 (런 없음)"],
+    ["/game/numpath/result", ".cover", "NumPath 결과 (런 없음)"],
   ]) {
     await goto(p);
     check(`${label} 주소 직접 접속 → 인트로 폴백`, await page.isVisible(sel), page.url());
