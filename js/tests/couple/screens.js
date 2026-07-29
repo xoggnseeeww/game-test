@@ -11,6 +11,8 @@ import {
   K_AXIS,
   LIKERT,
   ITEM_TOTAL,
+  ANCHOR_ITEMS,
+  ANCHOR_CONCEPTS,
   BEHAVIOR_LABELS,
   ATTACH_TYPES,
   CONFLICT_STYLES,
@@ -144,6 +146,7 @@ export function renderCoupleIntro() {
       <div class="cta">
         <button class="cta-btn" id="cp-start">시작하기</button>
       </div>
+      <div class="cp-guide-link"><button data-nav="couple-guide">📖 이 체크, 어떻게 쓰는 건가요?</button></div>
       ${adSlotMarkup("banner", "margin-top:6px; margin-bottom:22px;")}
     </div>
   `));
@@ -429,7 +432,8 @@ function inviteBlockMarkup() {
   return `
     <div class="cp-invite-cta">
       <div class="cp-block-title">배우자와 결과를 합쳐볼까요?</div>
-      <p class="cp-block-sub">배우자도 각자 답한 뒤 두 결과를 합치면, 서로를 어떻게 다르게 보고 있는지 볼 수 있어요.</p>
+      <p class="cp-block-sub">배우자도 각자 답한 뒤 두 결과를 합치면, <b>혼자서는 알 수 없는 것</b>이 보여요 —
+      같은 질문에 두 사람이 얼마나 다르게 답했는지. (위 결과가 더 정확해지는 건 아니에요.)</p>
       <button class="cta-btn" data-nav="couple-invite">배우자 초대 링크 만들기</button>
     </div>
   `;
@@ -559,6 +563,7 @@ export function renderCoupleInvite() {
           <button class="share-mini active" data-share="copy">🔗 링크 복사</button>
         </div>
       </div>
+      <div class="cp-guide-link"><button data-nav="couple-guide">📖 합치면 뭐가 달라지나요?</button></div>
       <p class="disclaimer">이 링크에는 결합 결과를 계산하는 데 필요한 내 점수가 담겨 있어요.
       배우자 화면에도 내가 문항마다 어떻게 답했는지는 표시되지 않습니다.
       다만 링크 자체가 암호화된 것은 아니니 <b>배우자 외 다른 사람에게는 보내지 마세요.</b><br/>
@@ -633,6 +638,7 @@ export function renderCouplePair() {
       <div class="cta">
         <button class="cta-btn" id="cp-pair-start">문항 ${ITEM_TOTAL}개 시작하기</button>
       </div>
+      <div class="cp-guide-link"><button data-nav="couple-guide">📖 합치면 뭐가 달라지나요?</button></div>
       ${adSlotMarkup("banner", "margin-top:6px; margin-bottom:22px;")}
     </div>
   `));
@@ -790,6 +796,7 @@ export function renderCoupleReport() {
       <p class="disclaimer">${SERVICE_NOTICE}<br/>
       이 결과는 두 분이 각자 답한 내용을 비교한 것이며, 문항별 응답은 어느 화면에도 표시되지 않습니다.</p>
 
+      <div class="cp-guide-link"><button data-nav="couple-guide">📖 이 결과, 어떻게 읽나요?</button></div>
       <button class="retry-btn" data-nav="couple-result">내 결과 다시 보기</button>
     </div>
   `));
@@ -903,4 +910,138 @@ async function drawCoupleCard(r) {
   ctx.fillText(`${location.origin}/test/couple`, W / 2, 1014);
 
   return canvas;
+}
+
+// ---------------------------------------------------------------- 이용 안내
+
+// 이 화면이 있는 이유: 사용자는 "둘이 하면 더 정확해진다"고 짐작하기 쉬운데, 실제 설계는
+// 그렇지 않다. 개인 점수는 자기 응답만으로 계산되고 배우자 응답은 한 글자도 들어가지 않는다.
+// 합쳐서 얻는 것은 정밀도가 아니라 **혼자서는 존재할 수 없는 정보**(인지 격차)다.
+// 이 구분을 미리 알려주지 않으면 사용자는 기대와 다른 결과를 받고 "부정확하다"고 느낀다.
+// 마케팅 문구도 같은 이유로 "둘이 하면 더 정확해집니다"가 아니라
+// "혼자서는 알 수 없는 것을 알게 됩니다" 쪽을 쓴다.
+export function renderCoupleGuide() {
+  const anchorPerConcept = ANCHOR_ITEMS.length / ANCHOR_CONCEPTS.length;
+
+  app.appendChild(el(`
+    <div>
+      <div class="back-row">
+        <button class="back-btn" data-nav="couple-intro">‹</button>
+        <div class="back-title">이용 안내</div>
+        <button class="exit-btn" data-nav="home" aria-label="홈으로 가기">🏠</button>
+      </div>
+      ${adSlotMarkup("banner", "margin-top:10px; margin-bottom:4px;")}
+
+      <div class="cover">
+        <div class="emoji">📖</div>
+        <div class="tag">부부 관계 성향 체크</div>
+        <h2>혼자서는<br/>알 수 없는 것</h2>
+        <p>혼자 해도 되고, 배우자와 함께 해도 됩니다.<br/>다만 나오는 게 서로 다릅니다.</p>
+      </div>
+
+      <div class="cp-profile">
+        <div class="cp-block-title">무엇이 나오나요</div>
+        <div class="cp-guide-two">
+          <div class="cp-guide-col">
+            <div class="head">혼자 하면</div>
+            <p>나의 관계 성향 유형, 네 가지 성향 점수, 애착 두 축 점수, 갈등이 생겼을 때의 방식.
+            그리고 <b>얼마나 확실한 결과인지</b>(확신도)까지 함께 나옵니다.</p>
+          </div>
+          <div class="cp-guide-col">
+            <div class="head">둘이 하면</div>
+            <p>위의 내용은 <b>그대로</b>이고, 여기에 <b>같은 질문에 두 사람이 얼마나 다르게 답했는지</b>가
+            더해집니다. 그리고 그 차이를 어떻게 이야기로 꺼낼지도요.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="cp-profile cp-guide-key">
+        <div class="cp-block-title">⚠️ 가장 오해하기 쉬운 것</div>
+        <p class="cp-guide-lead">둘이 한다고 <b>내 결과가 더 정확해지지는 않습니다.</b></p>
+        <p>내 유형과 점수는 <b>내가 답한 문항 ${ITEM_TOTAL}개만으로</b> 계산됩니다.
+        배우자의 답은 이 계산에 한 글자도 들어가지 않아요. 혼자 해도 개인 결과의 정확도는 똑같습니다.</p>
+        <p>합쳐서 얻는 건 "더 정확한 결과"가 아니라 <b>혼자서는 아예 존재할 수 없는 정보</b>입니다.</p>
+      </div>
+
+      <div class="cp-profile">
+        <div class="cp-block-title">예를 들면 이런 겁니다</div>
+        <div class="cp-guide-story">
+          <p>"지금의 분담이 공정하다"는 문장에 <b>내가 2점</b>을 눌렀다고 해볼게요.</p>
+          <p>이것만으로는 알 수 없습니다. 내가 유난히 예민한 걸까요, 실제로 한쪽으로 기울어 있는 걸까요?</p>
+          <p><b>배우자가 같은 문장에 4점을 눌렀다</b>는 걸 알아야
+          "두 사람이 같은 집을 다르게 보고 있다"는 이야기가 됩니다.</p>
+          <p class="punch">정밀도가 올라간 게 아니라, <b>재는 대상이 '나'에서 '우리'로 바뀐 것</b>입니다.</p>
+        </div>
+      </div>
+
+      <div class="cp-profile">
+        <div class="cp-block-title">차이 값은 오히려 더 흔들립니다</div>
+        <p class="cp-block-sub">그래서 이렇게 만들었어요.</p>
+        <p class="cp-note">두 사람의 답을 빼면 <b>두 사람의 오차가 함께 실립니다.</b>
+        이 체크에서 가장 흔들리기 쉬운 값이에요. 그래서 차이를 내는 문항만 개념 하나당
+        ${anchorPerConcept}문항씩, 모두 ${ANCHOR_ITEMS.length}문항을 썼습니다 — 다른 문항보다 두껍게 받쳐둔 겁니다.</p>
+        <p class="cp-note">반대로 <b>두 분에게 공통으로 있는 버릇은 빼는 순간 사라집니다.</b>
+        둘 다 후하게 답하는 편이라면, 그 후함은 차이값에서 상쇄돼요.</p>
+        <p class="cp-note">차이를 "몇 점"이 아니라 <b>비슷함 / 조금 다름 / 뚜렷하게 다름</b> 세 구간으로만
+        보여드리는 것도 같은 이유입니다. 소수점까지 단정할 만큼 정밀한 값이 아니니까요.</p>
+      </div>
+
+      <div class="cp-profile">
+        <div class="cp-block-title">한 사람이 대충 답하면, 둘 다 못 봅니다</div>
+        <p class="cp-note">결합 결과의 신뢰도는 두 사람의 평균이 아니라 <b>약한 쪽</b>을 따릅니다.
+        한 분이라도 응답 점검에 두 번 이상 걸리면 결합 결과를 아예 만들지 않아요.
+        서로 시간 있을 때, 각자 천천히 답해주세요.</p>
+      </div>
+
+      <div class="cp-profile">
+        <div class="cp-block-title">순서</div>
+        <ol class="cp-guide-steps">
+          <li><b>상황 고르기</b> — 호칭·역할·자녀 단계를 고르면 그 상황에 맞는 문장이 나옵니다.</li>
+          <li><b>문항에 답하기</b> — 문항 ${ITEM_TOTAL}개, 약 6분 30초.</li>
+          <li><b>내 결과 보기</b> — 여기서 끝내도 됩니다.</li>
+          <li><b>배우자 초대 링크 만들기</b> — 결과 화면 아래 버튼으로 링크를 만들어 배우자에게 보냅니다.</li>
+          <li><b>배우자가 답하면</b> — 배우자 화면에 두 분의 결합 결과가 나옵니다.</li>
+        </ol>
+        <p class="cp-note">순서를 바꿔도 됩니다. 배우자가 먼저 하고 나에게 링크를 보내도 똑같이 동작해요.</p>
+      </div>
+
+      <div class="cp-profile">
+        <div class="cp-block-title">자주 묻는 것</div>
+        <div class="cp-guide-qa">
+          <div class="q">자녀 단계는 꼭 같게 골라야 하나요?</div>
+          <p>네. 자녀 단계가 다르면 두 분이 서로 다른 문장을 받게 돼서 비교 자체가 성립하지 않고,
+          결합 결과를 만들지 않습니다. 반면 <b>역할은 달라도 되고, 둘 다 같은 걸 골라도 괜찮아요</b> —
+          두 분 다 "내가 주로 맡고 있다"고 느끼는 것 자체가 의미 있는 신호라서 따로 짚어드립니다.</p>
+
+          <div class="q">내가 문항에 어떻게 답했는지 배우자가 보게 되나요?</div>
+          <p>어느 화면에도 표시되지 않습니다. 두 분의 결과를 비교한 요약만 함께 보시게 돼요.
+          다만 초대 링크에는 결과 계산에 필요한 값이 담겨 있으니,
+          <b>배우자 외 다른 사람에게는 보내지 마세요.</b></p>
+
+          <div class="q">"결과를 만들 수 없다"고 나와요.</div>
+          <p>응답이 너무 빠르거나 한쪽 값으로만 치우쳤을 때 나오는 안내입니다.
+          틀린 답이 있어서가 아니라, 그 상태로 낸 결과는 두 분에게 도움이 안 되기 때문이에요.
+          천천히 다시 해주시면 됩니다.</p>
+
+          <div class="q">결과가 나랑 안 맞는 것 같아요.</div>
+          <p>유형 옆의 <b>확신도</b>를 봐주세요. "경계"라고 적혀 있으면 1·2위 성향이 거의 붙어 있다는
+          뜻이고, 그건 실제로 단정하기 어려운 값입니다. 유형 이름보다 <b>네 성향 점수</b>를 함께 보시는 게
+          더 정확합니다.</p>
+
+          <div class="q">다시 해도 되나요?</div>
+          <p>언제든지요. 다만 짧은 간격으로 반복하면 성향이 아니라
+          "지난번에 뭐라고 답했는지"를 재게 됩니다. 시간을 좀 두고 하시는 편이 좋아요.</p>
+        </div>
+      </div>
+
+      ${SUPPORT_MARKUP}
+      <p class="disclaimer">${SERVICE_NOTICE}</p>
+
+      <div class="cta">
+        <button class="cta-btn" data-nav="couple-intro">시작하러 가기</button>
+      </div>
+      ${adSlotMarkup("banner", "margin-top:6px; margin-bottom:22px;")}
+    </div>
+  `));
+  bindNav(app);
 }

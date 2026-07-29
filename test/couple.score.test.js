@@ -35,6 +35,8 @@ import {
   scoreItem,
   normalize,
   stepOf,
+  seedFromRaw,
+  tieBreakOrder,
   validityCheck,
   reverseMismatchCount,
   anchorScores,
@@ -175,9 +177,12 @@ test("앵커는 후반부에 흩어져 배치된다", () => {
     const items = assembleQuestionnaire(SETUP);
     const at = items.map((it, i) => (it.factor === "AN" ? i + 1 : null)).filter(Boolean);
     assert.equal(at.length, ANCHOR_ITEMS.length);
-    assert.ok(at[0] >= 34, `앵커가 너무 앞(${at[0]}번째)에서 시작한다`);
+    // 후반부(35번 이후) 구간 안에 전부 들어간다
+    assert.ok(at[0] >= 35, `앵커가 너무 앞(${at[0]}번째)에서 시작한다`);
+    assert.ok(at[at.length - 1] <= items.length, `앵커가 문항지를 벗어났다(${at[at.length - 1]})`);
+    // 앵커끼리 붙지 않는다(사이에 일반 문항 최소 1개)
     for (let i = 1; i < at.length; i++) {
-      assert.ok(at[i] - at[i - 1] >= 3, `앵커 ${at[i - 1]}·${at[i]}가 붙어 있다`);
+      assert.ok(at[i] - at[i - 1] >= 2, `앵커 ${at[i - 1]}·${at[i]}가 붙어 있다`);
     }
     // 같은 개념의 a·b는 서로 멀리 — 앞 문항을 기억하고 똑같이 맞추는 응답을 억제한다.
     for (const { key } of ANCHOR_CONCEPTS) {
@@ -284,6 +289,13 @@ test("지시 이행 문항이 틀리면 플래그가 선다", () => {
   assert.equal(bad.verdict, "warn");
 });
 
+test("정방향 만점 + 역채점 4점(차이 3.0)은 오탐하지 않는다", () => {
+  // 임계값이 3이면 이 조합이 걸린다. 자기모순이 있는 응답인 건 맞지만 "안 읽고 찍기"와
+  // 겹친다고 단정하기 어려워 3.5로 보수화했다(§5.0 v3.3).
+  const borderline = variedAnswers({ D1: 5, D2: 5, D3: 5, D4: 4 });
+  assert.equal(reverseMismatchCount(borderline), 0);
+});
+
 test("역채점 정합성 검사가 2개 요인 이상에서만 플래그를 준다", () => {
   // 정방향은 전부 5, 역채점도 5로 답하면(=읽지 않고 한쪽으로 찍기) 변환값이 1이 되어
   // 정방향 평균 5와 4점 벌어진다.
@@ -320,11 +332,30 @@ test("확신도는 원점수 1점 차이를 경계로 흡수한다", () => {
   assert.equal(resolveBehavior({ D: 50, I: 50, S: 50, C: 50 }).confidence, "edge");
 });
 
-test("동점은 D > C > S > I 순서로 갈린다", () => {
-  assert.equal(resolveBehavior({ D: 60, I: 60, S: 60, C: 60 }).primary, "D");
-  assert.equal(resolveBehavior({ D: 10, I: 60, S: 60, C: 60 }).primary, "C");
-  assert.equal(resolveBehavior({ D: 10, I: 60, S: 60, C: 10 }).primary, "S");
-  assert.equal(resolveBehavior({ D: 10, I: 60, S: 10, C: 10 }).primary, "I");
+test("동점은 시드에 따라 갈리되 같은 시드면 항상 같다", () => {
+  // 고정 순서(D>C>S>I)를 쓰면 동점 사례 전원이 D로 코드화돼 집계에서 D형 비중이
+  // 실제보다 부풀려진다. 사용자 간에는 흩어지되 같은 응답이면 재현돼야 한다.
+  const tied = { D: 60, I: 60, S: 60, C: 60 };
+  for (const seed of [0, 1, 12345, 987654321]) {
+    assert.equal(resolveBehavior(tied, seed).primary, resolveBehavior(tied, seed).primary);
+  }
+  const winners = new Set();
+  for (let seed = 0; seed < 400; seed++) winners.add(resolveBehavior(tied, seed).primary);
+  assert.deepEqual([...winners].sort(), ["C", "D", "I", "S"], "동점이 특정 요인으로만 쏠린다");
+
+  // 동점이 아니면 시드와 무관하게 점수가 이긴다
+  for (let seed = 0; seed < 50; seed++) {
+    assert.equal(resolveBehavior({ D: 10, I: 60, S: 10, C: 10 }, seed).primary, "I");
+  }
+});
+
+test("타이브레이크 시드는 원점수에서 나온다", () => {
+  // 배우자 코드에는 응답 원본이 아니라 원점수가 실린다. 시드를 원점수에서 뽑아야
+  // 상대 기기에서 다시 채점해도 같은 유형이 나온다.
+  const raw = { D: 12, I: 12, S: 12, C: 12, ANX: 10, AVO: 10, SC: 9, OC: 9 };
+  assert.equal(seedFromRaw(raw), seedFromRaw({ ...raw }));
+  assert.notEqual(seedFromRaw(raw), seedFromRaw({ ...raw, D: 13 }));
+  assert.deepEqual(tieBreakOrder(7).sort(), ["C", "D", "I", "S"], "네 요인이 모두 들어 있어야 한다");
 });
 
 // ---------------------------------------------------------------- §5.4 애착

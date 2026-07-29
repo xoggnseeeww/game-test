@@ -31,7 +31,11 @@ const QC_CONSISTENCY_GAP = 3;
 const STRAIGHT_LINE_RATIO = 0.8;
 const MIN_ELAPSED_MS = 130000;
 // 역채점 정합성: 요인 하나가 어긋나는 것은 우연일 수 있으므로 2개 요인 이상일 때만 센다.
-const REVERSE_MISMATCH_GAP = 3;
+// 임계값이 3이 아니라 3.5인 이유(§5.0 v3.3): 정방향 3문항에 5·5·5로 답하고 역채점 문항에
+// 4점을 준 사람은 차이가 정확히 3.0이라 `>=3`에 걸린다. 자기모순이 있는 응답인 건 맞지만
+// 검사가 원래 잡으려는 대상(안 읽고 찍기)과 겹친다고 단정하기는 어려워, 한 단계 보수화했다.
+// 3.5가 맞는 값인지는 실제 응답 분포를 봐야 아는 것이라 잠정값이다.
+const REVERSE_MISMATCH_GAP = 3.5;
 const REVERSE_MISMATCH_MIN = 2;
 // 같은 개념의 앵커 두 문항이 이만큼 벌어지면 본인 응답 자체가 흔들린 것으로 본다.
 const ANCHOR_INCONSISTENT_GAP = 3;
@@ -135,13 +139,38 @@ export function anchorScores(answers) {
 
 // ---------------------------------------------------------------- §5.3 행동성향 유형
 
-// 동점이면 이 순서로 앞선 요인이 이긴다. 무작위로 고르면 같은 응답이 새로고침마다
-// 다른 유형을 내놓는다.
-const TIE_BREAK = ["D", "C", "S", "I"];
+// 동점 처리(§5.3 v3.3 재설계). 예전에는 `D > C > S > I` 고정 순서로 갈랐다. 개인에게는 큰
+// 영향이 없지만(완전 동점이면 확신도가 늘 "경계"로 표기되고 리포트도 두 성향을 함께 서술한다),
+// **집계에서는 동점 사례 전원이 D로 코드화되어 D형 비중이 실제보다 부풀려진다.** 문항 자체가
+// 사회적 바람직성 편향을 이미 안고 있는데 타이브레이크가 그 위에 한 방향으로 더 얹는 구조였다.
+//
+// 시드는 요인 원점수에서 뽑는다. 같은 응답이면 새로고침해도 같은 결과가 나오고(재현성),
+// 사용자 간에는 고르게 흩어진다. 배우자 코드에는 원점수가 실리므로 **상대 기기에서 다시
+// 채점해도 같은 순서가 나온다** — 응답 원본이 아니라 원점수에서 뽑는 이유가 이것이다.
+export function seedFromRaw(raw) {
+  let h = 2166136261;
+  for (const factor of Object.keys(FACTOR_ITEMS)) {
+    h ^= raw[factor];
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
 
-export function resolveBehavior(norm) {
+export function tieBreakOrder(seed) {
+  const order = BEHAVIOR_AXES.slice();
+  let s = seed >>> 0;
+  for (let i = order.length - 1; i > 0; i--) {
+    s = (Math.imul(s, 1103515245) + 12345) >>> 0;
+    const j = s % (i + 1);
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+  return order;
+}
+
+export function resolveBehavior(norm, seed = 0) {
+  const tieBreak = tieBreakOrder(seed);
   const ranked = BEHAVIOR_AXES.slice().sort(
-    (a, b) => norm[b] - norm[a] || TIE_BREAK.indexOf(a) - TIE_BREAK.indexOf(b)
+    (a, b) => norm[b] - norm[a] || tieBreak.indexOf(a) - tieBreak.indexOf(b)
   );
   const primary = ranked[0];
   const secondary = ranked[1];
@@ -246,7 +275,7 @@ export function computeCouple(answers, { elapsedMs = null, setup = null } = {}) 
     norm[factor] = normalize(raw[factor], codes.length);
   }
 
-  const behavior = resolveBehavior(norm);
+  const behavior = resolveBehavior(norm, seedFromRaw(raw));
   const attachment = resolveAttachment(raw.ANX, raw.AVO);
   const conflict = resolveConflict(raw.SC, raw.OC);
 

@@ -621,6 +621,28 @@ async function playNumpathRun(page) {
     await page.isVisible(".cp-privacy"),
     "cp-privacy"
   );
+  // === 이용 안내 화면 ===
+  // "둘이 하면 더 정확해진다"는 오해를 미리 풀어주는 화면이라, 링크가 살아 있는지와
+  // 핵심 문장이 실제로 렌더되는지를 본다.
+  await page.click('[data-nav="couple-guide"]');
+  check("인트로 → 이용 안내", page.url().endsWith("/test/couple/guide"), page.url());
+  const guideBody = (await page.textContent("#app")).replace(/\s+/g, " ");
+  check(
+    "안내에 '개인 결과는 합쳐도 더 정확해지지 않는다'가 명시됨",
+    guideBody.includes("내 결과가 더 정확해지지는 않습니다"),
+    guideBody.slice(0, 120)
+  );
+  check("안내에 이용 순서가 있다", guideBody.includes("배우자 초대 링크 만들기"));
+  check("안내에 자주 묻는 것이 있다", guideBody.includes("자녀 단계는 꼭 같게 골라야 하나요"));
+  check("안내에도 상시 안내 링크가 있다", await page.isVisible(".cp-support"));
+  // 설명서가 "둘이 하면 더 정확" 류로 되돌아가는 변경을 막는다.
+  check(
+    "'합치면 더 정확' 류 표현 없음",
+    !/합치면 더 정확|둘이 하면 더 정확|정확도가 (올라|높아)/.test(guideBody),
+    guideBody.slice(0, 120)
+  );
+  await page.click('[data-nav="couple-intro"]');
+
   await page.click("#cp-start");
   check("시작하기 → 상황 고르기", page.url().endsWith("/test/couple/setup"), page.url());
 

@@ -12,6 +12,7 @@ import {
   renderCouplePair,
   renderCoupleReport,
   renderCoupleShared,
+  renderCoupleGuide,
   coupleReady,
   coupleBlocked,
   partnerFromUrl,
@@ -38,6 +39,15 @@ export const coupleScreens = [
     path: "/test/couple",
     title: "부부 관계 성향 체크 | 과몰입구역",
     render: renderCoupleIntro,
+    theme: "couple",
+  },
+  {
+    // 이용 안내. 진행 상태와 무관하게 언제든 볼 수 있어야 해서 guard가 없다 —
+    // "둘이 하면 더 정확해지나?" 같은 의문은 대개 시작하기 직전이나 결과를 본 직후에 생긴다.
+    id: "couple-guide",
+    path: "/test/couple/guide",
+    title: "이용 안내 | 부부 관계 성향 체크",
+    render: renderCoupleGuide,
     theme: "couple",
   },
   {

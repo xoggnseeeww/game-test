@@ -17,19 +17,26 @@ import {
 } from "./data.js";
 import { REVERSE_CODES } from "./score.js";
 
-// 앵커를 놓기 시작하는 자리(1-based)와 자리 사이 간격.
+// 앵커 6개를 놓는 자리(1-based). 35~49번 15칸 안에서, 아래 두 제약을 동시에 만족한다.
 //
-// 기획서는 zoneStart=35 · 앵커 간 minGap=2(=사이에 2문항)를 함께 요구하지만, 49문항에서
-// 두 조건은 동시에 만족할 수 없다 — 앵커 6개를 3칸 간격으로 놓으려면 마지막이 35+15=50번이
-// 되어 문항지를 벗어난다. 한 칸 앞당겨(34번부터) 이격 쪽을 지켰다. 후반부 배치의 목적
-// (자기 상황을 충분히 떠올린 뒤 응답)은 한 문항 차이로 달라지지 않는다.
-const ANCHOR_ZONE_START = 34;
-const ANCHOR_STRIDE = 3;
+//  - 앵커끼리 붙지 않는다(사이에 일반 문항 최소 1개). 붙어 나오면 "여기가 배우자와 비교되는
+//    구간이구나"를 알아차리고 그 구간에서만 방어적으로 답하게 된다.
+//  - 같은 개념의 a·b는 4문항 이상 떨어진다. 앞 문항을 기억하고 똑같이 맞추는 응답을 억제한다.
+//
+// 앵커 사이 이격을 2가 아니라 1로 두는 이유(§3.2 v3.3 교정): 6개를 2칸 이격으로 놓으려면
+// 6 + 5×2 = 16칸이 필요한데 구간은 15칸뿐이라 배치가 성립하지 않는다. 실질적으로 중요한
+// 제약은 같은 개념 a·b의 4문항 이격 쪽이고, 앵커-앵커는 1칸만 띄워도 "덩어리로 보이지 않게"
+// 하려던 목적은 달성된다.
+const ANCHOR_ZONE_START = 35;
+// 구간 안에서의 상대 위치(0-based). 앞 두 칸(35·36번)은 비워둔다 — 35번이 재고지 자리이고,
+// 재고지 **바로 다음**이 앵커여도 "이 문항이 민감하다"는 신호가 되므로 한 칸 더 띄운다.
+// 같은 개념 짝은 슬롯 (0,2)·(1,4)·(3,5)에 놓이므로 실제 간격은 4·6·5문항이 된다.
+const ANCHOR_OFFSETS = [2, 4, 6, 8, 10, 13];
 
 // 비공개 재고지를 띄우는 자리(1-based). **앵커 문항이 아닌 자리**여야 한다 — 특정 문항
 // 바로 앞에 안내를 붙이면 그 문항이 민감하다는 신호가 되어, 그 구간에서만 방어적으로
-// 답하게 만든다(§6.5.2 v3.2). 앵커가 34·37·40…이므로 35번은 일반 문항 자리다.
-export const NOTICE_POSITION = ANCHOR_ZONE_START + 1;
+// 답하게 만든다(§6.5.2 v3.2). 구간 첫 칸을 비워둔 것이 이 자리다.
+export const NOTICE_POSITION = ANCHOR_ZONE_START;
 
 // 같은 요인 문항이 연달아 나오면 앞 문항의 답이 다음 답을 끌어당긴다. 역채점 문항끼리
 // 붙어도 마찬가지로 "이번엔 반대로 답해야 한다"는 감각이 이어져, 역채점이 잡으려던
@@ -107,24 +114,29 @@ function repairReverseRuns(items, minGap) {
   return out;
 }
 
-// 앵커 6개를 후반부에 **흩어서** 놓는다.
+// 앵커 6개를 후반부 구간에 **흩어서** 놓는다.
 //
 // v3.1까지는 검사 맨 끝에 연속 배치했는데, 기여 인정·부담·공정성을 묻는 문항이 한 덩어리로
 // 붙어 나오면 "여기가 배우자와 비교되는 구간이구나"를 쉽게 알아차리고 그 구간에서만
 // 방어적으로 답하게 된다. 앵커의 존재 이유가 정직한 비교인데 배치가 그걸 방해하는 셈이다.
 //
-// 같은 개념의 a·b 문항은 슬롯을 3칸 띄워 배치한다(문항 수로는 9문항 간격) — 앞 문항을
-// 기억하고 똑같이 맞추는 응답을 억제하기 위해서다.
+// 슬롯 순서는 [c1a, c2a, c1b, c3a, c2b, c3b] — 같은 개념의 짝 사이에 다른 개념의 앵커가
+// 끼어들어, 4문항 이상 이격이 자연스럽게 만들어진다. 어느 개념이 c1/c2/c3 자리를 맡을지와
+// a·b 중 어느 쪽이 먼저 나올지는 세션마다 섞는다.
 function scatterAnchors(base, anchors, shuffleFn) {
   const order = shuffleFn(ANCHOR_CONCEPTS.map((c) => c.key));
   const byConcept = {};
   for (const key of order) {
     byConcept[key] = shuffleFn(anchors.filter((a) => a.concept === key));
   }
-  // 슬롯 배열: [c0-1st, c1-1st, c2-1st, c0-2nd, c1-2nd, c2-2nd]
+  const [c1, c2, c3] = order;
   const sequence = [
-    ...order.map((k) => byConcept[k][0]),
-    ...order.map((k) => byConcept[k][1]),
+    byConcept[c1][0],
+    byConcept[c2][0],
+    byConcept[c1][1],
+    byConcept[c3][0],
+    byConcept[c2][1],
+    byConcept[c3][1],
   ];
 
   const out = base.slice();
@@ -132,7 +144,7 @@ function scatterAnchors(base, anchors, shuffleFn) {
   // 앞에 놓일 앵커 i개가 이미 들어가 있으므로 그 자리에 그대로 splice하면 맞는다.
   // (뒤에서부터 넣으면 아직 짧은 배열의 범위를 넘어 전부 끝에 붙는다.)
   for (let i = 0; i < sequence.length; i++) {
-    out.splice(ANCHOR_ZONE_START - 1 + i * ANCHOR_STRIDE, 0, sequence[i]);
+    out.splice(ANCHOR_ZONE_START - 1 + ANCHOR_OFFSETS[i], 0, sequence[i]);
   }
   return out;
 }

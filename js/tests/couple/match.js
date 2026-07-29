@@ -21,6 +21,7 @@ import {
   FACTOR_ITEMS,
   BEHAVIOR_AXES,
   normalize,
+  seedFromRaw,
   resolveBehavior,
   resolveAttachment,
   resolveConflict,
@@ -345,7 +346,8 @@ export function decodePartner(code) {
   for (const [factor, codes] of Object.entries(FACTOR_ITEMS)) {
     norm[factor] = normalize(raw[factor], codes.length);
   }
-  const behavior = resolveBehavior(norm);
+  // 시드를 원점수에서 뽑으므로, 배우자 기기에서 다시 채점해도 본인 기기와 같은 유형이 나온다.
+  const behavior = resolveBehavior(norm, seedFromRaw(raw));
   const attachment = resolveAttachment(raw.ANX, raw.AVO);
   const conflict = resolveConflict(raw.SC, raw.OC);
 

@@ -1580,3 +1580,95 @@ body {
 .cp-support-title { font-size: 13px; font-weight: 800; color: #3B3941; margin-bottom: 6px; }
 .cp-support p { margin: 0; font-size: 12px; line-height: 1.7; color: #5C5964; }
 .cp-support ul { margin: 8px 0 0; padding-left: 18px; font-size: 12px; line-height: 1.8; color: #5C5964; }
+
+/* 이용 안내 화면 */
+.cp-guide-link {
+  padding: 6px 20px 0;
+  text-align: center;
+}
+
+.cp-guide-link button {
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  padding: 8px;
+}
+
+.cp-guide-two {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.cp-guide-col {
+  background: #F7F6FA;
+  border-radius: 14px;
+  padding: 13px 14px;
+}
+
+.cp-guide-col .head {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--accent-ink);
+  margin-bottom: 5px;
+}
+
+.cp-guide-col p { margin: 0; font-size: 13px; line-height: 1.7; color: #4A4750; }
+
+/* 가장 오해하기 쉬운 지점이라 유일하게 강조 배경을 준다 */
+.cp-guide-key { border: 2px solid var(--accent-dim); }
+
+.cp-guide-key p { font-size: 13.5px; line-height: 1.75; color: #4A4750; margin: 10px 0 0; }
+
+.cp-guide-lead {
+  font-size: 15px !important;
+  font-weight: 700;
+  color: var(--accent-ink) !important;
+}
+
+.cp-guide-story p {
+  margin: 10px 0 0;
+  font-size: 13.5px;
+  line-height: 1.75;
+  color: #4A4750;
+}
+
+.cp-guide-story .punch {
+  background: var(--accent-soft);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-top: 14px;
+}
+
+.cp-guide-steps {
+  margin: 10px 0 0;
+  padding-left: 20px;
+  font-size: 13.5px;
+  line-height: 1.9;
+  color: #4A4750;
+}
+
+.cp-guide-steps li { margin-bottom: 4px; }
+
+.cp-guide-qa .q {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #3B3941;
+  margin-top: 16px;
+}
+
+.cp-guide-qa .q:first-child { margin-top: 8px; }
+
+.cp-guide-qa p {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.75;
+  color: #4A4750;
+}
