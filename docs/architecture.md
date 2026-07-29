@@ -102,6 +102,7 @@ js/games/<id>/          테스트에 속하지 않는 독립 미니게임(예: n
 | `/test/disc/dilemma/play` | `dilemma-play` | disc | 문항 미완료 → `disc-intro` |
 | `/test/disc/dilemma/ad` | `dilemma-ad` | disc | 문항 미완료 → `disc-intro`, 게임 미완료 → `dilemma-intro` |
 | `/test/couple` · `/setup` | `couple-intro` · `couple-setup` | couple | — |
+| `/test/couple/guide` | `couple-guide` | couple | — (이용 안내, 언제든 접근 가능) |
 | `/test/couple/play` | `couple-question` | couple | 축 미선택 → `couple-intro` · 다 답했으면 마지막 문항으로 되돌림 |
 | `/test/couple/ad` · `/result` · `/invite` | `couple-ad` · `couple-result` · `couple-invite` | couple | 문항 미완료 → `couple-intro` |
 | `/test/couple/pair?p=<코드>` | `couple-pair` | couple | 코드 안 풀림 → `couple-intro` · 본인 응답 완료 → `couple-report` |
@@ -125,7 +126,7 @@ js/games/<id>/          테스트에 속하지 않는 독립 미니게임(예: n
 `docs/disc-architecture.md`로 분리돼 있다. NumPath(테스트에 속하지 않는 독립 게임)의 흐름·게임
 로직 개요는 `docs/numpath-architecture.md` 참고.
 
-**부부 관계 성향 체크만 화면이 9개다** — 축 선택·배우자 초대·결합 결과가 더 있기 때문이다.
+**부부 관계 성향 체크만 화면이 10개다** — 축 선택·이용 안내·배우자 초대·결합 결과가 더 있기 때문이다.
 백엔드가 없어 배우자 결과를 주소(`?p=<코드>`)로 실어 나르므로 `couple-pair`만 쿼리 스트링에
 의존한다. 상세는 `docs/couple-architecture.md`.
 
