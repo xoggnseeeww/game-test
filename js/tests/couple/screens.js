@@ -685,7 +685,7 @@ function gapMarkup(c) {
       <p class="cp-block-sub">누가 맞고 틀린 게 아니라, 서로 다른 자리에서 보고 있다는 신호예요.</p>
       ${rows}
       ${c.gapHidden.length
-        ? `<p class="cp-note">${c.gapHidden.map((i) => i.label).join("·")}은(는) 두 문항 사이 답이 많이 갈려서
+        ? `<p class="cp-note">${c.gapHidden.map((i) => i.label).join("·")}은 두 문항 사이 답이 많이 갈려서
            이번 결과에서는 비교하지 않았어요. 흔들리는 응답을 차이로 보여드리면 오히려 오해가 생기니까요.</p>`
         : ""}
     </div>
