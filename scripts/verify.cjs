@@ -212,8 +212,8 @@ async function playCptGame(page) {
     `mark=${await loaderMark(page)} (문항 ${adhdTotal - 1}개 통과)`
   );
   check(
-    "ADHD 문항 화면에 광고 슬롯 정확히 1개(중복 누적 없음)",
-    (await page.$$eval(".ad-slot", (l) => l.length)) === 1,
+    "ADHD 문항 화면에 광고 슬롯 정확히 2개(상단+하단, 중복 누적 없음)",
+    (await page.$$eval(".ad-slot", (l) => l.length)) === 2,
     `${await page.$$eval(".ad-slot", (l) => l.length)}개`
   );
   await page.waitForSelector(".option-btn");
@@ -324,8 +324,8 @@ async function playCptGame(page) {
     `mark=${await loaderMark(page)} (문항 ${discTotal - 1}개 통과)`
   );
   check(
-    "DISC 문항 화면에 광고 슬롯 정확히 1개(중복 누적 없음)",
-    (await page.$$eval(".ad-slot", (l) => l.length)) === 1,
+    "DISC 문항 화면에 광고 슬롯 정확히 2개(상단+하단, 중복 누적 없음)",
+    (await page.$$eval(".ad-slot", (l) => l.length)) === 2,
     `${await page.$$eval(".ad-slot", (l) => l.length)}개`
   );
   // 마지막 문항 (1단계 + 2단계) — 끝나면 딜레마 게임으로 넘어간다
