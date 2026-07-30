@@ -164,7 +164,7 @@ test("둘 다 분담이 자신에게 불리하다고 느끼면 일치 인사이�
   // 인사이트에 영향이 없어야 한다 — burdenOverlap은 AN3만 본다.
   const bothHigh = burdenOverlap(anchorsOf([3, 3, 4]), anchorsOf([1, 1, 5]));
   assert.ok(bothHigh, "둘 다 AN3 점수가 중앙값(3) 이상인데 인사이트가 없다");
-  assert.equal(bothHigh.pattern, "both-disadvantaged");
+  assert.equal(bothHigh.pattern, "both-carry-more");
 });
 
 test("분담 인식 일치 인사이트는 방향을 드러내지 않는다 — 한쪽만 높으면 아무 말도 안 한다", () => {

@@ -61,3 +61,4 @@
 - 부부 체크 화면 파일 분리 (screens.js → +screens-match.js +card.js) → [D-50](decisions/2027-h1.md#d-50-부부-체크-screensjs를-screensjs--screens-matchjs--cardjs로-분리)
 - 결과 유형·결합 결과 설명 상세화 + 짧은 코드 즉시 노출 + 코드 입력 화면 뒤로가기 수정 → [D-51](decisions/2027-h1.md#d-51-결과-유형결합-결과-설명-상세화--짧은-코드-즉시-노출--코드-입력-화면-뒤로가기-수정)
 - AN3(분담 공정성)를 자기참조형 문항으로 재작성 + "둘 다 손해 본다" 일치 인사이트 추가 → [D-52](decisions/2027-h1.md#d-52-an3분담-공정성를-자기참조형-문항으로-재작성--둘-다-손해-본다-일치-인사이트-추가)
+- AN3·burdenOverlap 문구 순화 + 개인 성향 설명(ATTACH_TYPES·CONFLICT_STYLES) 확장 → [D-53](decisions/2027-h1.md#d-53-an3burdenoverlap-문구-순화--개인-성향-설명attach_typesconflict_styles-확장)

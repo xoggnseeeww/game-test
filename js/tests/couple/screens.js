@@ -398,6 +398,7 @@ function profileMarkup(r) {
             r.attachment.avo.edge ? AXIS_LABELS.AVO : null,
           ].filter(Boolean).join("·")}은 딱 가운데쯤이라 어느 쪽이라고 말하기 어려워요.</p>`
         : ""}
+      <p class="cp-note">${ATTACH_TYPES[r.attachment.key].desc}</p>
     </div>
   `;
 }
@@ -408,8 +409,8 @@ function profileMarkup(r) {
 function conflictBody(r) {
   return `
     <p class="cp-note">부딪혔을 때 <b>${CONFLICT_STYLES[r.conflict.style].name}</b>에 가까워요.
-    ${CONFLICT_STYLES[r.conflict.style].desc}입니다.
     ${r.conflict.confidence === "edge" ? "다만 경계에 가까워서 상황에 따라 달라질 수 있어요." : ""}</p>
+    <p class="cp-note">${CONFLICT_STYLES[r.conflict.style].desc}</p>
     ${barMarkup(AXIS_LABELS.SC, r.norm.SC)}
     ${barMarkup(AXIS_LABELS.OC, r.norm.OC)}
   `;
