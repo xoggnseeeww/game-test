@@ -26,7 +26,7 @@ export const FACTOR_ITEMS = {
   OC: codesOf(CONFLICT_ITEMS, "OC"),
 };
 
-export const QC1_EXPECTED = 2;
+const QC1_EXPECTED = 2;
 const QC_CONSISTENCY_GAP = 3;
 const STRAIGHT_LINE_RATIO = 0.8;
 const MIN_ELAPSED_MS = 130000;
@@ -47,7 +47,7 @@ export function scoreItem(code, value) {
   return REVERSE_CODES.has(code) ? 6 - value : value;
 }
 
-export function factorRaw(answers, codes) {
+function factorRaw(answers, codes) {
   let sum = 0;
   for (const code of codes) {
     const v = answers[code];

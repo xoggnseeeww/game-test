@@ -841,13 +841,6 @@ button.meta-chip {
   cursor: pointer;
 }
 
-.share-note {
-  text-align: center;
-  font-size: 11px;
-  color: #B4B0A8;
-  margin: 8px 0 0;
-}
-
 .next-block {
   padding: 14px 20px 8px;
 }

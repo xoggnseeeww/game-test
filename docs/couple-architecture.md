@@ -23,7 +23,9 @@ js/tests/couple/
   match.js      부부 매칭 — 성향 조합 · 애착 태그 · Gap · 환경축 · 배우자 코드 코덱 (DOM 모름)
   shortcode.js  8자 짧은 코드 형식(Crockford Base32) — 발급·조회·브라우저 입력 검증이 같이 쓴다 (DOM 모름)
   remote.js     짧은 코드 발급·조회 fetch. score/match/shortcode와 달리 네트워크를 쓰므로 순수 함수 아님
-  screens.js    10개 화면 렌더 + 공유 카드 캔버스 + 배우자 전용 코드 카드 캔버스
+  card.js       공유 카드·배우자 전용 코드 카드가 같이 쓰는 캔버스 배경·헤더·바닥 URL
+  screens.js    7개 화면(인트로·설정·문항·광고·개인 결과·공유·안내) + 공유 카드 캔버스
+  screens-match.js  3개 화면(초대·코드 입력·결합 결과) + 코드 카드 캔버스
   index.js      디스크립터: coupleTest(메타) + coupleScreens(화면 배열)
 
 functions/api/couple-code/
@@ -35,6 +37,15 @@ functions/api/couple-code/
 순환 참조는 없다 — `assemble → score → data`, `assemble → data`.
 `functions/api/couple-code/`는 `js/tests/couple/shortcode.js`를 그대로 import한다 — 발급 쪽
 알파벳과 조회 쪽 알파벳이 갈라지면 발급된 코드를 조회가 못 알아본다.
+
+**`screens.js` / `screens-match.js` 분리(2026-07-30)**: 짧은 코드 매칭(D-45) 도입 이후
+`screens.js` 하나가 1270줄대로 커져서(다른 테스트의 화면 파일은 500~700줄대) 배우자와
+합치는 흐름만 뺐다. 의존 방향은 한쪽뿐이다 — `screens-match.js`가 `screens.js`의
+`resetCouple`·`coupleReady`·`partnerFromUrl`·`result`·`foldMarkup`과 `SERVICE_NOTICE`·
+`SUPPORT_MARKUP`·`PRIVACY_MARKUP`을 가져다 쓰고, 반대 방향(screens.js가 screens-match.js를
+import)은 없다 — `screens.js`가 결과 화면의 매칭 CTA(`inviteBlockMarkup`)를 그리지만, 이동
+자체는 라우터의 `data-nav` 문자열로만 하므로 다른 화면 파일의 렌더 함수를 직접 부를 필요가
+없다. 그래서 순환 참조 없이 한 방향 계층으로 나뉜다.
 
 ## 2. 문항 구성 (기획서 §3.2·§4)
 

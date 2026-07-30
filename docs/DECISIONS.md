@@ -58,3 +58,4 @@
 - 테스트·게임 3곳에 페이지별 OG 미리보기 추가 — `_redirects` rewrite + 정적 셸(빌드 없이) → [D-47](decisions/2027-h1.md#d-47-테스트게임-3곳에-페이지별-og-미리보기-추가--redirects-rewrite--정적-셸)
 - DISC 인트로에 "12가지 유형 미리보기" 화면 추가, 검사 없이도 유형을 훑어보게 함 → [D-48](decisions/2027-h1.md#d-48-disc-인트로에-12가지-유형-미리보기-화면-추가)
 - 목록 화면(심리테스트·미니게임)에도 배너 추가 + 홈 하단 배너를 모바일 전용 고정(sticky) 도크로 → [D-49](decisions/2027-h1.md#d-49-목록-화면에도-배너-추가--홈-하단-배너를-모바일-전용-고정sticky-도크로)
+- 부부 체크 화면 파일 분리 (screens.js → +screens-match.js +card.js) → [D-50](decisions/2027-h1.md#d-50-부부-체크-screensjs를-screensjs--screens-matchjs--cardjs로-분리)

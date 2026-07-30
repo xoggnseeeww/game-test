@@ -967,3 +967,60 @@ OG 셸(D-32→D-47로 재번호), DISC 12유형 미리보기(D-33→D-48), 목�
 남아 있어서 처음엔 애먼 곳(`_redirects` 파싱)에서 실패 원인을 찾을 뻔했다 — 재시작해서
 해결. **교훈**: 머지처럼 서버가 읽는 파일이 바뀌는 작업 뒤에는 반드시 로컬 서버를
 재시작하고 나서 검증할 것.
+
+## 2026-07-30(6) — 코드 정리: 부부 체크 파츠화 + 사용 안 하는 코드 제거
+
+"수정의 수정을 거치면서 불필요한 코드·로직이 쌓였는지, 파일이 무거워졌으면 파츠화도
+하자"는 요청에 답한 정리 세션.
+
+**파일 크기 점검**: `js/tests/couple/screens.js`가 1274줄로 다른 테스트의 화면 파일
+(DISC 690·ADHD 534)보다 거의 두 배 컸다. D-45(짧은 코드 도입)·D-46(개인정보처리방침)까지
+계속 기능을 얹기만 하고 파일을 안 쪼갠 결과.
+
+**파츠화** (D-50):
+- `js/tests/couple/screens-match.js` 신설 — 배우자와 결과를 합치는 흐름(초대 화면·짧은
+  코드/25자 코드/링크 직접 입력·결합 결과)만 뺐다. 개인 검사만 하는 흐름(인트로·설정·문항·
+  광고·개인 결과·공유·안내)은 `screens.js`에 남겼다.
+- `js/tests/couple/card.js` 신설 — 공유 카드(`drawCoupleCard`)와 배우자 전용 코드 카드
+  (`drawCoupleCodeCard`)가 캔버스 생성·그라디언트 배경·헤더 문구·바닥 URL을 **토씨 하나
+  안 틀리고 복사**해서 갖고 있었다(두 함수가 서로 다른 커밋에서 추가되며 생긴 중복 — 코드
+  카드는 D-45에서 나중에 추가됐는데, 그때 공유 카드를 그대로 베껴 썼다). `createCoupleCanvas()`·
+  `drawCoupleCardFooter()`로 뽑아 양쪽이 같이 쓰게 했다.
+- 의존 방향은 한쪽으로 고정: `screens-match.js`가 `screens.js`의 `resetCouple`·`coupleReady`·
+  `partnerFromUrl`·`result`·`foldMarkup`과 `SERVICE_NOTICE`·`SUPPORT_MARKUP`·`PRIVACY_MARKUP`을
+  가져다 쓴다. 반대 방향은 없다 — 결과 화면의 매칭 유도 버튼은 라우터 `data-nav` 문자열로만
+  이동을 걸어서, 다른 화면 파일의 렌더 함수를 직접 호출할 필요가 없었다(순환 참조 없음).
+- `js/tests/couple/index.js`가 `renderCoupleInvite`·`renderCouplePair`·`renderCoupleReport`를
+  이제 `screens-match.js`에서 import한다.
+- 결과: `screens.js` 1274 → 779줄, `screens-match.js` 490줄, `card.js` 31줄. 개별 파일은
+  다른 테스트와 비슷한 크기로 돌아왔다(총 줄 수는 파일 헤더·import 보일러플레이트가 늘어
+  소폭 증가했지만, 그 대가로 실제 중복 코드는 줄었다).
+
+**사용 안 하는 코드 제거**:
+- `score.js`의 `QC1_EXPECTED`·`factorRaw`에 붙어 있던 `export`를 뗐다 — 두 값 다 자기
+  파일(`score.js`) 안에서만 쓰이고 다른 파일 어디서도 import하지 않았다. 반대 사례도
+  하나 있었다 — `resetCouple`은 분리 전에는 "다른 파일에서 안 쓰는 export"로 보였지만,
+  `screens-match.js`가 실제로 가져다 쓰게 되면서 export가 정당한 것으로 바뀌었다(파일을
+  가르기 전엔 몰랐던 것).
+- `styles.css`의 `.share-note` 규칙 — 어떤 JS 파일에서도(정적 문자열로도, 템플릿 리터럴
+  변수 조합으로도) 참조하지 않는 죽은 CSS였다. 제거.
+- 전체 CSS 클래스 164개를 JS 쪽 사용 여부와 대조해 훑었다 — `.cp-chip-contrast`·
+  `.np-msg--clear`는 처음엔 "안 쓰이는 것"처럼 잡혔지만 실제로는
+  `` `cp-chip-${d.levelKey}` `` 같은 템플릿 리터럴로 동적 조합되고 있어서 오탐이었다(코드가
+  아니라 검사 스크립트의 한계). `.share-note`만 진짜였다.
+- 부부 체크 모듈 전체(9개 파일) export 87개를 전수 대조해 "선언 파일 밖에서 아무도 안
+  쓰는 export"가 남았는지 확인 — 위 두 개(QC1_EXPECTED·factorRaw) 외에는 없었다.
+
+**손대지 않기로 한 것**: `scripts/verify.cjs`(1166줄)는 검토했지만 그대로 뒀다. PROGRESS.md와
+같은 부류의 "계속 쌓이는 게 정상인 파일"이라고 판단했다 — 새 기능마다 회귀 검사가 추가되는
+구조고, 검사 하나하나가 서로 독립적이라(한 검사를 지워도 다른 검사가 안 깨진다) "누적된
+불필요한 로직"에 해당하지 않는다. 쪼갠다면 화면 그룹별로 나눌 수는 있지만, 지금은 그 정도
+비용을 들일 만한 신호(실제 중복·데드 코드)가 없었다.
+
+**검증**: 분리 전후로 `npm test` 128/128 동일 유지. `scripts/verify.cjs`를 `serve.py`·
+`wrangler pages dev` 양쪽에서 분리 직후 및 추가 정리(export 제거·CSS 삭제) 이후 각각 여러
+차례 통과 확인 — 짧은 코드 발급·코드 카드 저장·코드 직접 입력(짧은 코드/25자/링크 전체)까지
+실제 백엔드로 재검증했다. `test/modules.test.js`가 `index.js`를 통해 두 화면 파일을 모두
+로드하므로 import/export 어긋남은 그 자리에서 잡힌다. ADHD Go/No-Go 타이밍 검사가 두 차례
+일시적으로 실패했는데, 재실행하면 통과하는 헤드리스 샌드박스 타이밍 이슈로 이 세션의
+변경과 무관함을 확인했다(부부 체크 코드를 건드리지 않은 실행에서도 동일 증상 재현).

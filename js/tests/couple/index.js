@@ -8,15 +8,13 @@ import {
   renderCoupleQuestion,
   renderCoupleAd,
   renderCoupleResult,
-  renderCoupleInvite,
-  renderCouplePair,
-  renderCoupleReport,
   renderCoupleShared,
   renderCoupleGuide,
   coupleReady,
   coupleBlocked,
   partnerFromUrl,
 } from "./screens.js";
+import { renderCoupleInvite, renderCouplePair, renderCoupleReport } from "./screens-match.js";
 
 export const coupleTest = {
   id: "couple",

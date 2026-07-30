@@ -52,7 +52,11 @@ js/core/              router(레지스트리·guard·teardown·게임 레지스�
 js/screens/home.js    홈 · 심리테스트 목록(등록된 테스트에서 자동 생성) · 미니게임 목록(등록된 게임에서 자동 생성) · 개인정보처리방침
 js/tests/<id>/        테스트 1개 = 폴더 1개: data · score · screens · index(디스크립터)
                       현재 adhd(+반응속도 게임), disc(+딜레마 게임),
-                      couple(+assemble · match — 문항지 조립과 부부 매칭이 따로 검증돼야 해서 분리)
+                      couple(+assemble · match — 문항지 조립과 부부 매칭이 따로 검증돼야 해서 분리).
+                      couple은 screens.js(문항 진행·개인 결과)가 다른 테스트 대비 훨씬 커져서
+                      screens-match.js(초대·코드 입력·결합 결과)로 한 번 더 쪼갰다 —
+                      의존 방향은 screens-match.js → screens.js 한쪽뿐(반대는 없음).
+                      두 화면 파일이 같이 쓰는 카드 캔버스는 card.js로 뺐다
 js/games/<id>/        테스트에 속하지 않는 독립 미니게임 1개 = 폴더 1개. 현재 numpath
 functions/api/couple-code/  부부 체크 짧은 코드 발급(index.js)·조회([code].js). 유일한 백엔드 —
                       Cloudflare Pages Function + KV(COUPLE_CODES). js/tests/couple/shortcode.js를
