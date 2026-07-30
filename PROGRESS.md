@@ -1024,3 +1024,26 @@ OG 셸(D-32→D-47로 재번호), DISC 12유형 미리보기(D-33→D-48), 목�
 로드하므로 import/export 어긋남은 그 자리에서 잡힌다. ADHD Go/No-Go 타이밍 검사가 두 차례
 일시적으로 실패했는데, 재실행하면 통과하는 헤드리스 샌드박스 타이밍 이슈로 이 세션의
 변경과 무관함을 확인했다(부부 체크 코드를 건드리지 않은 실행에서도 동일 증상 재현).
+
+### 2026-07-30(7) — main 머지 (D-50 코드 정리 반영)
+
+위 코드 정리 커밋(`efedec1`)에 분리 경계의 중복 빈 줄 하나를 마저 지운 커밋(`b125fe6`)을
+더해 main에 반영했다.
+
+- 머지 전 최종 검토: `card.js`·`index.js`를 다시 훑어 이상 없음 확인(둘 다 이전에
+  `node --check`로 문법 검증까지 끝난 상태). `npm test` 128/128 재확인.
+- 머지 직전 `scripts/verify.cjs`를 새로 띄운 서버 두 종류에서 각각 재실행했다.
+  `serve.py`는 바로 전체 통과. `wrangler pages dev`는 첫 실행에서 반응속도 게임 경로
+  2건(`/test/adhd/reaction` 직접 접속, 콘솔 에러 검사)이 실패했는데, 로그를 보니
+  `Address already in use: 127.0.0.1:8788` — 이전 작업에서 띄워 4시간 가까이 떠 있던
+  스테일 `wrangler` 프로세스가 포트를 여전히 물고 있어서 새로 띄운 인스턴스가 뜨지 못하고
+  낡은 프로세스가 요청을 처리하고 있었다. 이 세션의 부부 체크 변경과는 무관한 환경
+  이슈(`PROGRESS.md` 기존 기록의 "wrangler pages dev가 장시간 뒤 멎거나 죽는" 패턴과
+  동일) — `pkill`로 정리하고 재기동하니 `/test/adhd/reaction`이 바로 200을 돌려줬고,
+  전체 재실행에서 128/128 통과.
+- `main`이 직전 머지(`aca2595`) 이후 독립 커밋 없이 그대로였어서, `git merge-base
+  --is-ancestor main claude/site-deployment-review-ffl0z9`로 확인 후 feature 브랜치를
+  `main`에 `--ff-only`로 머지 — 재번호 충돌도, 통합 버그도 없는 순수 fast-forward였다
+  (`aca2595` → `b125fe6`). `origin/main` 푸시로 Cloudflare Pages 배포 트리거.
+- 머지 후 작업 브랜치(`claude/site-deployment-review-ffl0z9`)로 복귀, `CURRENT_TASK.md`에
+  머지 완료 기록 추가.
