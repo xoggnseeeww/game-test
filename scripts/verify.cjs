@@ -817,6 +817,23 @@ async function playNumpathRun(page) {
     );
   }
 
+  // 발급 API는 인증이 없는 공개 엔드포인트다. 형식(길이)만 보고 KV에 넣으면, 누구나
+  // 유효하지 않은 문자열을 계속 보내 하루 쓰기 한도(1,000회)를 실제 사용자보다 먼저
+  // 채울 수 있다 — decodePartner()로 진짜 유효한 코드인지 먼저 확인하고 저장해야 한다.
+  // 브라우저 UI로는 이 경로를 못 타서(앱은 항상 유효한 코드만 보낸다) API를 직접 두드린다.
+  if (shortCodeReady) {
+    const junkRes = await fetch(`${BASE}/api/couple-code`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ p: "x".repeat(25) }),
+    });
+    check(
+      "짧은 코드 발급 API가 유효하지 않은 부부 코드는 거절한다 (KV 쓰기 한도 남용 방지)",
+      junkRes.status === 400,
+      `status=${junkRes.status}`
+    );
+  }
+
   // 결과 화면의 "부부 결과 매칭" 버튼 — 이미 내 결과가 나와 있는 상태에서 배우자 코드를
   // 직접 입력하면, 상황 고르기로 다시 보내지 않고 곧장 결합 결과로 가야 한다(coupleReady()가
   // 참일 때의 분기). 자기 자신의 코드로 매칭해서 라우팅만 확인한다 — 결과 값의 의미가

@@ -6,13 +6,10 @@
 // 둘 다 js/tests/couple/remote.js 쪽에서 실패로 처리돼 25자 링크 폴백으로 넘어가므로
 // 로컬에서 이 경로가 없어도 나머지 기능은 정상 동작한다.
 import { randomShortCode } from "../../../js/tests/couple/shortcode.js";
+import { decodePartner } from "../../../js/tests/couple/match.js";
 
 const TTL_SECONDS = 60 * 60 * 24 * 7; // 7일 — 기획서 §9.2
 const MAX_ISSUE_ATTEMPTS = 5;
-// 형식 검증은 여기서 하지 않는다 — decodePartner()가 이미 진짜 검증이고, 여기서 또 하면
-// 두 검증이 갈라질 여지가 생긴다. 다만 아무 문자열이나 무한정 채워지는 것만 막는다.
-const MIN_LEN = 10;
-const MAX_LEN = 64;
 
 export async function onRequestPost({ request, env }) {
   let body;
@@ -24,7 +21,12 @@ export async function onRequestPost({ request, env }) {
   }
 
   const p = typeof body?.p === "string" ? body.p.trim() : "";
-  if (p.length < MIN_LEN || p.length > MAX_LEN) {
+  // 형식을 여기서 새로 정의하지 않는다 — decodePartner()가 이미 진짜 검증이고, 규칙을
+  // 여기 따로 베끼면 둘이 갈라질 여지가 생긴다. 대신 그 함수를 그대로 가져다 쓴다: 진짜
+  // 유효한 부부 코드가 아니면(체크섬 불일치·길이 다름 등) 애초에 KV에 넣지 않는다.
+  // 인증이 없는 공개 엔드포인트라서, 이게 없으면 누구나 아무 문자열이나 계속 보내
+  // 하루 KV 쓰기 한도(1,000회)를 실제 사용자보다 먼저 채울 수 있었다.
+  if (!decodePartner(p)) {
     return json({ error: "invalid_payload" }, 400);
   }
 
