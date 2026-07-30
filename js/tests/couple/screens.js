@@ -2,7 +2,7 @@
 // (초대·코드 입력·결합 결과)은 screens-match.js에 있다. 그쪽이 이 파일의
 // resetCouple·coupleReady·partnerFromUrl·result·foldMarkup과 아래 세 상수를
 // 가져다 쓴다 — 반대 방향은 없다(이 파일은 screens-match.js를 모른다).
-import { app, go, parseSharedPath } from "../../core/router.js";
+import { app, go, onLeave, parseSharedPath } from "../../core/router.js";
 import { el, bindNav, bindExit, bindAdGate } from "../../core/dom.js";
 import { state } from "../../core/state.js";
 import { roundRect } from "../../core/util.js";
@@ -31,7 +31,9 @@ import {
 } from "./data.js";
 import { computeCouple, BEHAVIOR_AXES } from "./score.js";
 import { assembleQuestionnaire, NOTICE_POSITION } from "./assemble.js";
-import { decodePartner } from "./match.js";
+import { decodePartner, encodePartner } from "./match.js";
+import { formatShortCode } from "./shortcode.js";
+import { ensureShortCode } from "./remote.js";
 import { createCoupleCanvas, drawCoupleCardFooter } from "./card.js";
 
 const COMBO_COUNT = T_AXIS.length * R_AXIS.length * K_AXIS.length;
@@ -441,7 +443,12 @@ function actionMarkup(r) {
 }
 
 // 배우자 코드를 이미 들고 있으면 초대가 아니라 결합 결과가 다음 목적지다.
-function inviteBlockMarkup() {
+//
+// 예전엔 짧은 코드를 보려면 "배우자 초대 링크 만들기"를 눌러 별도 화면(couple-invite)까지
+// 가야 했다 — 코드 자체는 그 화면에서 자동으로 뜨지만, 그 화면에 도달하는 클릭 한 번이
+// 불편하다는 피드백을 받았다. 결과 화면에 뜨자마자 코드를 바로 노출한다(아래 wireInlineShortCode).
+// "링크로 보내기·코드 카드 저장" 같은 부가 기능은 여전히 couple-invite 화면에 남겨둔다.
+function inviteBlockMarkup(r) {
   if (state.couple.partner) {
     return `
       <div class="cp-invite-cta">
@@ -456,10 +463,54 @@ function inviteBlockMarkup() {
       <div class="cp-block-title">배우자와 결과를 합쳐볼까요?</div>
       <p class="cp-block-sub">같은 질문에 두 분이 얼마나 다르게 답했는지 볼 수 있어요.
       <b>혼자서는 알 수 없는 것</b>이에요. (위 결과가 더 정확해지는 건 아니에요.)</p>
-      <button class="cta-btn" data-nav="couple-invite">배우자 초대 링크 만들기</button>
+      <div class="cp-shortcode-block cp-shortcode-block--inline">
+        <div class="cp-block-sub" style="margin:0 0 4px;">짧은 코드를 문자로 바로 보내세요 (7일간 유효)</div>
+        <div class="cp-shortcode" id="cp-shortcode-inline">발급 중...</div>
+        <button class="share-mini" id="cp-shortcode-inline-copy" hidden>🔗 코드 복사</button>
+      </div>
+      <button class="cta-btn" data-nav="couple-invite">🔗 링크로 보내기 · 코드 카드 저장</button>
       <button class="cta-btn cp-invite-secondary" data-nav="couple-pair">💌 부부 결과 매칭 — 배우자 코드 입력하기</button>
     </div>
   `;
+}
+
+// 결과 화면에 들어오자마자(클릭 없이) 짧은 코드를 발급·표시한다. 같은 결과로 재진입하면
+// ensureShortCode()의 캐시를 그대로 쓰므로, 화면을 여러 번 오가도 재발급되지 않는다.
+// 화면을 떠난 뒤 응답이 오면 onLeave로 잡은 left 플래그로 DOM 갱신을 건너뛴다(E-4와 같은 함정).
+async function wireInlineShortCode(r) {
+  const codeEl = app.querySelector("#cp-shortcode-inline");
+  if (!codeEl) return; // 이미 배우자 코드를 들고 있는 분기(위)는 이 요소가 없다.
+  const copyBtn = app.querySelector("#cp-shortcode-inline-copy");
+
+  let left = false;
+  onLeave(() => {
+    left = true;
+  });
+
+  const partnerCode = encodePartner(r);
+  const short = await ensureShortCode(partnerCode);
+  if (left) return;
+
+  if (!short) {
+    codeEl.textContent = "발급이 지금 안 돼요 — 아래 버튼으로 링크를 보내주세요.";
+    return;
+  }
+
+  codeEl.textContent = formatShortCode(short);
+  copyBtn.hidden = false;
+  copyBtn.classList.add("active");
+  copyBtn.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(formatShortCode(short));
+      const original = copyBtn.textContent;
+      copyBtn.textContent = "✅ 복사 완료!";
+      setTimeout(() => {
+        copyBtn.textContent = original;
+      }, 1500);
+    } catch (err) {
+      console.error("코드 복사 실패", err);
+    }
+  });
 }
 
 // 사유를 특정하지 않는다. 속도 외의 사유로 플래그가 섰을 때 "빠르게 진행되어"라고
@@ -524,7 +575,7 @@ export function renderCoupleResult() {
       ${foldMarkup("갈등이 생겼을 때", conflictBody(r))}
       ${actionMarkup(r)}
 
-      ${inviteBlockMarkup()}
+      ${inviteBlockMarkup(r)}
 
       ${shareBlockMarkup("내 유형을 친구에게 보여주기")}
 
@@ -549,6 +600,8 @@ export function renderCoupleResult() {
     resetCouple();
     go("couple-intro");
   });
+
+  wireInlineShortCode(r);
 
   // 공유는 "내 유형 소개 페이지" 주소로만 한다. 배우자 코드가 담긴 주소를 여기에 걸면
   // 아무에게나 내 응답이 실린 링크가 나간다 — 초대 링크는 별도 화면에서만 만든다.

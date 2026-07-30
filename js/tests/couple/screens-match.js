@@ -23,7 +23,7 @@ import {
   decodePartner,
 } from "./match.js";
 import { isShortCode, normalizeShortCode, formatShortCode } from "./shortcode.js";
-import { issueShortCode, resolveShortCode } from "./remote.js";
+import { ensureShortCode, resolveShortCode } from "./remote.js";
 import { createCoupleCanvas, drawCoupleCardFooter } from "./card.js";
 import {
   resetCouple,
@@ -127,21 +127,16 @@ export function renderCoupleInvite() {
   wireShortCode(r, partnerCode, () => left);
 }
 
-// 짧은 코드는 재진입할 때마다 새로 발급하지 않는다 — 같은 결과(같은 partnerCode)로는
-// state.couple.shortCode에 캐시해둔 걸 그대로 쓴다. KV 쓰기 한도가 하루 1,000회라
-// 화면을 여러 번 왔다갔다하면 금방 소진된다.
+// 재진입할 때마다 새로 발급하지 않는다 — 같은 결과(같은 partnerCode)로는 ensureShortCode()가
+// state.couple.shortCode 캐시를 그대로 쓴다. 결과 화면에서 이미 발급받아 왔다면(§ 결과 화면의
+// 자동 노출) 여기선 캐시 히트로 끝나 네트워크 요청이 아예 안 나간다.
 async function wireShortCode(r, partnerCode, isLeft) {
   const block = app.querySelector("#cp-shortcode-block");
   const codeEl = app.querySelector("#cp-shortcode");
   const cardBtn = app.querySelector("#cp-code-card-btn");
 
-  const cached = state.couple.shortCode;
-  let short = cached && cached.for === partnerCode ? cached.code : null;
-  if (!short) {
-    short = await issueShortCode(partnerCode);
-    if (isLeft()) return;
-    if (short) state.couple.shortCode = { code: short, for: partnerCode };
-  }
+  const short = await ensureShortCode(partnerCode);
+  if (isLeft()) return;
 
   if (!short) {
     block.innerHTML = `<p class="cp-note">짧은 코드 발급이 지금 안 돼요. 위 링크로 보내주세요.</p>`;
@@ -170,11 +165,16 @@ function extractPartnerCandidate(raw) {
 
 export function renderCouplePair() {
   const partner = partnerFromUrl();
+  // 이 화면은 인트로에서도(아직 내 결과가 없을 때), 내 결과 화면에서도(coupleReady()) 들어올
+  // 수 있다. 뒤로가기를 항상 홈으로 고정해두면, 결과를 이미 본 사람이 배우자 코드를 입력하러
+  // 왔다가 뒤로 가려 할 때 자기 결과 화면으로 못 돌아가고 홈으로 튕긴다 — 뒤로가기는
+  // 실제로 온 자리로 돌아가야 한다.
+  const backTarget = coupleReady() ? "couple-result" : "home";
 
   app.appendChild(el(`
     <div>
       <div class="back-row">
-        <button class="back-btn" data-nav="home">‹</button>
+        <button class="back-btn" data-nav="${backTarget}">‹</button>
         <div class="back-title">부부 관계 성향 체크</div>
       </div>
       ${adSlotMarkup("bannerTop", "margin-top:10px; margin-bottom:4px;")}
@@ -276,12 +276,17 @@ function wireCodeEntry() {
 
 // 단일 "궁합 점수"를 만들지 않는다(§7.2). 대신 요인별로 세 구간만 서술하고, 어떤 조합도
 // "나쁜 궁합"으로 단정하지 않는다 — 모든 조합에 강점과 유의점이 함께 붙는다.
-// 네 성향에 각각 설명을 붙이면 여덟 줄이 된다. 한눈에 보이는 요약 줄(칩)을 먼저 놓고,
-// 설명은 **눈여겨볼 것(많이 다른 편)**에만 붙인다 — 전부 같은 무게로 늘어놓으면
-// 무엇을 봐야 하는지가 사라진다. 해당 항목이 여럿이면 같은 설명이 반복되므로 한 줄로 묶는다
-// (같은 구간이면 levelDesc가 같다는 전제 — DYNAMIC_LEVELS가 구간당 문구 하나만 갖는다).
+// 예전엔 "많이 다른(contrast)" 축에만 설명을 붙이고 닮았거나(similar) 보완하는(complement)
+// 축은 칩 라벨만 보여줬다 — attachmentText()를 붙이기 전의 가까움·거리 막대와 같은 결함이다
+// (칩만으로는 "닮은 편"이 실제로 뭘 뜻하는지 알 수 없다). 네 축 전부 설명을 붙이되, 같은
+// 구간에 묶인 축은 levelDesc가 같으므로(DYNAMIC_LEVELS가 구간당 문구 하나) 한 줄로 묶는다.
+// 순서는 §8.2대로 긍정적인 것(닮음·보완)을 먼저, 부딪히는 지점(대비)을 뒤에 놓는다.
 function dynamicsMarkup(dynamics) {
-  const notable = dynamics.filter((d) => d.levelKey === "contrast");
+  const order = ["similar", "complement", "contrast"];
+  const groups = order
+    .map((levelKey) => dynamics.filter((d) => d.levelKey === levelKey))
+    .filter((g) => g.length);
+
   return `
     <div class="cp-profile">
       <div class="cp-block-title">두 분의 성향은</div>
@@ -291,9 +296,7 @@ function dynamicsMarkup(dynamics) {
           <span class="cp-chip cp-chip-${d.levelKey}">${d.label} · ${d.levelLabel}</span>
         `).join("")}
       </div>
-      ${notable.length
-        ? `<p class="cp-note"><b>${notable.map((d) => d.label).join(" · ")}</b> — ${notable[0].levelDesc}</p>`
-        : `<p class="cp-note">크게 부딪힐 만한 성향 차이는 보이지 않았어요.</p>`}
+      ${groups.map((g) => `<p class="cp-note"><b>${g.map((d) => d.label).join(" · ")}</b> — ${g[0].levelDesc}</p>`).join("")}
     </div>
   `;
 }
