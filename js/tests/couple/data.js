@@ -105,7 +105,12 @@ export const CONFLICT_ITEMS = [
 export const ANCHOR_CONCEPTS = [
   { key: "AN1", label: "기여 인정", desc: "우리가 하고 있는 일을 서로 알아준다고 느끼는 정도" },
   { key: "AN2", label: "전체 부담", desc: "지금 짊어진 몫이 버겁다고 느끼는 정도" },
-  { key: "AN3", label: "분담 공정성", desc: "지금의 분담이 공정하다고 느끼는 정도" },
+  // v3.4(D-51): "우리가 공정한가"라는 대칭 질문은 "내가 배우자보다 손해 본다고 느끼는지"를
+  // 원천적으로 측정하지 못했다(사용자 피드백). 자기참조형으로 바꿔서 그 느낌 자체는 잡되,
+  // 두 사람 점수를 그대로 비교해 방향을 알려주면 n=2 설문에서는 "전면 공개"와 같아진다
+  // (내 답을 아는 사람은 상대 답을 역산할 수 있다) — 그래서 출력에서는 여전히 방향을 안 쓰고,
+  // match.js의 burdenOverlap()이 "둘 다 손해 본다고 느낀다" 일치 패턴만(방향 없이) 짚어준다.
+  { key: "AN3", label: "분담 공정성", desc: "지금의 분담이 자신에게 불리하다고 느끼는 정도" },
 ];
 
 export const ANCHOR_ITEMS = [
@@ -113,8 +118,8 @@ export const ANCHOR_ITEMS = [
   { code: "AN1b", factor: "AN", concept: "AN1", text: "배우자는 내가 우리 가정을 위해 들이는 노력을 잘 알고 있다." },
   { code: "AN2a", factor: "AN", concept: "AN2", text: "나는 우리 가정에서 내가 맡고 있는 몫이 버겁게 느껴질 때가 많다." },
   { code: "AN2b", factor: "AN", concept: "AN2", text: "지금 내가 감당하고 있는 일의 양은, 나 혼자 감당하기에 벅차다고 느낀다." },
-  { code: "AN3a", factor: "AN", concept: "AN3", text: "우리 부부가 일과 가정의 몫을 나누어 맡은 방식은, 두 사람 모두에게 공정하다고 느낀다." },
-  { code: "AN3b", factor: "AN", concept: "AN3", text: "우리가 각자 맡고 있는 몫의 크기는 서로 비슷하다고 느낀다." },
+  { code: "AN3a", factor: "AN", concept: "AN3", text: "나는 지금의 분담 방식이 나에게 더 불리하게 짜여 있다고 느낀다." },
+  { code: "AN3b", factor: "AN", concept: "AN3", text: "지금 내가 맡고 있는 몫에 비해, 배우자가 맡은 몫은 상대적으로 가볍게 느껴진다." },
 ];
 
 // ---------------------------------------------------------------- 응답 품질 검사 (§4.5, 비채점)

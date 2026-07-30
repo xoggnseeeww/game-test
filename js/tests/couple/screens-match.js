@@ -334,6 +334,7 @@ function gapMarkup(c) {
         : ""}
       ${lowLine}
       ${rows}
+      ${c.burdenOverlap ? `<p class="cp-note">🤝 ${c.burdenOverlap.text}</p>` : ""}
       ${c.gapHidden.length
         ? `<p class="cp-note">${c.gapHidden.map((i) => i.label).join("·")}은 두 문항 사이 답이 갈려서
            이번엔 비교하지 않았어요.</p>`

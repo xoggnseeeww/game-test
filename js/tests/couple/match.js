@@ -205,6 +205,34 @@ export function roleOverlap(setupA, setupB) {
   };
 }
 
+// ---------------------------------------------------------------- §7.3 분담 인식 일치 (D-51)
+
+// AN3(분담 공정성)를 자기참조형("나는 손해 본다고 느낀다")으로 바꾸면서 생긴 새 인사이트.
+// roleOverlap()과 같은 방식이다 — 두 점수를 비교해서 "누가 더 손해"라고 말하지 않는다.
+// 대신 **둘 다 같은 자기인식(나는 손해 본다)에 도달했다**는 일치만 짚는다. 이건 상대적
+// 비교가 아니라 "당신도 그렇게 느끼고, 배우자도 그렇게 느낀다"는 대칭 정보라, 방향을
+// 전혀 드러내지 않고도 실제로 흔한 인지 격차(둘 다 자기가 더 손해 본다고 느끼는 현상)를
+// 보여줄 수 있다.
+//
+// 한쪽만 높은 "엇갈림" 경우는 여기서 다루지 않는다 — 그 경우까지 뭔가 말하려 들면 "한쪽만
+// 그렇게 느낀다"는 게 곧 방향 노출이 된다(n=2 설문에서는 내 답을 아는 사람이 이 말만 듣고도
+// 상대 답을 역산한다). 그 경우는 기존 Gap Score(크기만 노출)에 그대로 맡긴다.
+const BURDEN_HIGH = 3; // 개념 점수 중앙값(1~5 척도) — score.js axisState()의 관례와 동일
+export function burdenOverlap(anchorsA, anchorsB) {
+  const a = anchorsA.AN3;
+  const b = anchorsB.AN3;
+  // 내부 일관성이 깨진 응답은 짚지 않는다 — 흔들리는 응답을 인사이트의 근거로 쓰면
+  // 근거 없는 이야기가 된다(§7.3 앵커 내부 일관성과 같은 기준).
+  if (!a.consistent || !b.consistent) return null;
+  if (a.score >= BURDEN_HIGH && b.score >= BURDEN_HIGH) {
+    return {
+      pattern: "both-disadvantaged",
+      text: "두 분 다 지금의 분담 방식이 자신에게 더 불리하다고 느끼고 있어요. 서로 다른 이유로 같은 결론에 도달했을 수 있어요 — 구체적으로 뭐가 그렇게 느껴지는지 한번 맞춰볼 만해요.",
+    };
+  }
+  return null;
+}
+
 // ---------------------------------------------------------------- 결합 결과
 
 /**
@@ -230,6 +258,7 @@ export function combine(a, b) {
     envTop: env.filter((i) => i.levelKey !== "low").sort((x, y) => y.diff - x.diff),
     env,
     roleOverlap: roleOverlap(a.setup, b.setup),
+    burdenOverlap: burdenOverlap(a.anchors, b.anchors),
     // 플래그가 1개인 쪽이 있으면 결과에 오차 가능 문구를 병기한다.
     lowConfidence: a.validity.count === 1 || b.validity.count === 1,
   };
