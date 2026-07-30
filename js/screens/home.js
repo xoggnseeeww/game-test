@@ -3,9 +3,13 @@ import { app, listTests, listGames } from "../core/router.js";
 import { el, bindNav } from "../core/dom.js";
 import { adSlotMarkup } from "../core/ads.js";
 
+// 하단 배너(bannerBottom)는 폰 화면에서 뷰포트 맨 아래에 고정된다(.home-ad-dock,
+// styles.css) — 모바일 앱의 "하단 고정 배너"처럼 스크롤과 무관하게 항상 보이는
+// 자리다. 가려지는 콘텐츠가 없도록 .home-screen에 그 높이만큼 하단 여백을 미리 둔다.
+// 데스크톱(카드 레이아웃)에서는 카드 폭 밖으로 삐져나가 보이므로 일반 흐름으로 되돌린다.
 export function renderHome() {
   app.appendChild(el(`
-    <div>
+    <div class="home-screen">
       <div class="header">
         <div class="logo">
           <div class="logo-badge">과</div>
@@ -32,7 +36,7 @@ export function renderHome() {
       <div class="site-footer">
         <a href="https://data-pantry.com" target="_blank" rel="noopener">by 데이터팬트리</a>
       </div>
-      ${adSlotMarkup("bannerBottom", "margin-top:8px; margin-bottom:20px;")}
+      <div class="home-ad-dock">${adSlotMarkup("bannerBottom")}</div>
     </div>
   `));
   bindNav(app);
@@ -46,6 +50,7 @@ export function renderPsychList() {
         <button class="back-btn" data-nav="home">‹</button>
         <div class="back-title">심리테스트</div>
       </div>
+      ${adSlotMarkup("bannerTop", "margin-top:10px; margin-bottom:4px;")}
       <div class="section-title">🔥 지금 인기</div>
       <div class="test-list">
         ${listTests().map((t) => `
@@ -59,6 +64,7 @@ export function renderPsychList() {
           </button>
         `).join("")}
       </div>
+      ${adSlotMarkup("bannerBottom", "margin-top:6px; margin-bottom:22px;")}
     </div>
   `));
   bindNav(app);
@@ -75,6 +81,7 @@ export function renderGameList() {
         <button class="back-btn" data-nav="home">‹</button>
         <div class="back-title">미니게임</div>
       </div>
+      ${adSlotMarkup("bannerTop", "margin-top:10px; margin-bottom:4px;")}
       ${
         games.length === 0
           ? `
@@ -97,6 +104,7 @@ export function renderGameList() {
         `).join("")}
       </div>`
       }
+      ${adSlotMarkup("bannerBottom", "margin-top:6px; margin-bottom:22px;")}
     </div>
   `));
   bindNav(app);

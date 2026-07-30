@@ -253,6 +253,40 @@ body {
   color: #8A8790;
 }
 
+/* 홈 하단 배너: 폰에서 볼 때 뷰포트 맨 아래에 고정한다(모바일 앱의 "하단 고정 배너"
+   느낌) — 스크롤과 무관하게 항상 그 자리에 보인다. 데스크톱(카드 레이아웃, D-21)에서
+   고정을 그대로 두면 카드 폭 밖 뷰포트 전체 너비로 삐져나와 카드와 안 맞으므로,
+   768px 이상에서는 일반 흐름으로 되돌린다(.home-screen 아래에 그냥 이어짐). */
+/* 데스크톱(일반 흐름): 위쪽은 살짝만, 아래쪽(카드 맨 끝)은 다른 화면의 트레일링
+   여백과 맞춰 넉넉하게 — 두 값 다 dock의 padding이 담당하고 ad-slot 자체 margin은 0. */
+.home-ad-dock {
+  padding: 6px 0 20px;
+}
+.home-ad-dock .ad-slot.banner {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+@media (max-width: 767px) {
+  .home-ad-dock {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+    background: #F6F4EF;
+    /* env(safe-area-inset-bottom): 아이폰 하단 홈 인디케이터 제스처 영역에 안 붙게 띄운다. */
+    padding: 6px 0 max(6px, env(safe-area-inset-bottom));
+    box-shadow: 0 -2px 10px rgba(0,0,0,.06);
+  }
+
+  /* 고정 배너 높이(광고 52px + 위아래 패딩)만큼 미리 비워둔다 — 안 그러면 배너가
+     마지막 콘텐츠(site-footer)를 덮어 가린다. */
+  .home-screen {
+    padding-bottom: 80px;
+  }
+}
+
 .section-title {
   font-size: 13px;
   font-weight: 800;
