@@ -96,6 +96,7 @@ js/games/<id>/          테스트에 속하지 않는 독립 미니게임(예: n
 | `/test/adhd/reaction/play` | `reaction-play` | game | 답 부족 → `test-intro` |
 | `/test/adhd/reaction/ad` | `reaction-ad` | game | 답 부족 → `test-intro`, 게임 미완료 → `reaction-intro` |
 | `/test/disc` | `disc-intro` | disc | — |
+| `/test/disc/types` | `disc-types` | disc | — |
 | `/test/disc/play` | `disc-question` | disc | 순서 미생성 → `disc-intro` |
 | `/test/disc/result` | `disc-result` | disc | 문항 미완료 → `disc-intro` · 문항은 끝났지만 게임 미완료 → `dilemma-intro` |
 | `/test/disc/result/<slug>` | `disc-shared` | disc | 슬러그 안 풀리면 → `home` |

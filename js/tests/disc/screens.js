@@ -89,7 +89,7 @@ export function renderDiscIntro() {
       <div class="meta-chips">
         <div class="meta-chip"><div class="value">${N}상황</div><div class="label">먼저</div></div>
         <div class="meta-chip"><div class="value">+${DILEMMAS.length}라운드</div><div class="label">미니게임</div></div>
-        <div class="meta-chip"><div class="value">${Object.keys(DISC_TYPES).length}가지</div><div class="label">결과 유형</div></div>
+        <button class="meta-chip" data-nav="disc-types"><div class="value">${Object.keys(DISC_TYPES).length}가지</div><div class="label">결과 유형 ›</div></button>
       </div>
       <p class="disclaimer">상황마다 <b>가장 나 같은 것</b>과 <b>가장 아닌 것</b>을 하나씩 고릅니다.
       한쪽을 고르면 다른 쪽 점수가 내려가는 방식이라, 전부 "그렇다"로 밀어붙일 수 없어요.<br/>
@@ -104,6 +104,42 @@ export function renderDiscIntro() {
   app.querySelector("#disc-start").addEventListener("click", () => {
     startDiscTest();
     go("disc-question");
+  });
+}
+
+// ---------------------------------------------------------------- 유형 12가지 미리보기
+
+// 검사를 시작하지 않고도 12개 유형을 훑어볼 수 있는 목록. 항목을 누르면 검사를 안 해도
+// 되는 공유 결과 화면(disc-shared, /test/disc/result/<slug>)으로 바로 보낸다 — 그 화면이
+// 이미 유형별 상세(태그·설명·궁합)를 전부 갖추고 있어서 화면을 새로 만들 필요가 없었다.
+export function renderDiscTypes() {
+  const entries = Object.values(DISC_TYPES);
+  app.appendChild(el(`
+    <div>
+      <div class="back-row">
+        <button class="back-btn" data-nav="disc-intro">‹</button>
+        <div class="back-title">${entries.length}가지 유형 미리보기</div>
+        <button class="exit-btn" data-nav="home" aria-label="홈으로 가기">🏠</button>
+      </div>
+      <div class="test-list" style="padding-top:8px;">
+        ${entries.map((t) => `
+          <button class="test-card" data-slug="${t.slug}">
+            <div class="icon" style="background:#E8642E;">${t.emoji}</div>
+            <div class="body">
+              <div class="name">${t.name}</div>
+              <div class="desc">${t.subtitle}</div>
+            </div>
+            <div class="chevron">›</div>
+          </button>
+        `).join("")}
+      </div>
+    </div>
+  `));
+  bindNav(app);
+  app.querySelectorAll(".test-card").forEach((card) => {
+    card.addEventListener("click", () => {
+      location.href = `/test/disc/result/${card.dataset.slug}`;
+    });
   });
 }
 

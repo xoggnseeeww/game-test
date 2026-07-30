@@ -3,22 +3,19 @@
 > 이 파일은 1~2k 토큰 이하를 유지한다 — "언젠가 할 일"이 아니라 "지금 유효한 작업"만.
 
 ## 현재 작업
-없음. 2026-07-30: 테스트·게임 3곳(`/test/adhd`·`/test/disc`·`/game/numpath`)에 페이지별 OG
-미리보기 추가(`og-shells/*.html` + `_redirects` rewrite). 배포 후 여러 라운드의 실사용
-피드백(이미지 크롭·톤·캐시·**`_redirects` 목적지의 `.html` 확장자가 Cloudflare의 clean-URL
-정규화로 308을 유발해 `/test/disc`가 홈으로 떨어지던 진짜 원인**)을 거쳐 전부 수정·배포
-완료, 사용자가 직접 "된다" 확인. 관련 결정: `docs/decisions/2027-h1.md` D-32(갱신 4건).
-상세는 `PROGRESS.md` 참고.
+없음. 2026-07-30: DISC 인트로의 "결과 유형" 칩을 눌러 12가지 유형을 검사 없이 미리보는
+화면(`disc-types`, `/test/disc/types`) 추가 — 카드를 누르면 기존 공유 상세 화면
+(`disc-shared`)으로 직행. 관련 결정: `docs/decisions/2027-h1.md` D-33. 아직 main 머지 전.
 
-이어서 DISC 공유 이미지("🖼️ 이미지 저장")에 유형 설명 문단이 빠져 있다는 지적을 받아
-`drawDiscCard()`에 `t.desc` 본문을 추가하고 긴 줄 자동 줄바꿈(`wrapLine()`)을 넣었는데,
-사용자가 온스크린 화면과 나란히 비교해서 "실제로는 이렇게 나와요" 4카드(연애·일·
-스트레스·나를 대하는 법)도 여전히 빠졌다고 재차 지적 — `layoutDiscCardBody()`로
-설명+4카드 전체의 좌표를 한 번에 계산하도록 확장해서 마저 추가했다(1080×2144, 실제
-다운로드 PNG로 육안 확인). 아직 main 머지 전.
+이전(2026-07-30, main 머지 완료): 테스트·게임 3곳에 페이지별 OG 미리보기 추가
+(`og-shells/*.html` + `_redirects` rewrite) → 배포 후 여러 라운드 실사용 피드백(이미지
+크롭·톤·캐시·**`_redirects` 목적지의 `.html` 확장자가 Cloudflare clean-URL 정규화로 308을
+유발해 `/test/disc`가 홈으로 떨어지던 진짜 원인**)을 거쳐 수정 완료, 사용자 확인함. 이어서
+DISC 공유 이미지("🖼️ 이미지 저장")에 유형 설명 + "실제로는 이렇게 나와요" 4카드가 빠져
+있던 것도 `layoutDiscCardBody()`로 추가. 관련 결정: D-32(갱신 4건). 상세는 `PROGRESS.md`.
 
-이전(2026-07-28): DISC 문항·딜레마 선택지 중 상황과 안 맞거나 어색한 문구 3건 수정(식당 메뉴
-상황에서 "평점·웨이팅 검색"이 튀어나오던 것 등) + main 머지 완료. 상세는 `PROGRESS.md` 참고.
+더 이전(2026-07-28): DISC 문항·딜레마 선택지 중 상황과 안 맞거나 어색한 문구 3건 수정(식당
+메뉴 상황에서 "평점·웨이팅 검색"이 튀어나오던 것 등) + main 머지 완료. 상세는 `PROGRESS.md`.
 
 더 이전(2026-07-28, 메인 머지 완료): 독립 미니게임 **NumPath: Stack & Clear**(숫자 경로 퍼즐) 추가.
 `js/games/numpath/`(engine·generate·solve·audio·play·screens·index) 신설, 라우터에

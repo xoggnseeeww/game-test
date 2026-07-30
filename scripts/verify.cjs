@@ -386,6 +386,26 @@ async function playNumpathRun(page) {
   const discTotal = parseInt(discChips[0], 10);
   check("DISC 인트로 개수 문구", Number.isInteger(discTotal) && discTotal > 0, discChips.join(" | "));
 
+  // === 검사 시작 없이 12가지 유형 미리보기 → 유형 클릭 시 공유 상세로 이동 ===
+  await page.click('[data-nav="disc-types"]');
+  check("결과 유형 칩 → 12가지 미리보기 화면", page.url().endsWith("/test/disc/types"), page.url());
+  const typeCardCount = await page.$$eval(".test-card", (l) => l.length);
+  check(
+    "유형 미리보기 카드 개수가 결과 유형 수와 일치",
+    typeCardCount === discTotal,
+    `카드 ${typeCardCount}개 vs 칩 문구 ${discTotal}`
+  );
+  await page.click(".test-card >> nth=0");
+  await page.waitForSelector(".result-card", { timeout: 5000 });
+  check(
+    "유형 카드 클릭 → 검사 없이 해당 유형 상세로 직행",
+    /\/test\/disc\/result\/[a-z0-9-]+$/.test(page.url()),
+    page.url()
+  );
+  await goto("/test/disc/types");
+  await page.click(".back-btn");
+  check("유형 미리보기 뒤로가기 → 인트로", page.url().endsWith("/test/disc"), page.url());
+
   await page.click("#disc-start");
   await page.click(".modal-btn-primary").catch(() => {});
 
