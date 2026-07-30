@@ -371,6 +371,14 @@ body {
   box-shadow: 0 2px 8px rgba(0,0,0,.05);
 }
 
+/* 칩 중 일부는 <button data-nav>로 눌러서 이동한다(예: DISC 인트로의 "결과 유형") —
+   브라우저 기본 버튼 테두리·배경·폰트를 지워서 <div> 칩과 똑같이 보이게 한다. */
+button.meta-chip {
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
+}
+
 .meta-chip .value {
   font-size: 16px;
   font-weight: 800;

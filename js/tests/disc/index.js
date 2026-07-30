@@ -4,6 +4,7 @@ import { parseSharedPath } from "../../core/router.js";
 import { TETRADS, DISC_SLUG_TO_KEY } from "./data.js";
 import {
   renderDiscIntro,
+  renderDiscTypes,
   renderDiscQuestion,
   renderDiscResult,
   renderDiscShared,
@@ -33,6 +34,13 @@ export const discScreens = [
     path: "/test/disc",
     title: "직장인 유형검사 | 과몰입구역",
     render: renderDiscIntro,
+    theme: "disc",
+  },
+  {
+    id: "disc-types",
+    path: "/test/disc/types",
+    title: "직장인 유형검사 - 12가지 유형 미리보기 | 과몰입구역",
+    render: renderDiscTypes,
     theme: "disc",
   },
   {

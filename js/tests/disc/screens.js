@@ -89,7 +89,7 @@ export function renderDiscIntro() {
       <div class="meta-chips">
         <div class="meta-chip"><div class="value">${N}상황</div><div class="label">먼저</div></div>
         <div class="meta-chip"><div class="value">+${DILEMMAS.length}라운드</div><div class="label">미니게임</div></div>
-        <div class="meta-chip"><div class="value">${Object.keys(DISC_TYPES).length}가지</div><div class="label">결과 유형</div></div>
+        <button class="meta-chip" data-nav="disc-types"><div class="value">${Object.keys(DISC_TYPES).length}가지</div><div class="label">결과 유형 ›</div></button>
       </div>
       <p class="disclaimer">상황마다 <b>가장 나 같은 것</b>과 <b>가장 아닌 것</b>을 하나씩 고릅니다.
       한쪽을 고르면 다른 쪽 점수가 내려가는 방식이라, 전부 "그렇다"로 밀어붙일 수 없어요.<br/>
@@ -104,6 +104,42 @@ export function renderDiscIntro() {
   app.querySelector("#disc-start").addEventListener("click", () => {
     startDiscTest();
     go("disc-question");
+  });
+}
+
+// ---------------------------------------------------------------- 유형 12가지 미리보기
+
+// 검사를 시작하지 않고도 12개 유형을 훑어볼 수 있는 목록. 항목을 누르면 검사를 안 해도
+// 되는 공유 결과 화면(disc-shared, /test/disc/result/<slug>)으로 바로 보낸다 — 그 화면이
+// 이미 유형별 상세(태그·설명·궁합)를 전부 갖추고 있어서 화면을 새로 만들 필요가 없었다.
+export function renderDiscTypes() {
+  const entries = Object.values(DISC_TYPES);
+  app.appendChild(el(`
+    <div>
+      <div class="back-row">
+        <button class="back-btn" data-nav="disc-intro">‹</button>
+        <div class="back-title">${entries.length}가지 유형 미리보기</div>
+        <button class="exit-btn" data-nav="home" aria-label="홈으로 가기">🏠</button>
+      </div>
+      <div class="test-list" style="padding-top:8px;">
+        ${entries.map((t) => `
+          <button class="test-card" data-slug="${t.slug}">
+            <div class="icon" style="background:#E8642E;">${t.emoji}</div>
+            <div class="body">
+              <div class="name">${t.name}</div>
+              <div class="desc">${t.subtitle}</div>
+            </div>
+            <div class="chevron">›</div>
+          </button>
+        `).join("")}
+      </div>
+    </div>
+  `));
+  bindNav(app);
+  app.querySelectorAll(".test-card").forEach((card) => {
+    card.addEventListener("click", () => {
+      location.href = `/test/disc/result/${card.dataset.slug}`;
+    });
   });
 }
 
@@ -392,10 +428,83 @@ export function renderDiscShared() {
 
 // ---------------------------------------------------------------- 공유 카드
 
+// data.js의 "\n" 줄바꿈은 온스크린 좁은 컬럼 기준이라, 1080px 캔버스에 그대로 그리면
+// 가장 긴 줄이 여백 없이 캔버스 폭에 거의 맞닿는다(측정 결과 1040px, 캔버스 1080px).
+// 단어 단위로 다시 감싸서 항상 여백 안에 들어오게 한다.
+function wrapLine(ctx, text, maxWidth) {
+  const words = text.split(" ");
+  const lines = [];
+  let current = "";
+  for (const word of words) {
+    const test = current ? `${current} ${word}` : word;
+    if (current && ctx.measureText(test).width > maxWidth) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = test;
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
+}
+
+const DESC_FONT = "500 32px Pretendard, sans-serif";
+const LIFE_TITLE_FONT = "700 32px Pretendard, sans-serif";
+const LIFE_HEADER_FONT = "700 30px Pretendard, sans-serif";
+const LIFE_BODY_FONT = "500 28px Pretendard, sans-serif";
+
+// 결과 화면(.result-card p)의 설명과 "실제로는 이렇게 나와요" 카드 4개(연애·일·스트레스·
+// 나를 대하는 법)를 순서대로 쌓으며 각 줄의 y좌표를 미리 계산한다. 캔버스는 유형마다
+// 텍스트 길이가 달라 고정 높이로 두면 잘리거나 빈 공간이 남으므로, 그리기 전에 전체
+// 내용의 최종 높이부터 알아야 한다 — 그래서 측정과 배치를 한 번에 하는 이 함수가 필요하다.
+function layoutDiscCardBody(measureCtx, t, maxWidth, startY) {
+  const plan = [];
+  let y = startY;
+
+  measureCtx.font = DESC_FONT;
+  for (const line of t.desc.split("\n").flatMap((l) => wrapLine(measureCtx, l, maxWidth))) {
+    plan.push({ text: line, y, font: DESC_FONT, color: "rgba(255,255,255,.92)" });
+    y += 44;
+  }
+
+  y += 64;
+  plan.push({ text: "실제로는 이렇게 나와요", y, font: LIFE_TITLE_FONT, color: "#fff" });
+  y += 58;
+
+  const sections = [
+    ["💘", "연애할 때", t.life.love],
+    ["💼", "일할 때", t.life.work],
+    ["🌧️", "스트레스 받을 때", t.life.stress],
+    ["📋", "나를 대하는 법", t.life.manual],
+  ];
+  for (const [icon, title, body] of sections) {
+    plan.push({ text: `${icon} ${title}`, y, font: LIFE_HEADER_FONT, color: "#FFE2D2" });
+    y += 46;
+    measureCtx.font = LIFE_BODY_FONT;
+    for (const line of body.split("\n").flatMap((l) => wrapLine(measureCtx, l, maxWidth))) {
+      plan.push({ text: line, y, font: LIFE_BODY_FONT, color: "rgba(255,255,255,.92)" });
+      y += 40;
+    }
+    y += 44;
+  }
+
+  return { plan, bottom: y };
+}
+
 async function drawDiscCard(r) {
   const t = r.type;
   const W = 1080;
-  const H = 1080;
+  const MAX_WIDTH = W - 160; // 좌우 80px 여백
+
+  // 높이를 정하기 전에 실제로 감싼 줄 수를 알아야 해서, 측정용으로 먼저 컨텍스트를 만든다.
+  const measureCanvas = document.createElement("canvas");
+  const measureCtx = measureCanvas.getContext("2d");
+  const { plan, bottom } = layoutDiscCardBody(measureCtx, t, MAX_WIDTH, 970);
+
+  const ctaY = bottom + 26;
+  const urlY = ctaY + 42;
+  const H = urlY + 48;
+
   const canvas = document.createElement("canvas");
   canvas.width = W;
   canvas.height = H;
@@ -447,12 +556,19 @@ async function drawDiscCard(r) {
   ctx.fillStyle = "#FFE2D2";
   ctx.fillText(t.tags.join("   "), W / 2, 920);
 
+  // 설명 + "실제로는 이렇게 나와요" 4카드 — layoutDiscCardBody가 계산해둔 좌표 그대로 찍는다.
+  for (const item of plan) {
+    ctx.font = item.font;
+    ctx.fillStyle = item.color;
+    ctx.fillText(item.text, W / 2, item.y);
+  }
+
   ctx.font = "700 34px Pretendard, sans-serif";
   ctx.fillStyle = "#fff";
-  ctx.fillText("너는 무슨 유형이야?", W / 2, 990);
+  ctx.fillText("너는 무슨 유형이야?", W / 2, ctaY);
   ctx.font = "600 26px Pretendard, sans-serif";
   ctx.fillStyle = "rgba(255,255,255,.7)";
-  ctx.fillText(`${location.origin}/test/disc`, W / 2, 1032);
+  ctx.fillText(`${location.origin}/test/disc`, W / 2, urlY);
 
   return canvas;
 }
