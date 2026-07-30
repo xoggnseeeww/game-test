@@ -15,7 +15,7 @@
 //      rewrite하면 그 정식 주소로 308을 한 번 더 보낸다. 그 308의 목적지
 //      (`/og-shells/test-disc` 같은 내부 파일 경로)는 앱에 등록된 화면이 아니라서
 //      라우터가 홈으로 떨어뜨린다 — 실제로 배포에서 겪은 버그다(2026-07-30,
-//      `docs/decisions/2027-h1.md` D-32 갱신 4).
+//      `docs/decisions/2027-h1.md` D-47 갱신 4).
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -81,7 +81,7 @@ test("_redirects: OG 셸 규칙 3개가 전부 존재하고 대상 파일도 실
     assert.equal(
       rule.dest,
       shell.redirectDest,
-      `${shell.path} 규칙의 목적지가 예상과 다르다 — .html 확장자를 붙이면 Cloudflare가 확장자 없는 정식 주소로 308을 한 번 더 보낸다(D-32 갱신 4)`
+      `${shell.path} 규칙의 목적지가 예상과 다르다 — .html 확장자를 붙이면 Cloudflare가 확장자 없는 정식 주소로 308을 한 번 더 보낸다(D-47 갱신 4)`
     );
     assert.ok(!rule.dest.endsWith(".html"), `${shell.path} 규칙의 목적지에 .html 확장자가 붙어있으면 안 된다`);
     assert.equal(rule.status, "200", `${shell.path} 규칙은 rewrite(200)여야 한다 — 리다이렉트면 주소창이 바뀐다`);
