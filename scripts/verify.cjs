@@ -215,7 +215,9 @@ async function playNumpathRun(page) {
   // 앱 버그가 아니므로 제외한다. 다만 "Failed to load resource: ... 403" 같은 메시지는 본문에
   // 주소가 없어서 m.text()만 보면 걸러지지 않는다 — m.location().url까지 같이 본다.
   // (AdFit 스크립트가 슬롯마다 붙었는지는 아래 "광고 슬롯" 검사가 DOM으로 따로 확인한다)
-  const EXTERNAL_NOISE = /ERR_TUNNEL_CONNECTION_FAILED|jsdelivr|pretendard|daumcdn|AdFit/i;
+  // accounts.google.com/gsi/client: 우상단 관리자 로그인(js/core/auth.js)이 쓰는 GIS 스크립트.
+  // 다른 CDN 자원과 같은 이유로 샌드박스 프록시가 막는다 — 앱 버그가 아니다.
+  const EXTERNAL_NOISE = /ERR_TUNNEL_CONNECTION_FAILED|jsdelivr|pretendard|daumcdn|AdFit|accounts\.google\.com/i;
   page.on("console", (m) => {
     if (m.type() !== "error") return;
     const t = m.text();
@@ -635,6 +637,38 @@ async function playNumpathRun(page) {
   // 다시 시작 → 인트로로 (자동으로 새 런을 시작하지 않는다 — ADHD "테스트 다시하기"와 같은 패턴)
   await page.click("#retry-btn");
   check("NumPath 다시하기 → 인트로로(자동 재시작 아님)", page.url().endsWith("/game/numpath"), page.url());
+
+  // === 관리자 전용 게이트: 부부 체크는 아직 출시 전이라 관리자(js/core/auth.js의
+  // ADMIN_EMAIL)만 들어갈 수 있어야 한다. 아래는 로그인 전(비관리자) 상태로 확인한다 ===
+  await goto("/test");
+  check("부부 체크 카드에 '출시 예정' 배지 (비관리자)", await page.isVisible(".coming-soon-badge"));
+  await page.click('[data-nav="couple-intro"]');
+  check(
+    "비관리자가 카드를 클릭해도 목록에 그대로 남는다",
+    page.url().endsWith("/test"),
+    page.url()
+  );
+  check(
+    "비관리자 접근 시 '곧 출시됩니다' 모달이 뜬다",
+    (await page.textContent(".modal-title").catch(() => "")) === "곧 출시됩니다"
+  );
+  await page.click("#modal-confirm").catch(() => {});
+  await goto("/test/couple/result");
+  check(
+    "비관리자가 하위 화면 주소로 직접 접속해도 목록으로 돌아온다",
+    page.url().endsWith("/test"),
+    page.url()
+  );
+  await page.click("#modal-confirm").catch(() => {});
+
+  // 이후 부부 체크 회귀는 관리자 권한으로 진행한다 — 관리자 전용 기능이라 다른 방법이 없다.
+  // 실제 Google 로그인은 헤드리스에서 재현할 수 없어(GIS 팝업), localStorage를 auth.js와
+  // 같은 형식으로 직접 채워 로그인 상태를 흉내낸다.
+  await page.evaluate(() => localStorage.setItem("gt_admin_email", "xogns022@gmail.com"));
+  check(
+    "관리자 로그인 후 배지가 사라진다",
+    !(await goto("/test").then(() => page.isVisible(".coming-soon-badge")))
+  );
 
   // === 부부 관계 성향 체크: 3축 선택 → 46문항 → 결과 → 배우자 코드 왕복 ===
   await goto("/test/couple");

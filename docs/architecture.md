@@ -27,8 +27,12 @@ js/core/
   router.js             화면 레지스트리 · 테스트/게임 레지스트리 · 경로 해석 · guard · teardown · 테마 · history · 렌더 후 refreshAds()
   state.js              단일 상태 객체 (테스트별·게임별 네임스페이스)
   dom.js                el() · bindNav() · showModal() · bindAdGate()(광고 게이트 카운트다운)
+  auth.js               관리자 로그인 — Google Identity Services로 받은 이메일이 ADMIN_EMAIL과
+                        같은지만 본다(서버 검증 없음). localStorage에 이메일만 보관, isAdmin()/logout()/
+                        renderSignInButton() 제공
+  header.js             #app 밖(body)에 붙는 전역 우상단 햄버거 메뉴 — 로그인 상태 표시·로그인/로그아웃
   share.js              공유 URL · navigator.share · 결과 카드 캔버스
-  util.js               shuffle · normalizePath · roundRect · localStorage 방어 래퍼
+  util.js               shuffle · normalizePath · roundRect
   ads.js                카카오 AdFit — adSlotMarkup()(단위 코드 단일 소스) · adGateMarkup()(전면 게이트 마크업) · refreshAds()(로더 태그 재실행)
 js/screens/home.js      홈 · 심리테스트 목록 · 미니게임 목록 · 개인정보처리방침 + commonScreens
 js/tests/<id>/
@@ -103,13 +107,13 @@ js/games/<id>/          테스트에 속하지 않는 독립 미니게임(예: n
 | `/test/disc/dilemma` | `dilemma-intro` | disc | 문항 미완료 → `disc-intro` |
 | `/test/disc/dilemma/play` | `dilemma-play` | disc | 문항 미완료 → `disc-intro` |
 | `/test/disc/dilemma/ad` | `dilemma-ad` | disc | 문항 미완료 → `disc-intro`, 게임 미완료 → `dilemma-intro` |
-| `/test/couple` · `/setup` | `couple-intro` · `couple-setup` | couple | — |
-| `/test/couple/guide` | `couple-guide` | couple | — (이용 안내, 언제든 접근 가능) |
-| `/test/couple/play` | `couple-question` | couple | 축 미선택 → `couple-intro` · 다 답했으면 마지막 문항으로 되돌림 |
-| `/test/couple/ad` · `/result` · `/invite` | `couple-ad` · `couple-result` · `couple-invite` | couple | 문항 미완료 → `couple-intro` |
-| `/test/couple/pair[?p=<코드>]` | `couple-pair` | couple | 코드 없음/안 풀림 → **인트로 폴백 아님**, 직접 입력 폼 렌더(D-45) · 코드 있고 본인 응답 완료 → `couple-report` |
-| `/test/couple/together` | `couple-report` | couple | 코드 없음·문항 미완료 → `couple-intro` |
-| `/test/couple/result/<slug>` | `couple-shared` | couple | 슬러그 안 풀리면 → `home` |
+| `/test/couple` · `/setup` | `couple-intro` · `couple-setup` | couple | **관리자만**(D-51) — 아니면 "곧 출시됩니다" 모달 + `psych-list` |
+| `/test/couple/guide` | `couple-guide` | couple | **관리자만**(D-51) |
+| `/test/couple/play` | `couple-question` | couple | **관리자만**(D-51) · 통과해도 축 미선택 → `couple-intro` · 다 답했으면 마지막 문항으로 되돌림 |
+| `/test/couple/ad` · `/result` · `/invite` | `couple-ad` · `couple-result` · `couple-invite` | couple | **관리자만**(D-51) · 통과해도 문항 미완료 → `couple-intro` |
+| `/test/couple/pair[?p=<코드>]` | `couple-pair` | couple | **관리자만**(D-51) · 통과하면 코드 없음/안 풀림 → 직접 입력 폼 렌더(D-45) · 코드 있고 본인 응답 완료 → `couple-report` |
+| `/test/couple/together` | `couple-report` | couple | **관리자만**(D-51) · 통과해도 코드 없음·문항 미완료 → `couple-intro` |
+| `/test/couple/result/<slug>` | `couple-shared` | couple | **관리자만**(D-51) · 통과해도 슬러그 안 풀리면 → `home` |
 | `/game/numpath` | `numpath-intro` | game | — |
 | `/game/numpath/play` | `numpath-play` | game | 런 없음 → `numpath-intro` |
 | `/game/numpath/ad` | `numpath-ad` | game | 런 없음 → `numpath-intro`, 런 미완료 → `numpath-play` |

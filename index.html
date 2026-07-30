@@ -31,6 +31,10 @@
      통째로 갈아끼워 재스캔시킨다(js/core/router.js의 render() 끝에서 호출) —
      그래서 태그를 지우면 안 된다, refreshAds()가 갈아끼울 대상 자체가 없어진다. -->
 <script type="text/javascript" src="//t1.daumcdn.net/kas/static/ba.min.js" async></script>
+<!-- 우상단 관리자 로그인(js/core/auth.js)이 쓰는 Google Identity Services. Client ID는
+     public 값이라 여기 노출돼도 안전하지만, 실제 로그인 버튼이 뜨려면 Google Cloud
+     Console에서 발급받은 값을 auth.js의 GOOGLE_CLIENT_ID에 채워 넣어야 한다. -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
   <div id="app"></div>

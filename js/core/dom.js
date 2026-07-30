@@ -54,7 +54,7 @@ export function bindAdGate(root, onContinue) {
   btn.addEventListener("click", onContinue);
 }
 
-export function showModal({ title, body, confirmLabel = "확인", cancelLabel = "취소", onConfirm }) {
+export function showModal({ title, body, confirmLabel = "확인", cancelLabel = "취소", onConfirm = () => {} }) {
   const overlay = el(`
     <div class="modal-overlay">
       <div class="modal-box">
@@ -62,7 +62,7 @@ export function showModal({ title, body, confirmLabel = "확인", cancelLabel = 
         <p class="modal-body">${body}</p>
         <div class="modal-actions">
           <button class="modal-btn-primary" id="modal-confirm">${confirmLabel}</button>
-          <button class="modal-btn-secondary" id="modal-cancel">${cancelLabel}</button>
+          ${cancelLabel ? `<button class="modal-btn-secondary" id="modal-cancel">${cancelLabel}</button>` : ""}
         </div>
       </div>
     </div>
@@ -72,7 +72,8 @@ export function showModal({ title, body, confirmLabel = "확인", cancelLabel = 
   overlay.addEventListener("click", (e) => {
     if (e.target === overlay) close();
   });
-  overlay.querySelector("#modal-cancel").addEventListener("click", close);
+  const cancelBtn = overlay.querySelector("#modal-cancel");
+  if (cancelBtn) cancelBtn.addEventListener("click", close);
   overlay.querySelector("#modal-confirm").addEventListener("click", () => {
     close();
     onConfirm();

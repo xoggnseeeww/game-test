@@ -69,9 +69,81 @@ body {
 
 #app {
   max-width: 480px;
-  margin: 0 auto;
-  min-height: 100vh;
+  margin: 56px auto 0;
+  min-height: calc(100vh - 56px);
   background: #F6F4EF;
+}
+
+/* 사이트 전역 우상단 햄버거 메뉴. #app 밖(body)에 고정으로 붙어서 화면이 바뀌어도
+   그대로 있다(모달과 같은 이유). #app의 margin-top이 이 높이만큼 자리를 비워둔다. */
+.site-header-menu {
+  position: fixed;
+  top: 8px;
+  right: 14px;
+  z-index: 60;
+}
+
+.hamburger-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: none;
+  background: rgba(23, 23, 26, .08);
+  font-size: 19px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.hamburger-panel {
+  display: none;
+  position: absolute;
+  top: 48px;
+  right: 0;
+  min-width: 220px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, .18);
+  padding: 14px;
+}
+
+.site-header-menu.open .hamburger-panel {
+  display: block;
+}
+
+.hamburger-account {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.hamburger-email {
+  font-size: 13px;
+  font-weight: 700;
+  color: #17171A;
+  word-break: break-all;
+}
+
+.hamburger-logout {
+  background: #F1EFEA;
+  color: #75727B;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 10px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.coming-soon-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  color: #D9436F;
+  background: rgba(217, 67, 111, .14);
+  border-radius: 6px;
+  padding: 2px 6px;
+  vertical-align: middle;
 }
 
 .header {

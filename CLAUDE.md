@@ -23,11 +23,14 @@
   그 위에 페이지별 OG 셸로 보내는 rewrite 규칙 3개가 더 있다(D-47) — `_redirects`는 첫 매치 우선이라
   더 구체적인 규칙이 항상 와일드카드보다 **위**에 있어야 한다. `test/og-shells.test.js`가 순서를 검사한다
 - 영속 데이터: 기본적으로 **없음** (예전엔 `localStorage["gt_reaction_best"]`로 반응속도 최고기록을 저장했으나 D-20에서 제거).
-  **예외 하나**: 부부 체크의 짧은 매칭 코드(Cloudflare KV, `COUPLE_CODES` 바인딩, 7일 TTL 자동 만료) — 식별자 없는
-  익명 점수 덩어리만 저장되고, 만료 외에 수동 삭제 경로는 없다(D-45). 시크릿·환경변수 **없음**은 그대로 유지.
-  백엔드는 이 하나의 기능에만 있다 — Cloudflare Pages Functions(`functions/api/couple-code/`) + KV,
+  **예외 둘**: ① 부부 체크의 짧은 매칭 코드(Cloudflare KV, `COUPLE_CODES` 바인딩, 7일 TTL 자동 만료) — 식별자 없는
+  익명 점수 덩어리만 저장되고, 만료 외에 수동 삭제 경로는 없다(D-45). ② 관리자 로그인 이메일
+  (`localStorage["gt_admin_email"]`, `js/core/auth.js`) — Google 로그인으로 받은 이메일 하나만 기기에
+  남고, 로그아웃하면 지워진다. 서버로는 전송되지 않는다(D-51). 시크릿·환경변수 **없음**은 그대로 유지
+  (Google Client ID는 공개 값이라 시크릿이 아니다).
+  백엔드는 부부 체크 짧은 코드 하나에만 있다 — Cloudflare Pages Functions(`functions/api/couple-code/`) + KV,
   `wrangler.jsonc`로 바인딩. 나머지 전부는 여전히 정적 파일 + 브라우저뿐이다.
-  이 예외가 생기면서 개인정보처리방침(`/privacy`, 홈 하단 링크)을 신설했다 — 실제로 저장·처리하는
+  이 예외들이 생기면서 개인정보처리방침(`/privacy`, 홈 하단 링크)을 신설했다 — 실제로 저장·처리하는
   것만 적는다. 아직 안 하는 걸 미리 적어두면 나중에 그 기능이 생겼을 때 방침이 먼저 거짓말이 된다
 - 방문 분석: Cloudflare Web Analytics — `data-pantry.com` 존에 automatic setup으로 이미 등록돼 있고,
   `fun.data-pantry.com`은 같은 존의 서브도메인이라 **코드 변경 없이 자동으로 같이 잡힌다**(2026-07-28 확인).
@@ -37,8 +40,9 @@
 
 ## 기술 스택
 빌드 없는 정적 SPA. 브라우저 네이티브 ES 모듈(`<script type="module">`), 런타임 의존성 0.
-외부 의존은 CDN 폰트 하나. 라우팅은 History API 직접 구현 + **레지스트리 방식 라우터**.
-상태는 메모리 내 단일 `state` 객체(새로고침하면 날아감).
+외부 의존은 CDN 폰트 하나 + Google Identity Services(우상단 관리자 로그인, D-51). 라우팅은
+History API 직접 구현 + **레지스트리 방식 라우터**. 상태는 메모리 내 단일 `state` 객체
+(새로고침하면 날아감) — 로그인 이메일만 예외로 `localStorage`에 남는다(위 항목 참고).
 
 ## 구조 개요
 ```
@@ -47,8 +51,9 @@ og-shells/             테스트·게임 진입 화면 3곳의 정적 OG 셸(og-
                       _redirects가 해당 경로만 이 파일로 rewrite한다 — index.html과 내용은
                       거의 같고 <title>·og:*만 페이지별이다(D-47)
 assets/                favicon(svg) · apple-touch-icon(png) · og-image*.png(1200×630, 홈+테스트/게임별)
-js/main.js            부팅: 화면·테스트·게임을 라우터에 등록
-js/core/              router(레지스트리·guard·teardown·게임 레지스트리) · state · dom · share · util · ads
+js/main.js            부팅: 화면·테스트·게임을 라우터에 등록 + initHeader()
+js/core/              router(레지스트리·guard·teardown·게임 레지스트리) · state · dom · share · util · ads ·
+                      auth(관리자 로그인 — Google Identity Services, D-51) · header(우상단 햄버거 메뉴)
 js/screens/home.js    홈 · 심리테스트 목록(등록된 테스트에서 자동 생성) · 미니게임 목록(등록된 게임에서 자동 생성) · 개인정보처리방침
 js/tests/<id>/        테스트 1개 = 폴더 1개: data · score · screens · index(디스크립터)
                       현재 adhd(+반응속도 게임), disc(+딜레마 게임),
@@ -125,6 +130,10 @@ docs/design-draft.html  최초 디자인 목업. 배포·동작과 무관 (.clau
   `functions/api/couple-code/index.js`·`[code].js`·`wrangler.jsonc` 셋 다 같이 고친다.
   바인딩 이름(`COUPLE_CODES`)은 세 곳 모두 문자 그대로 일치해야 한다 — 하나만 바꾸면
   로컬(`wrangler pages dev`)에서만 조용히 깨진다(배포본은 대시보드 바인딩이 남아있어 더 늦게 발견됨)
+- 다른 테스트/게임도 출시 전 관리자 전용으로 두려면 → `js/tests/couple/index.js`의
+  `comingSoonGuard()` 패턴을 그대로 복사해 모든 화면 `guard`에 씌우고, `card.comingSoon = true`
+  추가(D-51). 관리자 이메일은 `js/core/auth.js`의 `ADMIN_EMAIL` 하나뿐이라 공용 유틸리티로
+  뽑지 않았다 — 두 번째로 필요해지면 그때 뽑는다
 - 구조 변경(모듈 추가·이동·삭제) → **같은 커밋에** `docs/architecture.md` 모듈맵과 위 구조 개요 트리 갱신
 - `styles.css` 클래스명 변경 → 템플릿 문자열은 타입 체크가 없다. `grep -rn '<클래스명>' js/ styles.css`로 양쪽 확인
 - 새 테스트/게임에 OG 미리보기 추가 → `og-shells/<이름>.html` 작성 + `_redirects`에 규칙 추가(**와일드카드 위**) + `assets/og-<이름>.png` + `test/og-shells.test.js`의 `SHELLS` 배열에 항목 추가. 카드(`card.name`/`card.desc`) 문구 변경 시 셸의 `<title>`·`og:title`·`og:description`도 같이 고친다 — 자동 반영 안 됨(D-47), `og-shells.test.js`가 불일치를 잡아준다
