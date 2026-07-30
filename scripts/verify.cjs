@@ -571,7 +571,10 @@ async function playNumpathRun(page) {
     (await loaderMark(page)) === "numpath-play",
     `mark=${await loaderMark(page)}`
   );
-  check("NumPath 스테이지 전환 시 광고 슬롯 정확히 1개(중복 누적 없음)", (await page.$$eval(".ad-slot", (l) => l.length)) === 1);
+  check(
+    "NumPath 스테이지 전환 시 광고 슬롯 정확히 2개(상단+하단, 중복 누적 없음)",
+    (await page.$$eval(".ad-slot", (l) => l.length)) === 2
+  );
 
   // === 스테이지 클리어 직후(다음 스테이지로 넘어가기 전 900ms 지연 중) 이탈해도
   // 남은 setTimeout이 다른 화면을 밀어버리지 않는가 (E-4와 같은 종류의 버그) ===

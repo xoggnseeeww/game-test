@@ -30,6 +30,7 @@ export function renderNumpathPlay() {
         <div class="back-title">NumPath</div>
         <button class="exit-btn" aria-label="홈으로 가기">🏠</button>
       </div>
+      ${adSlotMarkup("banner", "margin-top:10px; margin-bottom:4px;")}
       <div class="np-goal">
         <div class="np-goal-row">
           <div class="np-goal-block">
