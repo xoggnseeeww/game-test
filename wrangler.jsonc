@@ -1,0 +1,12 @@
+{
+  "$schema": "https://developers.cloudflare.com/pages/functions/wrangler-configuration/",
+  "name": "gwamollip-zone",
+  // 빌드 단계가 없다 — 레포 루트 자체가 배포 산출물이다(CLAUDE.md).
+  "pages_build_output_dir": ".",
+  "compatibility_date": "2026-07-30",
+  "kv_namespaces": [
+    // functions/api/couple-code/ 가 이 바인딩으로 짧은 코드 ↔ 부부 코드(25자)를 저장한다.
+    // 바인딩 이름(COUPLE_CODES)을 바꾸면 그 두 파일의 env.COUPLE_CODES도 같이 고쳐야 한다.
+    { "binding": "COUPLE_CODES", "id": "157804a1341642bcb3a3b8405e7b927d" }
+  ]
+}

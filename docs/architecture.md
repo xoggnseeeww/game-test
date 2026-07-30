@@ -105,7 +105,7 @@ js/games/<id>/          테스트에 속하지 않는 독립 미니게임(예: n
 | `/test/couple/guide` | `couple-guide` | couple | — (이용 안내, 언제든 접근 가능) |
 | `/test/couple/play` | `couple-question` | couple | 축 미선택 → `couple-intro` · 다 답했으면 마지막 문항으로 되돌림 |
 | `/test/couple/ad` · `/result` · `/invite` | `couple-ad` · `couple-result` · `couple-invite` | couple | 문항 미완료 → `couple-intro` |
-| `/test/couple/pair?p=<코드>` | `couple-pair` | couple | 코드 안 풀림 → `couple-intro` · 본인 응답 완료 → `couple-report` |
+| `/test/couple/pair[?p=<코드>]` | `couple-pair` | couple | 코드 없음/안 풀림 → **인트로 폴백 아님**, 직접 입력 폼 렌더(D-45) · 코드 있고 본인 응답 완료 → `couple-report` |
 | `/test/couple/together` | `couple-report` | couple | 코드 없음·문항 미완료 → `couple-intro` |
 | `/test/couple/result/<slug>` | `couple-shared` | couple | 슬러그 안 풀리면 → `home` |
 | `/game/numpath` | `numpath-intro` | game | — |
@@ -127,8 +127,11 @@ js/games/<id>/          테스트에 속하지 않는 독립 미니게임(예: n
 로직 개요는 `docs/numpath-architecture.md` 참고.
 
 **부부 관계 성향 체크만 화면이 10개다** — 축 선택·이용 안내·배우자 초대·결합 결과가 더 있기 때문이다.
-백엔드가 없어 배우자 결과를 주소(`?p=<코드>`)로 실어 나르므로 `couple-pair`만 쿼리 스트링에
-의존한다. 상세는 `docs/couple-architecture.md`.
+배우자 결과는 기본적으로 주소(`?p=<25자 코드>`)로 실어 나르므로 `couple-pair`만 쿼리 스트링에
+의존한다. **이 테스트만 예외적으로 백엔드(Cloudflare Pages Functions + KV)를 하나 쓴다** —
+25자 코드를 8자로 줄여주는 `functions/api/couple-code/`. 스키마 자체는 그대로 백엔드 없이도
+동작해서(`couple-pair`가 25자 코드·링크 직접 입력도 받는다), 백엔드는 최적화지 의존성이
+아니다. 상세는 `docs/couple-architecture.md` §6-1.
 
 - **광고 게이트(`reaction-ad`/`dilemma-ad`/`numpath-ad`)**: `core/ads.js`의 `adGateMarkup()` +
   `core/dom.js`의 `bindAdGate()`로 구성. 300×250 AdFit 광고 단위(`interstitial`)를 3초
@@ -158,8 +161,10 @@ state = {
     items: null,     // 조립된 문항지 (축을 고른 뒤에 만들어진다)
     answers: {},     // 문항 코드 → 1~5
     index: 0,
+    completed: false,  // 문항을 끝까지 마쳤는가. answers 개수로 대신 세지 않는다(D-44)
     startedAt: null, elapsedMs: null,  // 소요시간 검사용. 완료 시점에 한 번 고정한다
-    partner: null,   // 초대 링크(?p=)에서 푼 배우자 결과 — 문항을 다시 시작해도 살려둔다
+    partner: null,   // 초대 링크(?p=)나 직접 입력으로 푼 배우자 결과 — 문항을 다시 시작해도 살려둔다
+    shortCode: null, // 초대 화면에서 발급받은 짧은 코드 캐시 { code, for } (D-45)
   },
 }
 ```
@@ -223,6 +228,7 @@ ADHD·DISC 채점 파이프라인 상세는 각각 `docs/adhd-architecture.md` �
 | `test/copy.test.js` | 화면 문구의 개수가 데이터에서 파생되는가 (`docs/ERRORS.md` E-1) |
 | `test/couple.score.test.js` | 문항 뱅크 구조 / 조립 규칙(요인 이격·역채점 분산·앵커 후미·축 조합 무관 동일 구성) / 채점 임계값 / 유효성 플래그 / 유형×문구 뱅크 빠짐없음 |
 | `test/couple.match.test.js` | ΔDISC 정규화 · Risk Matrix 대칭 · Gap 방향 보존 · 게이지 방향(K2 가산/K4 감산) · 등급 완충 · 구간 문구에 숫자 없음 · 배우자 코드 왕복/체크섬 |
+| `test/couple.shortcode.test.js` | 짧은 코드 형식(8자·Crockford Base32) · 혼동 글자(I·L·O·U) 미포함 · 바이트→문자 매핑이 치우치지 않는가 · 정규화(대소문자·대시) |
 | `test/numpath.engine.test.js` | 순차 연산 · 이동 판정(나눗셈 정수·뺄셈 양수) · Undo 왕복 불변식 · 클리어/막힘/이동초과 판정 |
 | `test/numpath.generate.test.js` | 시드 재현성 · 레벨마다 생성된 퍼즐이 항상 solve() 가능한가(교차 검증) · 별 등급 임계값 |
 

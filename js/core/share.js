@@ -31,7 +31,7 @@ function fontsReady(timeout = 2000) {
   ]);
 }
 
-async function saveImage(btn, draw, filename) {
+export async function saveImage(btn, draw, filename) {
   btn.textContent = "그리는 중...";
   try {
     await fontsReady();

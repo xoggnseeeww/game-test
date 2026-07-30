@@ -3,7 +3,7 @@ import { app, go, onLeave, parseSharedPath } from "../../core/router.js";
 import { el, bindNav, bindExit, bindAdGate } from "../../core/dom.js";
 import { state } from "../../core/state.js";
 import { roundRect } from "../../core/util.js";
-import { shareBlockMarkup, wireShare } from "../../core/share.js";
+import { shareBlockMarkup, wireShare, saveImage } from "../../core/share.js";
 import { adSlotMarkup, adGateMarkup } from "../../core/ads.js";
 import {
   T_AXIS,
@@ -37,6 +37,8 @@ import {
   encodePartner,
   decodePartner,
 } from "./match.js";
+import { isShortCode, normalizeShortCode, formatShortCode } from "./shortcode.js";
+import { issueShortCode, resolveShortCode } from "./remote.js";
 
 const COMBO_COUNT = T_AXIS.length * R_AXIS.length * K_AXIS.length;
 
@@ -85,6 +87,7 @@ export function resetCouple() {
     startedAt: null,
     elapsedMs: null,
     partner: state.couple ? state.couple.partner : null,
+    shortCode: null,
   };
 }
 
@@ -147,6 +150,7 @@ export function renderCoupleIntro() {
       <div class="cta">
         <button class="cta-btn" id="cp-start">시작하기</button>
       </div>
+      <div class="cp-guide-link"><button data-nav="couple-pair">💌 부부 결과 매칭 — 배우자 코드가 있어요</button></div>
       <div class="cp-guide-link"><button data-nav="couple-guide">📖 이 체크, 어떻게 쓰는 건가요?</button></div>
       ${adSlotMarkup("banner", "margin-top:6px; margin-bottom:22px;")}
     </div>
@@ -448,6 +452,7 @@ function inviteBlockMarkup() {
       <p class="cp-block-sub">같은 질문에 두 분이 얼마나 다르게 답했는지 볼 수 있어요.
       <b>혼자서는 알 수 없는 것</b>이에요. (위 결과가 더 정확해지는 건 아니에요.)</p>
       <button class="cta-btn" data-nav="couple-invite">배우자 초대 링크 만들기</button>
+      <button class="cta-btn cp-invite-secondary" data-nav="couple-pair">💌 부부 결과 매칭 — 배우자 코드 입력하기</button>
     </div>
   `;
 }
@@ -554,7 +559,8 @@ export function renderCoupleResult() {
 
 export function renderCoupleInvite() {
   const r = result();
-  const url = `${location.origin}/test/couple/pair?p=${encodePartner(r)}`;
+  const partnerCode = encodePartner(r);
+  const url = `${location.origin}/test/couple/pair?p=${partnerCode}`;
 
   app.appendChild(el(`
     <div>
@@ -575,6 +581,12 @@ export function renderCoupleInvite() {
         <div class="share-row">
           <button class="share-mini active" data-share="copy">🔗 링크 복사</button>
         </div>
+      </div>
+      <div class="cp-shortcode-block" id="cp-shortcode-block">
+        <div class="cp-block-title">링크 대신 짧은 코드로</div>
+        <p class="cp-block-sub">문자나 말로 전하기 편해요. 7일간 유효해요.</p>
+        <div class="cp-shortcode" id="cp-shortcode">발급 중...</div>
+        <button class="share-mini" id="cp-code-card-btn" disabled>🖼️ 배우자 전용 코드 카드 저장</button>
       </div>
       <div class="cp-guide-link"><button data-nav="couple-guide">📖 합치면 뭐가 달라지나요?</button></div>
       <p class="disclaimer">이 링크에는 결합 결과를 계산하는 데 필요한 내 점수가 담겨 있어요.
@@ -624,9 +636,56 @@ export function renderCoupleInvite() {
       flash(shareBtn, "공유 실패, 직접 복사해주세요");
     }
   });
+
+  // 화면을 떠난 뒤 발급 응답이 와도 지금 떠 있는 다른 화면의 DOM을 건드리면 안 된다 —
+  // app은 화면이 바뀌어도 같은 엘리먼트라 살아있는 것처럼 보인다(E-4와 같은 종류의 함정).
+  let left = false;
+  onLeave(() => {
+    left = true;
+  });
+  wireShortCode(r, partnerCode, () => left);
+}
+
+// 짧은 코드는 재진입할 때마다 새로 발급하지 않는다 — 같은 결과(같은 partnerCode)로는
+// state.couple.shortCode에 캐시해둔 걸 그대로 쓴다. KV 쓰기 한도가 하루 1,000회라
+// 화면을 여러 번 왔다갔다하면 금방 소진된다.
+async function wireShortCode(r, partnerCode, isLeft) {
+  const block = app.querySelector("#cp-shortcode-block");
+  const codeEl = app.querySelector("#cp-shortcode");
+  const cardBtn = app.querySelector("#cp-code-card-btn");
+
+  const cached = state.couple.shortCode;
+  let short = cached && cached.for === partnerCode ? cached.code : null;
+  if (!short) {
+    short = await issueShortCode(partnerCode);
+    if (isLeft()) return;
+    if (short) state.couple.shortCode = { code: short, for: partnerCode };
+  }
+
+  if (!short) {
+    block.innerHTML = `<p class="cp-note">짧은 코드 발급이 지금 안 돼요. 위 링크로 보내주세요.</p>`;
+    return;
+  }
+
+  codeEl.textContent = formatShortCode(short);
+  cardBtn.disabled = false;
+  cardBtn.classList.add("active");
+  cardBtn.addEventListener("click", () =>
+    saveImage(cardBtn, () => drawCoupleCodeCard(r, short), "과몰입구역-부부코드카드.png")
+  );
 }
 
 // ---------------------------------------------------------------- 초대 링크로 들어온 화면
+
+// 배우자 코드를 직접 입력받는다. 셋 다 받는다 — 짧은 코드(코드 카드·문자로 받은 것),
+// 25자 코드를 그대로 붙여넣은 경우, 링크를 통째로 붙여넣은 경우. 짧은 코드만 네트워크가
+// 필요하고, 나머지 둘은 decodePartner()가 바로 순수하게 처리한다(백엔드가 죽어도 25자
+// 코드·링크 경로는 그대로 동작한다).
+function extractPartnerCandidate(raw) {
+  const trimmed = raw.trim();
+  const m = trimmed.match(/[?&]p=([^&\s]+)/);
+  return m ? decodeURIComponent(m[1]) : trimmed;
+}
 
 export function renderCouplePair() {
   const partner = partnerFromUrl();
@@ -640,27 +699,95 @@ export function renderCouplePair() {
       ${adSlotMarkup("banner", "margin-top:10px; margin-bottom:4px;")}
       <div class="cover">
         <div class="emoji">💌</div>
-        <div class="tag">배우자가 보낸 초대</div>
-        <h2>배우자가 먼저<br/>답을 마쳤어요</h2>
-        <p>${partner ? `배우자는 <b>${COUPLE_TYPES[partner.typeKey].name}</b>으로 나왔어요.` : ""}
-        이제 같은 문항에 답하면 두 분의 결합 결과가 나옵니다.</p>
+        <div class="tag">${partner ? "배우자가 보낸 초대" : "부부 결과 매칭"}</div>
+        <h2>${partner ? "배우자가 먼저<br/>답을 마쳤어요" : "배우자의 코드를<br/>입력해주세요"}</h2>
+        <p>${partner
+          ? `배우자는 <b>${COUPLE_TYPES[partner.typeKey].name}</b>으로 나왔어요. 이제 같은 문항에 답하면 두 분의 결합 결과가 나옵니다.`
+          : "배우자가 결과 화면에서 받은 <b>짧은 코드</b>나 <b>링크</b>를 붙여넣으세요."}</p>
       </div>
+      ${partner ? "" : `
+        <div class="cp-code-entry">
+          <input type="text" id="cp-code-input" placeholder="예: K7M2-QX8P 또는 링크 전체" autocomplete="off" autocapitalize="off" />
+          <button class="cta-btn" id="cp-code-submit">확인</button>
+          <p class="cp-note cp-code-error" id="cp-code-error" hidden></p>
+        </div>
+      `}
       ${PRIVACY_MARKUP}
       <p class="disclaimer">${SERVICE_NOTICE}<br/>
       자녀 단계는 배우자와 <b>같은 항목</b>을 골라주세요 — 두 분이 같은 문장을 받아야 비교가 성립합니다.</p>
-      <div class="cta">
-        <button class="cta-btn" id="cp-pair-start">문항 ${ITEM_TOTAL}개 시작하기</button>
-      </div>
+      ${partner ? `
+        <div class="cta">
+          <button class="cta-btn" id="cp-pair-start">문항 ${ITEM_TOTAL}개 시작하기</button>
+        </div>
+      ` : ""}
       <div class="cp-guide-link"><button data-nav="couple-guide">📖 합치면 뭐가 달라지나요?</button></div>
       ${adSlotMarkup("banner", "margin-top:6px; margin-bottom:22px;")}
     </div>
   `));
   bindNav(app);
-  app.querySelector("#cp-pair-start").addEventListener("click", () => {
-    const saved = state.couple.partner;
-    resetCouple();
-    state.couple.partner = saved;
-    go("couple-setup");
+
+  if (partner) {
+    app.querySelector("#cp-pair-start").addEventListener("click", () => {
+      const saved = state.couple.partner;
+      resetCouple();
+      state.couple.partner = saved;
+      go("couple-setup");
+    });
+    return;
+  }
+
+  wireCodeEntry();
+}
+
+function wireCodeEntry() {
+  const input = app.querySelector("#cp-code-input");
+  const submit = app.querySelector("#cp-code-submit");
+  const errorEl = app.querySelector("#cp-code-error");
+
+  let left = false;
+  onLeave(() => {
+    left = true;
+  });
+
+  function showError(msg) {
+    errorEl.textContent = msg;
+    errorEl.hidden = false;
+  }
+
+  submit.addEventListener("click", async () => {
+    errorEl.hidden = true;
+    const candidate = extractPartnerCandidate(input.value);
+    if (!candidate) {
+      showError("코드나 링크를 입력해주세요.");
+      return;
+    }
+
+    submit.disabled = true;
+    submit.textContent = "확인 중...";
+
+    let partnerCode = candidate;
+    if (isShortCode(candidate)) {
+      const resolved = await resolveShortCode(normalizeShortCode(candidate));
+      if (left) return;
+      if (!resolved) {
+        submit.disabled = false;
+        submit.textContent = "확인";
+        showError("코드를 찾을 수 없어요. 7일이 지났거나 잘못 입력했을 수 있어요.");
+        return;
+      }
+      partnerCode = resolved;
+    }
+
+    const decoded = decodePartner(partnerCode);
+    submit.disabled = false;
+    submit.textContent = "확인";
+    if (!decoded) {
+      showError("코드를 확인할 수 없어요. 다시 확인해주세요.");
+      return;
+    }
+
+    state.couple.partner = decoded;
+    go(coupleReady() ? "couple-report" : "couple-setup");
   });
 }
 
@@ -936,6 +1063,72 @@ async function drawCoupleCard(r) {
   ctx.font = "700 34px Pretendard, sans-serif";
   ctx.fillStyle = "#fff";
   ctx.fillText("우리는 서로를 어떻게 보고 있을까?", W / 2, 968);
+  ctx.font = "600 26px Pretendard, sans-serif";
+  ctx.fillStyle = "rgba(255,255,255,.72)";
+  ctx.fillText(`${location.origin}/test/couple`, W / 2, 1014);
+
+  return canvas;
+}
+
+// 공유용 카드(drawCoupleCard)와 일부러 분리한다. 공유 카드는 SNS에 올려도 되게 만든
+// 물건이고, 이 카드는 배우자에게 **결과를 합치는 데 쓰이는 코드**가 찍혀 있어서 공개
+// 게시를 전제로 하면 안 된다. 하나로 합치면 사람들이 자기 코드가 찍힌 이미지를
+// 공개적으로 올리고도 모르게 된다.
+async function drawCoupleCodeCard(r, shortCode) {
+  const t = COUPLE_TYPES[r.typeKey];
+  const W = 1080;
+  const H = 1080;
+  const canvas = document.createElement("canvas");
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext("2d");
+
+  const bg = ctx.createLinearGradient(0, 0, W, H);
+  bg.addColorStop(0, "#E2557F");
+  bg.addColorStop(1, "#A32A5A");
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.textAlign = "center";
+  ctx.fillStyle = "rgba(255,255,255,.85)";
+  ctx.font = "700 30px Pretendard, sans-serif";
+  ctx.fillText("과몰입구역 · 부부 관계 성향 체크", W / 2, 90);
+
+  // 코드는 항상 이 y좌표(140~370) 구간에 고정해서 그린다. 이 카드에서 실제로 바뀌는 건
+  // 코드뿐이라 값을 담는 자리는 매번 같은 곳에 있어야 한다 — 다른 값을 넣는 카드를
+  // 새로 만들 때도 이 구간은 건드리지 않는다.
+  ctx.font = "700 32px Pretendard, sans-serif";
+  ctx.fillStyle = "rgba(255,255,255,.9)";
+  ctx.fillText("🔒 배우자 전용 코드", W / 2, 200);
+
+  ctx.font = "800 100px 'SF Mono', Menlo, Consolas, monospace";
+  ctx.fillStyle = "#fff";
+  ctx.fillText(formatShortCode(shortCode), W / 2, 320);
+
+  ctx.font = "600 28px Pretendard, sans-serif";
+  ctx.fillStyle = "rgba(255,255,255,.75)";
+  ctx.fillText("7일 동안 이 코드로 결과를 합칠 수 있어요", W / 2, 370);
+
+  ctx.font = "130px sans-serif";
+  ctx.fillStyle = "#fff";
+  ctx.fillText(t.emoji, W / 2, 560);
+
+  ctx.font = "800 56px Pretendard, sans-serif";
+  ctx.fillText(t.name, W / 2, 650);
+
+  ctx.font = "600 28px Pretendard, sans-serif";
+  ctx.fillStyle = "rgba(255,255,255,.8)";
+  ctx.fillText(`${ATTACH_TYPES[r.attachment.key].name} · ${BEHAVIOR_LABELS[r.behavior.primary]}`, W / 2, 696);
+
+  const warnW = 760;
+  ctx.fillStyle = "rgba(255,255,255,.16)";
+  roundRect(ctx, W / 2 - warnW / 2, 830, warnW, 106, 20);
+  ctx.fill();
+  ctx.font = "700 30px Pretendard, sans-serif";
+  ctx.fillStyle = "#fff";
+  ctx.fillText("⚠️ 배우자 외 다른 사람에게는", W / 2, 878);
+  ctx.fillText("보여주지 마세요", W / 2, 918);
+
   ctx.font = "600 26px Pretendard, sans-serif";
   ctx.fillStyle = "rgba(255,255,255,.72)";
   ctx.fillText(`${location.origin}/test/couple`, W / 2, 1014);

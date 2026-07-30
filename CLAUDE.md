@@ -9,17 +9,22 @@
 ## 커맨드
 | 동작 | 명령어 |
 |------|--------|
-| 로컬 실행 | `python3 serve.py 8766` — **`-m http.server` 금지** (SPA 폴백 없어 하위 경로 404 → 라우팅 오판) → `docs/ERRORS.md` E-9 |
+| 로컬 실행 | `python3 serve.py 8766` — **`-m http.server` 금지** (SPA 폴백 없어 하위 경로 404 → 라우팅 오판) → `docs/ERRORS.md` E-9. `functions/api/`는 이걸로 안 뜬다(정적 파일 서버라 API가 없다) — 부부 체크의 짧은 코드는 자동으로 링크 폴백으로 넘어간다(의도된 동작) |
+| 로컬 실행(백엔드 포함) | `npx wrangler pages dev . --port 8788` — `functions/api/couple-code/`까지 재현하려면 이거여야 한다(KV는 로컬 파일로 자동 대체). `wrangler.jsonc`의 `compatibility_date`가 설치된 wrangler 바이너리보다 앞서 있으면 뜨지 않는다 — 그땐 `--compatibility-date=YYYY-MM-DD`로 낮춰서 로컬 실행만 우회한다(설정 파일 자체는 오늘 날짜로 둔다) |
 | 빌드 | **없음** (ES 모듈을 브라우저가 직접 로드) |
 | 테스트 | `npm test` (= `node --test`, 의존성 0) — 채점 로직·모듈 정합성 |
-| 브라우저 회귀 | `mkdir -p /tmp/pw && cd /tmp/pw && npm i playwright` → `NODE_PATH=/tmp/pw/node_modules node scripts/verify.cjs` (서버 먼저) |
-| 배포 | `main` push → Cloudflare Pages 자동 배포 |
+| 브라우저 회귀 | `mkdir -p /tmp/pw && cd /tmp/pw && npm i playwright` → `NODE_PATH=/tmp/pw/node_modules node scripts/verify.cjs` (서버 먼저). `VERIFY_BASE=http://localhost:8788`로 wrangler dev를 가리키면 짧은 코드 발급·조회까지 실제로 검증된다 — 안 하면 그 부분만 폴백 경로로 대체 확인된다 |
+| 배포 | `main` push → Cloudflare Pages 자동 배포 (Functions·KV 바인딩도 `wrangler.jsonc`에서 같이 배포됨) |
 
 ## 식별자
 - 도메인 `https://fun.data-pantry.com` / 저장소 `xoggnseeeww/game-test`
 - 호스팅: Cloudflare Pages — 빌드 명령 없음, 출력 디렉터리 = 레포 루트
 - SPA 폴백: `_redirects` (`/*  /index.html  200`) — 없으면 하위 경로 직접 접속이 404
-- 영속 데이터: **없음** (예전엔 `localStorage["gt_reaction_best"]`로 반응속도 최고기록을 저장했으나 D-20에서 제거) / 시크릿·환경변수·백엔드 **없음**
+- 영속 데이터: 기본적으로 **없음** (예전엔 `localStorage["gt_reaction_best"]`로 반응속도 최고기록을 저장했으나 D-20에서 제거).
+  **예외 하나**: 부부 체크의 짧은 매칭 코드(Cloudflare KV, `COUPLE_CODES` 바인딩, 7일 TTL 자동 만료) — 식별자 없는
+  익명 점수 덩어리만 저장되고, 만료 외에 수동 삭제 경로는 없다(D-45). 시크릿·환경변수 **없음**은 그대로 유지.
+  백엔드는 이 하나의 기능에만 있다 — Cloudflare Pages Functions(`functions/api/couple-code/`) + KV,
+  `wrangler.jsonc`로 바인딩. 나머지 전부는 여전히 정적 파일 + 브라우저뿐이다
 - 방문 분석: Cloudflare Web Analytics — `data-pantry.com` 존에 automatic setup으로 이미 등록돼 있고,
   `fun.data-pantry.com`은 같은 존의 서브도메인이라 **코드 변경 없이 자동으로 같이 잡힌다**(2026-07-28 확인).
   **이 레포에 분석 스크립트를 추가하지 말 것** — 페이지당 스니펫은 하나만 허용되는데 이미 상위 존에서
@@ -42,10 +47,15 @@ js/tests/<id>/        테스트 1개 = 폴더 1개: data · score · screens · 
                       현재 adhd(+반응속도 게임), disc(+딜레마 게임),
                       couple(+assemble · match — 문항지 조립과 부부 매칭이 따로 검증돼야 해서 분리)
 js/games/<id>/        테스트에 속하지 않는 독립 미니게임 1개 = 폴더 1개. 현재 numpath
+functions/api/couple-code/  부부 체크 짧은 코드 발급(index.js)·조회([code].js). 유일한 백엔드 —
+                      Cloudflare Pages Function + KV(COUPLE_CODES). js/tests/couple/shortcode.js를
+                      그대로 가져다 쓴다(발급·조회·브라우저 검증이 같은 알파벳을 봐야 한다)
+wrangler.jsonc         위 Function의 KV 바인딩 설정. 빌드 명령은 여전히 없다 — 이 파일은 배포
+                      산출물이 아니라 Cloudflare Pages가 Functions를 띄울 때만 읽는다
 test/                 node --test 스위트 (채점 로직 · 게임 로직 · 모듈 import/export 정합성)
 styles.css            전체 스타일. 브랜드 색은 CSS custom properties + theme-* 클래스
 _redirects            Cloudflare Pages SPA 폴백
-serve.py              로컬 개발 서버 (SPA 폴백 포함, 개발 전용)
+serve.py              로컬 개발 서버 (SPA 폴백 포함, 개발 전용, functions/는 못 띄운다)
 scripts/verify.cjs     헤드리스 브라우저 회귀 스위트 (레포 의존성 아님 — 파일 헤더 참고)
 docs/design-draft.html  최초 디자인 목업. 배포·동작과 무관 (.claudeignore)
 ```
@@ -99,6 +109,10 @@ docs/design-draft.html  최초 디자인 목업. 배포·동작과 무관 (.clau
 - 부부 체크 앵커 문항 수 변경 → `assemble.js`의 `ANCHOR_ZONE_START`/`ANCHOR_STRIDE`가 문항지
   끝을 넘지 않는지 확인한다(6개×3칸이 34번에서 시작해 정확히 49번에 끝난다). 넘으면 조립이
   조용히 앞으로 밀린다
+- 부부 체크 KV에 담는 값(짧은 코드 → 배우자 코드 문자열)의 형식·바인딩 이름 변경 →
+  `functions/api/couple-code/index.js`·`[code].js`·`wrangler.jsonc` 셋 다 같이 고친다.
+  바인딩 이름(`COUPLE_CODES`)은 세 곳 모두 문자 그대로 일치해야 한다 — 하나만 바꾸면
+  로컬(`wrangler pages dev`)에서만 조용히 깨진다(배포본은 대시보드 바인딩이 남아있어 더 늦게 발견됨)
 - 구조 변경(모듈 추가·이동·삭제) → **같은 커밋에** `docs/architecture.md` 모듈맵과 위 구조 개요 트리 갱신
 - `styles.css` 클래스명 변경 → 템플릿 문자열은 타입 체크가 없다. `grep -rn '<클래스명>' js/ styles.css`로 양쪽 확인
 

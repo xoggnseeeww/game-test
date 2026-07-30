@@ -36,5 +36,9 @@ export const state = {
     startedAt: null,
     elapsedMs: null,
     partner: null,
+    // 초대 화면에서 발급받은 짧은 코드 캐시. { code, for }에서 for는 그 코드를 발급받을 때
+    // 실었던 25자 배우자 코드 — 재진입 시 이게 같으면 재발급 없이 그대로 쓴다(KV 쓰기
+    // 한도가 하루 1,000회라 화면을 왔다갔다할 때마다 새로 발급하면 낭비다).
+    shortCode: null,
   },
 };

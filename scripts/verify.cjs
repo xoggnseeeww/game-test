@@ -621,6 +621,10 @@ async function playNumpathRun(page) {
     await page.isVisible(".cp-privacy"),
     "cp-privacy"
   );
+  check(
+    "인트로에 '부부 결과 매칭' 버튼이 있다 (배우자 코드로 바로 합치기)",
+    await page.isVisible('[data-nav="couple-pair"]')
+  );
   // === 이용 안내 화면 ===
   // "둘이 하면 더 정확해진다"는 오해를 미리 풀어주는 화면이라, 링크가 살아 있는지와
   // 핵심 문장이 실제로 렌더되는지를 본다.
@@ -771,12 +775,56 @@ async function playNumpathRun(page) {
     !/상위\s*\d+\s*%|백분위|하위\s*\d+\s*%/.test(cpBody),
     cpBody.slice(0, 120)
   );
+  check(
+    "결과 화면에도 '부부 결과 매칭' 보조 버튼이 있다 (초대 링크 만들기와 별개 경로)",
+    await page.isVisible('.cp-invite-secondary[data-nav="couple-pair"]')
+  );
 
   // === 배우자 초대 링크 왕복 ===
   await page.click('[data-nav="couple-invite"]');
   check("초대 링크 화면 주소", page.url().endsWith("/test/couple/invite"), page.url());
   const inviteUrl = (await page.textContent("#cp-link")).trim();
   check("초대 링크가 ?p= 코드를 담고 있다", /\/test\/couple\/pair\?p=[0-9a-z]+$/.test(inviteUrl), inviteUrl);
+
+  // 짧은 코드는 functions/api/couple-code/의 KV 발급이 실제로 동작해야 나온다.
+  // `serve.py`로 돌리면 API가 없어 폴백 문구("발급이 지금 안 돼요")만 확인할 수 있고,
+  // 이 왕복은 `wrangler pages dev`로 돌릴 때만 끝까지 검증된다 — VERIFY_BASE로 가리킨다.
+  let shortCodeText = null;
+  const shortCodeReady = await page
+    .waitForSelector("#cp-code-card-btn:not([disabled])", { timeout: 6000 })
+    .then(() => true)
+    .catch(() => false);
+  if (shortCodeReady) {
+    shortCodeText = (await page.textContent("#cp-shortcode")).trim();
+    check("짧은 코드가 발급된다 (XXXX-XXXX 형식)", /^[0-9A-Z]{4}-[0-9A-Z]{4}$/.test(shortCodeText), shortCodeText);
+    check(
+      "코드 카드 저장 버튼이 활성화된다",
+      await page.$eval("#cp-code-card-btn", (b) => b.classList.contains("active"))
+    );
+  } else {
+    check(
+      "백엔드가 없을 때는 짧은 코드 발급 실패가 조용히 링크 폴백으로 넘어간다",
+      (await page.textContent("#cp-shortcode-block")).includes("발급이 지금 안 돼요")
+    );
+  }
+
+  // 결과 화면의 "부부 결과 매칭" 버튼 — 이미 내 결과가 나와 있는 상태에서 배우자 코드를
+  // 직접 입력하면, 상황 고르기로 다시 보내지 않고 곧장 결합 결과로 가야 한다(coupleReady()가
+  // 참일 때의 분기). 자기 자신의 코드로 매칭해서 라우팅만 확인한다 — 결과 값의 의미가
+  // 아니라 "이미 완료한 사람은 문항을 또 안 풀어도 된다"가 관심사다. 뒤로가기는 SPA
+  // 내비게이션(data-nav)으로 돌아가 state.couple을 유지한다 — goto()면 새 세션이 된다.
+  await page.click('[data-nav="couple-result"]');
+  await page.waitForSelector(".cp-invite-secondary");
+  await page.click(".cp-invite-secondary");
+  check("결과 화면 매칭 버튼 → 코드 입력 화면", page.url().endsWith("/test/couple/pair"), page.url());
+  await page.fill("#cp-code-input", inviteUrl);
+  await page.click("#cp-code-submit");
+  await page.waitForFunction(() => !location.pathname.endsWith("/pair"), { timeout: 5000 });
+  check(
+    "이미 내 결과가 있으면 매칭 즉시 결합 결과로 (상황 고르기를 다시 시키지 않음)",
+    new URL(page.url()).pathname === "/test/couple/together",
+    page.url()
+  );
 
   // 링크를 새 세션(state가 빈 상태)에서 열면 "배우자가 먼저 마쳤다" 화면이 떠야 한다.
   const partnerPath = inviteUrl.slice(inviteUrl.indexOf("/test/couple/pair"));
@@ -787,12 +835,55 @@ async function playNumpathRun(page) {
 
   // 깨진 코드는 인트로로 떨어져야 한다 — 카카오톡에서 링크 끝이 잘려 붙는 경우가 있다.
   // (라우터는 화면을 바꿔도 location.search를 그대로 붙이므로 경로만 본다.)
+  // 예전엔 여기서 인트로로 돌려보냈다. 지금은 "부부 결과 매칭" 버튼으로 같은 화면에
+  // 직접 들어올 수 있는 경로가 생겨서, 깨진 코드도 인트로로 튕기는 대신 같은 화면에서
+  // 직접 입력할 기회를 준다 — 배우자가 보낸 링크가 잘렸어도 코드만 따로 받아 넣을 수 있다.
   await goto(partnerPath.slice(0, -1));
   check(
-    "코드가 잘린 초대 링크 → 인트로 폴백",
-    new URL(page.url()).pathname === "/test/couple",
+    "코드가 잘린 초대 링크 → 직접 입력 폼으로 대체(인트로로 튕기지 않음)",
+    new URL(page.url()).pathname === "/test/couple/pair" && (await page.isVisible("#cp-code-input")),
     page.url()
   );
+
+  // 잘못된 값을 넣으면 화면에 머물며 에러만 보여줘야 한다 — 조용히 아무 일도 안 하거나
+  // 엉뚱한 화면으로 튀면 사용자가 뭐가 잘못됐는지 알 수 없다.
+  // (직전 검사에서 잘린 코드가 ?p=로 붙어 있는 채라, 경로만 비교한다 — 라우터가
+  // go()로 화면을 바꿔도 location.search를 그대로 들고 다닌다.)
+  await page.fill("#cp-code-input", "이건-말이안되는값");
+  await page.click("#cp-code-submit");
+  await page.waitForSelector("#cp-code-error:not([hidden])", { timeout: 5000 });
+  check(
+    "직접 입력 폼: 잘못된 코드는 에러를 보여주고 같은 화면에 머문다",
+    new URL(page.url()).pathname === "/test/couple/pair" && (await page.isVisible("#cp-code-error")),
+    page.url()
+  );
+
+  // 링크를 통째로 붙여넣어도(짧은 코드가 아니라) 코드가 추출돼 처리돼야 한다 —
+  // 카카오톡에서 사람들이 실제로 링크째 복사해 붙이는 경우가 이 경로다.
+  await page.fill("#cp-code-input", inviteUrl);
+  await page.click("#cp-code-submit");
+  await page.waitForFunction(() => !location.pathname.endsWith("/pair"), { timeout: 5000 });
+  check(
+    "직접 입력 폼: 링크를 통째로 붙여넣어도 코드가 추출된다",
+    new URL(page.url()).pathname === "/test/couple/setup",
+    page.url()
+  );
+
+  // 짧은 코드도 같은 폼에서 받아야 한다 — 인트로의 "부부 결과 매칭" 버튼으로 들어온
+  // 완전히 새 세션에서, 링크가 아니라 8자 코드만으로 매칭이 되는지 확인한다.
+  if (shortCodeReady) {
+    await goto("/test/couple");
+    await page.click('[data-nav="couple-pair"]');
+    check("인트로의 매칭 버튼 → 코드 입력 화면", page.url().endsWith("/test/couple/pair"), page.url());
+    await page.fill("#cp-code-input", shortCodeText);
+    await page.click("#cp-code-submit");
+    await page.waitForFunction(() => !location.pathname.endsWith("/pair"), { timeout: 5000 });
+    check(
+      "짧은 코드만 입력해도 매칭된다 (아직 내 결과가 없으니 상황 고르기로)",
+      new URL(page.url()).pathname === "/test/couple/setup",
+      page.url()
+    );
+  }
 
   // === 초대받은 쪽이 답을 마치면 결합 리포트까지 도달하는가 ===
   // 초대 링크의 목적이 "합쳐 보기"이므로, 문항을 마친 뒤 개인 결과에서 멈추면 안 된다.
@@ -915,7 +1006,6 @@ async function playNumpathRun(page) {
     ["/test/couple/result", ".cover", "부부 체크 결과 (문항 미완료)"],
     ["/test/couple/invite", ".cover", "부부 체크 초대 (문항 미완료)"],
     ["/test/couple/ad", ".cover", "부부 체크 광고 게이트 (문항 미완료)"],
-    ["/test/couple/pair", ".cover", "부부 체크 페어링 (코드 없음)"],
     ["/test/couple/together", ".cover", "부부 체크 결합 결과 (코드·응답 없음)"],
     ["/game/numpath/play", ".cover", "NumPath 플레이 (런 없음)"],
     ["/game/numpath/ad", ".cover", "NumPath 광고 게이트 (런 없음)"],
@@ -924,6 +1014,15 @@ async function playNumpathRun(page) {
     await goto(p);
     check(`${label} 주소 직접 접속 → 인트로 폴백`, await page.isVisible(sel), page.url());
   }
+
+  // /test/couple/pair는 위 표의 다른 화면들과 다르다 — 코드가 없다고 인트로로
+  // 튕기지 않고, 이 화면 자체가 직접 입력 폼을 보여준다(부부 결과 매칭 진입점).
+  await goto("/test/couple/pair");
+  check(
+    "부부 체크 페어링 (코드 없음) 주소 직접 접속 → 자체 입력 폼 렌더 (인트로 폴백 아님)",
+    await page.isVisible(".cover") && await page.isVisible("#cp-code-input"),
+    page.url()
+  );
 
   // === 뒤로가기 정합성 ===
   await goto("/");
@@ -952,7 +1051,16 @@ async function playNumpathRun(page) {
   check("장식뿐이던 하단 네비게이션 제거됨", !(await page.$(".bottom-nav")));
   check("목업 잔재(가짜 상태바) 없음", !(await page.content()).includes("9:41"));
 
-  check("콘솔/페이지 에러 없음", errors.length === 0, errors.join(" ; "));
+  // /api/couple-code 관련 콘솔 에러는 두 갈래로 나온다: ① 백엔드가 아예 없는 로컬 개발
+  // (serve.py) — 위에서 shortCodeReady가 false로 이미 감지됐고, 그건 기대된 동작이라
+  // 별도로 확인했다(브라우저 자체가 찍는 "Failed to load resource: ... 501"과 remote.js가
+  // 찍는 "짧은 코드 발급 실패" 둘 다 이 경우에 나온다). ② 백엔드가 있는데도 실패 —
+  // 이건 진짜 버그라 걸러내면 안 된다. 그래서 무조건 지우지 않고, ①로 확인됐을 때만
+  // 이 경로의 메시지를 콘솔 에러 집계에서 뺀다.
+  const filteredErrors = shortCodeReady
+    ? errors
+    : errors.filter((e) => !e.includes("/api/couple-code") && !e.includes("couple/remote.js"));
+  check("콘솔/페이지 에러 없음", filteredErrors.length === 0, filteredErrors.join(" ; "));
 
   await browser.close();
 

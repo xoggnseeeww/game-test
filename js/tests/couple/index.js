@@ -105,16 +105,19 @@ export const coupleScreens = [
   },
   {
     id: "couple-pair",
-    // 배우자 코드는 ?p= 쿼리로 온다. 슬러그가 아니라서 공유 결과 주소(/result/<슬러그>)
-    // 규칙에 태울 수 없고, 라우터가 경로에 location.search를 붙여주므로 코드가 유지된다.
+    // 배우자 코드는 ?p= 쿼리로 올 수도 있고(링크 클릭), 화면에서 직접 입력할 수도 있다
+    // (인트로·결과 화면의 "부부 결과 매칭" 버튼). 주소에 코드가 없다고 인트로로 돌리지
+    // 않는다 — 없으면 renderCouplePair()가 직접 입력하는 화면을 보여준다.
     path: "/test/couple/pair",
     title: "배우자와 결과 합치기 | 과몰입구역",
     render: renderCouplePair,
     theme: "couple",
-    // guard에서 코드를 한 번 읽어 state에 캐시한다. 코드가 깨졌으면 인트로로 돌린다.
+    // guard에서 주소의 코드를 한 번 읽어 state에 캐시한다(코드가 깨졌으면 partnerFromUrl이
+    // null을 돌려주고, 화면이 직접 입력 폼으로 보여준다). 이미 양쪽 다 준비돼 있으면
+    // 이 화면을 거칠 필요 없이 곧장 결합 결과로 보낸다.
     guard: () => {
-      if (!partnerFromUrl()) return "couple-intro";
-      return coupleReady() ? "couple-report" : null;
+      partnerFromUrl();
+      return coupleReady() && state.couple.partner ? "couple-report" : null;
     },
   },
   {
