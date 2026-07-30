@@ -29,10 +29,10 @@ export function renderHome() {
           <div class="sub">머리 쓰는 잠깐의 퍼즐</div>
         </button>
       </div>
-      ${adSlotMarkup("bannerBottom", "margin-top:18px; margin-bottom:4px;")}
       <div class="site-footer">
         <a href="https://data-pantry.com" target="_blank" rel="noopener">by 데이터팬트리</a>
       </div>
+      ${adSlotMarkup("bannerBottom", "margin-top:8px; margin-bottom:20px;")}
     </div>
   `));
   bindNav(app);
