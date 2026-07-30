@@ -13,13 +13,16 @@ export const state = {
     pending: { most: null },
     dilemma: null,
   },
-  // NumPath: run은 진행 중인 런(시드·현재 스테이지·스테이지별 별점)만 들고 있다. 현재 스테이지의
-  // 보드 자체는 저장하지 않는다 — generatePuzzle(seed, stageIndex)가 결정적이라 매번 다시 만들어도
-  // 완전히 같은 보드가 나오고, 그래야 뒤로가기(popstate)로 이 화면에 다시 들어와도(진행 중이던
-  // 이동·소멸은 반응속도 게임의 라운드 진행처럼 화면 지역 변수라 초기화되는 게 자연스럽다)
-  // 최소한 "몇 번째 스테이지인지"는 안 잃어버린다. muted는 세션 한정 음소거(영속 데이터 없음 — D-20).
+  // NumPath: run은 진행 중인 런(시드·난이도·현재 스테이지·스테이지별 별점·이번 런에 번 코인)만
+  // 들고 있다. 현재 스테이지의 보드 자체는 저장하지 않는다 — generatePuzzle(seed, stageIndex,
+  // difficulty)가 결정적이라 매번 다시 만들어도 완전히 같은 보드가 나오고, 그래야 뒤로가기
+  // (popstate)로 이 화면에 다시 들어와도(진행 중이던 이동·소멸은 반응속도 게임의 라운드 진행처럼
+  // 화면 지역 변수라 초기화되는 게 자연스럽다) 최소한 "몇 번째 스테이지인지"는 안 잃어버린다.
+  // muted는 세션 한정 음소거, difficulty는 인트로에서 마지막으로 고른 난이도(세션 한정).
+  // 마을(코인·건물)은 여기가 아니라 localStorage["gt_numpath_village"]에 있다 — village.js·D-34.
   numpath: {
     run: null,
     muted: false,
+    difficulty: "normal",
   },
 };

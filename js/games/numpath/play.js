@@ -7,7 +7,8 @@ import { adSlotMarkup } from "../../core/ads.js";
 import { state } from "../../core/state.js";
 import { generatePuzzle } from "./generate.js";
 import { initState, applyMove, undo, canEnter, availableMoves, isCleared, isStuck, isOutOfMoves, posKey } from "./engine.js";
-import { STAGES_PER_RUN, starsFor } from "./data.js";
+import { stageCountFor, difficultyById, starsFor } from "./data.js";
+import { coinsFor, loadVillage, earnCoins, saveVillage } from "./village.js";
 import { playMoveTone, playClearChord, playBlockedTone } from "./audio.js";
 
 const OP_LABEL = { "+": "+", "-": "−", "*": "×", "/": "÷" };
@@ -47,6 +48,7 @@ export function renderNumpathPlay() {
       </div>
       <div class="np-hud">
         <div class="np-hud-row">
+          <div class="np-hud-item"><span class="np-hud-label">난이도</span><span class="np-hud-value" id="np-diff"></span></div>
           <div class="np-hud-item"><span class="np-hud-label">스테이지</span><span class="np-hud-value" id="np-stage"></span></div>
           <div class="np-hud-item"><span class="np-hud-label">이동 횟수</span><span class="np-hud-value" id="np-moves"></span></div>
         </div>
@@ -66,6 +68,7 @@ export function renderNumpathPlay() {
     state.numpath.run = null;
   });
 
+  const diffEl = app.querySelector("#np-diff");
   const stageEl = app.querySelector("#np-stage");
   const targetEl = app.querySelector("#np-target");
   const currentEl = app.querySelector("#np-current");
@@ -130,7 +133,10 @@ export function renderNumpathPlay() {
   }
 
   function renderHud() {
-    stageEl.textContent = `${state.numpath.run.stageIndex + 1} / ${STAGES_PER_RUN}`;
+    const run = state.numpath.run;
+    const diff = difficultyById(run.difficulty);
+    diffEl.textContent = `${diff.emoji} ${diff.name}`;
+    stageEl.textContent = `${run.stageIndex + 1} / ${stageCountFor(run.difficulty)}`;
     targetEl.textContent = puzzle.target;
     currentEl.textContent = playState.value;
     movesEl.textContent = `${playState.movesUsed} / ${puzzle.moveLimit}`;
@@ -152,7 +158,8 @@ export function renderNumpathPlay() {
   }
 
   function loadStage() {
-    const generated = generatePuzzle(state.numpath.run.seed, state.numpath.run.stageIndex);
+    const run = state.numpath.run;
+    const generated = generatePuzzle(run.seed, run.stageIndex, run.difficulty);
     puzzle = generated.puzzle;
     minMoves = generated.minMoves;
     playState = initState(puzzle);
@@ -173,21 +180,29 @@ export function renderNumpathPlay() {
 
     if (isCleared(puzzle, playState)) {
       playClearChord(muted());
+      const run = state.numpath.run;
       const stars = starsFor({ movesUsed: playState.movesUsed, moveLimit: puzzle.moveLimit, minMoves });
-      state.numpath.run.stars.push(stars);
-      msgEl.textContent = `🎉 클리어! ${"⭐".repeat(stars)}`;
+      run.stars.push(stars);
+
+      // 라운드 클리어 보상: 별 × 난이도 배수만큼 코인을 즉시 지급하고 마을 지갑에 적립한다.
+      // 런 도중 이탈해도 여기까지 번 코인은 남는다 — "클리어한 만큼"이 보상 단위라서다(D-34).
+      const coinAmount = coinsFor(stars, run.difficulty);
+      run.coins += coinAmount;
+      saveVillage(earnCoins(loadVillage(), coinAmount));
+
+      msgEl.textContent = `🎉 클리어! ${"⭐".repeat(stars)} +${coinAmount}🪙`;
       msgEl.className = "np-msg np-msg--visible np-msg--clear";
       boardEl.classList.add("np-board--locked");
       undoBtn.disabled = true;
       resetBtn.disabled = true;
 
-      const isLastStage = state.numpath.run.stageIndex + 1 >= STAGES_PER_RUN;
+      const isLastStage = run.stageIndex + 1 >= stageCountFor(run.difficulty);
       advanceTimer = setTimeout(() => {
         if (aborted) return;
         if (isLastStage) {
           go("numpath-ad");
         } else {
-          state.numpath.run.stageIndex += 1;
+          run.stageIndex += 1;
           loadStage();
         }
       }, STAGE_ADVANCE_DELAY_MS);

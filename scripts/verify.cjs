@@ -513,6 +513,35 @@ async function playNumpathRun(page) {
 
   await page.click('[data-nav="numpath-intro"]');
   check("NumPath 인트로 주소", page.url().endsWith("/game/numpath"), page.url());
+
+  // === 난이도 선택 UI — 카드 수·기본 선택·난이도별 스테이지 수 확충·선택 토글 ===
+  // 스테이지 수는 상수를 import하지 않고 카드 문구("N스테이지")에서 읽는다(D-17).
+  const diffCards = await page.$$eval(".np-diff", (nodes) =>
+    nodes.map((n) => ({
+      id: n.dataset.diff,
+      selected: n.classList.contains("np-diff--selected"),
+      stages: parseInt((n.textContent.match(/(\d+)\s*스테이지/) || [])[1], 10),
+    }))
+  );
+  check(
+    "NumPath 난이도 카드가 여러 개 있고 기본 선택이 정확히 하나다",
+    diffCards.length >= 2 && diffCards.filter((d) => d.selected).length === 1,
+    JSON.stringify(diffCards)
+  );
+  check(
+    "난이도별 스테이지 수가 전부 다르다(회차 확충)",
+    diffCards.every((d) => Number.isInteger(d.stages) && d.stages > 0) &&
+      new Set(diffCards.map((d) => d.stages)).size === diffCards.length,
+    diffCards.map((d) => `${d.id}:${d.stages}`).join(" ")
+  );
+  // 이후 검사는 첫 카드(가장 쉬운 난이도)로 돈다 — 런이 짧아 빠르고, 선택 토글도 같이 검증된다.
+  await page.click(".np-diff:first-child");
+  check(
+    "난이도 카드 클릭 → 선택 표시가 그 카드로 옮겨감",
+    await page.$eval(".np-diff:first-child", (n) => n.classList.contains("np-diff--selected")),
+  );
+  const easyStageCount = diffCards[0].stages;
+
   await page.click("#start-btn");
   await page.click(".modal-btn-primary").catch(() => {});
   await page.waitForSelector(".np-board .np-tile", { timeout: 5000 });
@@ -522,6 +551,13 @@ async function playNumpathRun(page) {
     /\d/.test(await page.textContent("#np-current")) &&
     /\d\s*\/\s*\d/.test(await page.textContent("#np-moves"));
   check("NumPath HUD(TARGET/CURRENT/MOVES) 채워짐", npHudFilled);
+  const npStageTotal = parseInt((await page.textContent("#np-stage")).split("/")[1], 10);
+  check(
+    "HUD 스테이지 총수 = 인트로에서 고른 난이도의 스테이지 수",
+    npStageTotal === easyStageCount,
+    `HUD=${npStageTotal}, 카드=${easyStageCount}`
+  );
+  check("HUD에 선택한 난이도 표시", (await page.textContent("#np-diff")).trim().length > 0);
 
   // Undo/Reset: 한 칸 이동 → Undo로 되돌리고 → 다시 이동 → Reset으로 처음 상태까지 되돌린다.
   {
@@ -631,10 +667,54 @@ async function playNumpathRun(page) {
     (await page.textContent(".result-card")).includes("⭐"),
     (await page.textContent(".result-card")).replace(/\s+/g, " ").trim().slice(0, 80)
   );
+  check(
+    "NumPath 결과에 이번 런 코인 보상 표시",
+    (await page.textContent(".result-card")).includes("🪙"),
+    (await page.textContent(".result-subtitle")).trim()
+  );
 
   // 다시 시작 → 인트로로 (자동으로 새 런을 시작하지 않는다 — ADHD "테스트 다시하기"와 같은 패턴)
   await page.click("#retry-btn");
   check("NumPath 다시하기 → 인트로로(자동 재시작 아님)", page.url().endsWith("/game/numpath"), page.url());
+
+  // === 넘버 마을: 코인 적립 → 건설 → 영속(localStorage) ===
+  // 방금 런(+앞의 부분 클리어들)에서 별×난이도 배수만큼 코인이 쌓였어야 하고, 첫 건물은
+  // 최저 난이도 한 런 보상으로 살 수 있게 잡혀 있다(test/numpath.village.test.js의 경제 검증).
+  await page.click("#np-village-btn");
+  await page.waitForSelector(".np-shop", { timeout: 5000 });
+  check("마을 화면 주소", page.url().endsWith("/game/numpath/village"), page.url());
+  const walletBefore = parseInt((await page.textContent("#np-wallet")).replace(/\D/g, ""), 10);
+  check("런에서 번 코인이 마을 지갑에 적립됨", Number.isInteger(walletBefore) && walletBefore > 0, `wallet=${walletBefore}`);
+
+  const buildBtn = await page.$(".np-build-btn:not([disabled])");
+  check("지갑 코인으로 살 수 있는 건물이 있다", !!buildBtn);
+  if (buildBtn) {
+    await markLoader(page, "numpath-village");
+    await buildBtn.click();
+    await page.waitForFunction(
+      (prev) => document.querySelector("#np-wallet")?.textContent.replace(/\D/g, "") !== prev,
+      String(walletBefore),
+      { timeout: 3000 }
+    );
+    const walletAfter = parseInt((await page.textContent("#np-wallet")).replace(/\D/g, ""), 10);
+    const builtCount = await page.$$eval(".np-shop-item--built", (l) => l.length);
+    check("건설 → 코인 차감 + 완공 표시 + 마을 풍경에 등장", walletAfter < walletBefore && builtCount >= 1 && (await page.$$eval(".np-scene-item", (l) => l.length)) >= 1, `🪙 ${walletBefore}→${walletAfter}, built=${builtCount}`);
+    check(
+      "마을 건설 재렌더 후에도 광고 로더 태그 유지(in-place, 재마운트 아님)",
+      (await loaderMark(page)) === "numpath-village",
+      `mark=${await loaderMark(page)}`
+    );
+
+    // 영속성: 새로고침해도 지갑·건설 목록이 남는다 (localStorage["gt_numpath_village"], D-34)
+    await page.reload({ waitUntil: "networkidle" });
+    await page.waitForSelector(".np-shop", { timeout: 5000 });
+    const walletReloaded = parseInt((await page.textContent("#np-wallet")).replace(/\D/g, ""), 10);
+    check(
+      "새로고침 후에도 마을 진행 유지(localStorage)",
+      walletReloaded === walletAfter && (await page.$$eval(".np-shop-item--built", (l) => l.length)) === builtCount,
+      `reload: 🪙 ${walletReloaded}, built=${await page.$$eval(".np-shop-item--built", (l) => l.length)}`
+    );
+  }
 
   // === 공유 슬러그 주소 (두 테스트 모두) ===
   // 불변식은 "결과 카드가 뜨고 홈이 아니다" — 화면 문구는 테스트마다 다르므로 문구로 검사하지 않는다.
@@ -676,6 +756,10 @@ async function playNumpathRun(page) {
     await goto(p);
     check(`${label} 주소 직접 접속 → 인트로 폴백`, await page.isVisible(sel), page.url());
   }
+
+  // 넘버 마을은 런과 무관한 영속 진행이라 guard가 없다 — 직접 접속해도 마을이 그대로 떠야 한다.
+  await goto("/game/numpath/village");
+  check("넘버 마을 주소 직접 접속 → 폴백 없이 마을 표시", await page.isVisible(".np-shop"), page.url());
 
   // === OG 셸: 특정 경로만 og-shells/*.html로 rewrite되고, 그 안에서도 SPA가 그대로 뜨는가 ===
   // _redirects가 /test/adhd·/test/disc·/game/numpath 세 경로만 og-shells/*.html로 rewrite한다

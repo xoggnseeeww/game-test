@@ -21,7 +21,9 @@
 - SPA 폴백: `_redirects` (`/*  /index.html  200`, 항상 마지막 줄) — 없으면 하위 경로 직접 접속이 404.
   그 위에 페이지별 OG 셸로 보내는 rewrite 규칙 3개가 더 있다(D-32) — `_redirects`는 첫 매치 우선이라
   더 구체적인 규칙이 항상 와일드카드보다 **위**에 있어야 한다. `test/og-shells.test.js`가 순서를 검사한다
-- 영속 데이터: **없음** (예전엔 `localStorage["gt_reaction_best"]`로 반응속도 최고기록을 저장했으나 D-20에서 제거) / 시크릿·환경변수·백엔드 **없음**
+- 영속 데이터: `localStorage["gt_numpath_village"]` **하나뿐** (NumPath 마을 코인·건설 목록, D-34).
+  반응속도 최고기록(`gt_reaction_best`)은 D-20에서 제거됐고 **되살리지 말 것** — D-20의 금지는 "검사에서
+  빠름을 성취로 프레이밍"하는 것이지 게임 진행 저장이 아니다(경계는 D-34 참고) / 시크릿·환경변수·백엔드 **없음**
 - 방문 분석: Cloudflare Web Analytics — `data-pantry.com` 존에 automatic setup으로 이미 등록돼 있고,
   `fun.data-pantry.com`은 같은 존의 서브도메인이라 **코드 변경 없이 자동으로 같이 잡힌다**(2026-07-28 확인).
   **이 레포에 분석 스크립트를 추가하지 말 것** — 페이지당 스니펫은 하나만 허용되는데 이미 상위 존에서
