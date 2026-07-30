@@ -62,6 +62,15 @@ class SPAHandler(http.server.SimpleHTTPRequestHandler):
         if not exists:
             dest = resolve_rewrite(request_path)
             if dest:
+                # Cloudflare Pages는 확장자 없는 경로(예: /og-shells/test-disc)를 같은 이름의
+                # .html 파일로 자동 해석해서 서빙한다. 거꾸로 .html이 붙은 주소로 직접 요청하면
+                # "정식 주소는 확장자 없는 쪽"이라며 308로 되돌려보낸다 — _redirects의 목적지에
+                # .html을 그대로 적었다가 실제 배포에서 예상 못한 308이 걸린 적이 있다(2026-07-30,
+                # docs/decisions/2027-h1.md D-32 갱신 4). 그래서 _redirects의 목적지는 항상
+                # 확장자를 뺀 형태로 쓰고, 여기서 그걸 실제 파일(.html)에 매핑해준다.
+                dest_fs = self.translate_path(dest)
+                if not os.path.exists(dest_fs) and os.path.exists(dest_fs + ".html"):
+                    dest = dest + ".html"
                 self.path = dest
         return super().send_head()
 
