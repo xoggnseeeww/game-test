@@ -85,11 +85,9 @@ DISC 공유 이미지("🖼️ 이미지 저장")에 유형 설명 + "실제로�
   스토리지 삭제 정책에 걸리는지)은 실기기에서 확인 필요
 - **NumPath 마을 화면 광고 슬롯** — 신설 화면(`/game/numpath/village`) 상단·하단 배너도 기존
   항목과 같은 이유(`t1.daumcdn.net` 차단)로 실기기 확인 필요
-- **⚠️ Supabase Auth 리다이렉트 URL 허용 목록에 `fun.data-pantry.com` 추가 필요** — Supabase MCP에
-  Auth 설정(Site URL/Additional Redirect URLs) 관련 도구가 없어서 코드로는 못 건드렸다. 지금
-  상태로 배포하면 fun 쪽 로그인 버튼을 눌러도 `redirect_to not allowed` 에러가 날 가능성이 높다.
-  Supabase 대시보드 → 해당 프로젝트 → Authentication → URL Configuration에서
-  `https://fun.data-pantry.com/game/numpath/village`를 Redirect URLs에 추가해야 한다
+- ~~Supabase Auth 리다이렉트 URL 허용 목록에 `fun.data-pantry.com` 추가~~ — 사용자가 Supabase
+  대시보드에서 `https://fun.data-pantry.com/**`을 Redirect URLs에 직접 등록 완료(2026-07-30).
+  Supabase MCP엔 Auth URL 설정 도구가 없어 코드로는 못 건드리는 부분이라 수동으로 처리됨
 - **NumPath 클라우드 로그인 실기기 동작(D-35)** — 샌드박스는 esm.sh(Supabase JS) 자체가 차단돼
   "CDN 실패 시 패널이 사용 불가로 착지하고 나머지는 정상"까지만 확인했다. 실제 로그인 성공
   경로(구글·카카오 OAuth 왕복 → `numpath-village`로 돌아와 세션 인식 → 로컬·클라우드 병합)는
