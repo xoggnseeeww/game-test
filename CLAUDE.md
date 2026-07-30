@@ -18,7 +18,9 @@
 ## 식별자
 - 도메인 `https://fun.data-pantry.com` / 저장소 `xoggnseeeww/game-test`
 - 호스팅: Cloudflare Pages — 빌드 명령 없음, 출력 디렉터리 = 레포 루트
-- SPA 폴백: `_redirects` (`/*  /index.html  200`) — 없으면 하위 경로 직접 접속이 404
+- SPA 폴백: `_redirects` (`/*  /index.html  200`, 항상 마지막 줄) — 없으면 하위 경로 직접 접속이 404.
+  그 위에 페이지별 OG 셸로 보내는 rewrite 규칙 3개가 더 있다(D-32) — `_redirects`는 첫 매치 우선이라
+  더 구체적인 규칙이 항상 와일드카드보다 **위**에 있어야 한다. `test/og-shells.test.js`가 순서를 검사한다
 - 영속 데이터: **없음** (예전엔 `localStorage["gt_reaction_best"]`로 반응속도 최고기록을 저장했으나 D-20에서 제거) / 시크릿·환경변수·백엔드 **없음**
 - 방문 분석: Cloudflare Web Analytics — `data-pantry.com` 존에 automatic setup으로 이미 등록돼 있고,
   `fun.data-pantry.com`은 같은 존의 서브도메인이라 **코드 변경 없이 자동으로 같이 잡힌다**(2026-07-28 확인).
@@ -33,18 +35,22 @@
 
 ## 구조 개요
 ```
-index.html            진입점 (메타·OG·referrer 정책은 전 주소 공통 — 페이지별 미리보기 불가)
-assets/                favicon(svg) · apple-touch-icon(png) · og-image(png, 1200×630)
+index.html            진입점 (메타·OG·referrer 정책은 기본값 — 아래 3곳 외 전 주소 공통)
+og-shells/             테스트·게임 진입 화면 3곳의 정적 OG 셸(og-shells/test-adhd.html 등).
+                      _redirects가 해당 경로만 이 파일로 rewrite한다 — index.html과 내용은
+                      거의 같고 <title>·og:*만 페이지별이다(D-32)
+assets/                favicon(svg) · apple-touch-icon(png) · og-image*.png(1200×630, 홈+테스트/게임별)
 js/main.js            부팅: 화면·테스트·게임을 라우터에 등록
 js/core/              router(레지스트리·guard·teardown·게임 레지스트리) · state · dom · share · util · ads
 js/screens/home.js    홈 · 심리테스트 목록(등록된 테스트에서 자동 생성) · 미니게임 목록(등록된 게임에서 자동 생성)
 js/tests/<id>/        테스트 1개 = 폴더 1개: data · score · screens · index(디스크립터)
                       현재 adhd(+반응속도 게임), disc(+딜레마 게임)
 js/games/<id>/        테스트에 속하지 않는 독립 미니게임 1개 = 폴더 1개. 현재 numpath
-test/                 node --test 스위트 (채점 로직 · 게임 로직 · 모듈 import/export 정합성)
+test/                 node --test 스위트 (채점 로직 · 게임 로직 · 모듈 import/export 정합성 · OG 셸 정합성).
+                      `og-shells/`와 이름이 비슷하지만 무관 — 여긴 순수 JS 유닛 테스트 폴더다
 styles.css            전체 스타일. 브랜드 색은 CSS custom properties + theme-* 클래스
-_redirects            Cloudflare Pages SPA 폴백
-serve.py              로컬 개발 서버 (SPA 폴백 포함, 개발 전용)
+_redirects            Cloudflare Pages SPA 폴백 + 페이지별 OG 셸 rewrite (순서 중요, 위 항목 참고)
+serve.py              로컬 개발 서버 — `_redirects`를 실제로 읽어 규칙대로 적용한다(개발 전용)
 scripts/verify.cjs     헤드리스 브라우저 회귀 스위트 (레포 의존성 아님 — 파일 헤더 참고)
 docs/design-draft.html  최초 디자인 목업. 배포·동작과 무관 (.claudeignore)
 ```
@@ -87,6 +93,7 @@ docs/design-draft.html  최초 디자인 목업. 배포·동작과 무관 (.clau
 - 새 `theme` 값 추가 → `js/core/router.js`의 `THEME_CLASSES` 배열 + `styles.css`의 `theme-*` 변수 블록
 - 구조 변경(모듈 추가·이동·삭제) → **같은 커밋에** `docs/architecture.md` 모듈맵과 위 구조 개요 트리 갱신
 - `styles.css` 클래스명 변경 → 템플릿 문자열은 타입 체크가 없다. `grep -rn '<클래스명>' js/ styles.css`로 양쪽 확인
+- 새 테스트/게임에 OG 미리보기 추가 → `og-shells/<이름>.html` 작성 + `_redirects`에 규칙 추가(**와일드카드 위**) + `assets/og-<이름>.png` + `test/og-shells.test.js`의 `SHELLS` 배열에 항목 추가. 카드(`card.name`/`card.desc`) 문구 변경 시 셸의 `<title>`·`og:title`·`og:description`도 같이 고친다 — 자동 반영 안 됨(D-32), `og-shells.test.js`가 불일치를 잡아준다
 
 ## 절대 수정 금지
 `.git/` · `node_modules/` · `docs/design-draft.html`

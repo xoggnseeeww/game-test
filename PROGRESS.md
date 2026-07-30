@@ -11,6 +11,41 @@
 
 ## 2026-07
 
+- **테스트·게임 3곳에 페이지별 OG 미리보기 추가** (2026-07-30):
+  - 요청 배경: 사용자가 "OG 메타 태그 수정 요청서"로 각 테스트/게임 페이지의 `og:title`·
+    `og:description`·`og:image`를 앱별로 넣고, 배포 후 카카오 디벨로퍼스 OG 캐시 삭제까지
+    요청.
+  - 원인: (신규 기능) 정적 SPA라 `index.html` 하나가 전 주소를 서빙해서 OG 태그가 전 주소
+    공통이었다(`.claude/rules/ui-and-deploy.md`에 명시돼 있던 제약). 서버 렌더링이 없어
+    크롤러는 JS를 실행하지 않고 최초 응답의 `<head>`만 읽으므로, 페이지별 미리보기는
+    빌드나 서버리스 함수 없이는 원천적으로 불가능한 구조였다.
+  - 구현: `og-shells/test-adhd.html`·`og-shells/test-disc.html`·`og-shells/game-numpath.html`
+    3개를 `index.html`과 거의 같게(같은 모듈 스크립트·`#app`) 작성하고, `_redirects`에 이
+    세 경로만 그 파일로 rewrite(200)하는 규칙을 **와일드카드 위에** 추가 — 이미 SPA 폴백에
+    쓰던 것과 같은 메커니즘이라 Cloudflare Pages Functions 같은 새 인프라가 필요 없었다
+    (Functions는 서버리스 코드라 D-9의 "빌드도 백엔드도 없음" 성격이 깨져서 기각).
+    셸 파일은 URL과 같은 물리 경로(예: `test/adhd.html`)에 두지 않고 별도 `og-shells/`
+    폴더에 모았다 — 저장소 루트 `test/`는 이미 `node --test` 유닛 테스트 폴더라 URL 경로와
+    이름이 겹치는 실제 디렉터리를 그 안에 또 만들면 두 목적이 섞인다.
+    `og:image`는 앱별로 새로 만들었다(`assets/og-adhd.png`·`og-disc.png`·`og-numpath.png`,
+    1200×630) — 홈 화면 목록 카드(`.test-card`)의 실제 스타일(어두운 카드 배경 + 브랜드
+    색 아이콘 배지 + 이름 + 설명)을 그대로 키워서 Playwright로 스크린샷했다(레포 의존성
+    아님, `assets/og-image.png` 만들 때와 같은 방식).
+    로컬 검증을 위해 `serve.py`도 고쳤다 — 예전엔 "파일 없으면 무조건 index.html"이라는
+    하드코딩 하나만 흉내 냈는데, 이제 `_redirects`를 실제로 파싱해서 규칙 그대로 적용한다.
+  - 검증: `test/og-shells.test.js` 신규 5개(`_redirects` 순서, 규칙·파일 존재, `<title>`·
+    `og:title`·`og:description`이 `card.name`/`card.desc`와 실제 일치, `og:image`·`og:url`
+    정확성) — 전부 일부러 값을 깨서 빨간불 확인 후 복구. `scripts/verify.cjs`에 케이스
+    추가: 세 경로 진입 시 셸의 타이틀이 정확한지 + 그 뒤로도 SPA가 정상 렌더돼 실제
+    사용자에게는 빈 화면이 아니라 평소와 같은 앱이 뜨는지, 셸이 없는 경로(예:
+    `/test/adhd/result/typhoon`)는 여전히 전역 `index.html`을 쓰는지. `npm test` 66/66.
+    **확인 못 한 것**: 카카오톡/트위터 실제 크롤러가 이 태그를 어떻게 렌더하는지, 이미지가
+    카카오 쪽 재인코딩을 거쳐도 폰트가 안 깨지는지 — 전부 `CURRENT_TASK.md` "배포 후 확인
+    필요"로 이동. **카카오 디벨로퍼스 OG 캐시 삭제는 이 세션에서 처리 못함** — 콘솔 접근
+    권한이 없고 이 브랜치가 아직 배포도 안 됐다. 배포 후 사용자가 직접
+    `https://developers.kakao.com/tool/clear/og`에서 세 URL을 제출해야 한다.
+    관련 결정: `docs/decisions/2027-h1.md` D-32.
+
 - **DISC 문항·딜레마 선택지 문구 다듬기** (2026-07-28):
   - 요청 배경: 사용자가 "질문이랑 4지선다가 조금 어색한 것들이 있더라고. 식당 같은 경우는 식당 도착해서
     메뉴 정하는데 답변이 식당을 다시 알아보는 그런 내용이 있고, 답변이 좀 애매한 경우도 있더라고"라고 지적.

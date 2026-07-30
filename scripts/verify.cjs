@@ -654,6 +654,36 @@ async function playNumpathRun(page) {
     check(`${label} 주소 직접 접속 → 인트로 폴백`, await page.isVisible(sel), page.url());
   }
 
+  // === OG 셸: 특정 경로만 og-shells/*.html로 rewrite되고, 그 안에서도 SPA가 그대로 뜨는가 ===
+  // _redirects가 /test/adhd·/test/disc·/game/numpath 세 경로만 og-shells/*.html로 rewrite한다
+  // (docs/DECISIONS.md 참고). 크롤러는 이 정적 셸의 <head>만 보고, 실제 방문자는 같은 셸이
+  // 로드한 js/main.js가 정상적으로 SPA를 이어서 그려야 한다 — 둘 다 확인한다.
+  for (const [p, expectedTitle, coverSel] of [
+    ["/test/adhd", "성인 ADHD 성향 체크 | 과몰입구역", ".cover"],
+    ["/test/disc", "직장인 유형검사 | 과몰입구역", ".cover"],
+    ["/game/numpath", "NumPath: Stack & Clear | 과몰입구역", ".cover"],
+  ]) {
+    await goto(p);
+    const title = await page.title();
+    const ogTitle = await page
+      .$eval('meta[property="og:title"]', (el) => el.content)
+      .catch(() => null);
+    check(`OG 셸 <title> — ${p}`, title === expectedTitle, title);
+    check(`OG 셸 og:title — ${p}`, ogTitle === expectedTitle, ogTitle);
+    check(`OG 셸 진입 후에도 SPA가 정상 렌더됨 — ${p}`, await page.isVisible(coverSel), page.url());
+  }
+  // 셸이 없는 주소는 여전히 전역 index.html의 공통 OG를 써야 한다 — rewrite 규칙이
+  // 의도한 3개보다 넓게 매치되고 있진 않은지 확인. document.title은 router.js의
+  // render()가 화면마다 다시 쓰므로(공유 결과 화면은 원래 "친구의 ... | 과몰입구역") 여기선
+  // 못 쓴다 — og:title 메타는 client JS가 안 건드리므로 최초 응답 그대로 남는다.
+  await goto("/test/adhd/result/typhoon");
+  const fallbackOgTitle = await page.$eval('meta[property="og:title"]', (el) => el.content);
+  check(
+    "OG 셸 없는 경로는 전역 index.html의 og:title을 그대로 씀",
+    fallbackOgTitle === "과몰입구역 - 심리테스트 · 미니게임",
+    fallbackOgTitle
+  );
+
   // === 뒤로가기 정합성 ===
   await goto("/");
   await page.click('[data-nav="psych-list"]');
