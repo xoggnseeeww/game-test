@@ -13,6 +13,7 @@
 - 채점 파이프라인 (ADHD / DISC) → §6
 - 공유 · 결과 카드 → §7
 - 테스트 스위트 → §8
+- OG 미리보기 셸 (`og-shells/`) → §9
 
 ---
 
@@ -95,6 +96,7 @@ js/games/<id>/          테스트에 속하지 않는 독립 미니게임(예: n
 | `/test/adhd/reaction/play` | `reaction-play` | game | 답 부족 → `test-intro` |
 | `/test/adhd/reaction/ad` | `reaction-ad` | game | 답 부족 → `test-intro`, 게임 미완료 → `reaction-intro` |
 | `/test/disc` | `disc-intro` | disc | — |
+| `/test/disc/types` | `disc-types` | disc | — |
 | `/test/disc/play` | `disc-question` | disc | 순서 미생성 → `disc-intro` |
 | `/test/disc/result` | `disc-result` | disc | 문항 미완료 → `disc-intro` · 문항은 끝났지만 게임 미완료 → `dilemma-intro` |
 | `/test/disc/result/<slug>` | `disc-shared` | disc | 슬러그 안 풀리면 → `home` |
@@ -219,6 +221,26 @@ ADHD·DISC 채점 파이프라인 상세는 각각 `docs/adhd-architecture.md` �
 ## 8. 테스트 스위트
 
 `npm test` (= `node --test`, 의존성 0). 브라우저 없이 도는 것만 여기 있다.
+
+## 9. OG 미리보기 셸 (`og-shells/`)
+
+정적 SPA는 `index.html` 하나가 전 주소를 서빙해서, OG 태그도 원래 전 주소 공통이었다
+(`docs/DECISIONS.md` D-47 이전). 테스트·게임 진입 화면 3곳(`/test/adhd`·`/test/disc`·
+`/game/numpath`)만 예외로 페이지별 미리보기를 지원한다:
+
+- `_redirects`가 그 3개 경로만 `og-shells/*.html`로 **rewrite**(200, 주소창은 안 바뀜)한다.
+  나머지 모든 경로는 그대로 `/index.html`로 떨어진다 — 규칙은 **위에서부터 첫 매치**이므로
+  이 3개 규칙이 반드시 와일드카드(`/*`)보다 **위**에 있어야 한다.
+- 셸 파일은 `index.html`과 거의 같다(같은 `<script type="module" src="/js/main.js">`,
+  같은 `#app`) — `<title>`·`og:title`·`og:description`·`og:image`·`og:url`만 페이지별이다.
+  크롤러는 이 정적 `<head>`만 읽고, 실제 방문자는 같은 모듈 스크립트가 이어서 SPA를 그린다.
+- `og:image`는 앱 이름·이모지·브랜드 색(`card.color`)을 홈 화면 목록 카드(`.test-card`)와
+  같은 스타일로 재구성한 1200×630 PNG(`assets/og-<이름>.png`) — Playwright로 생성했다
+  (레포 의존성 아님, `docs/DECISIONS.md` D-9와 같은 이유).
+- 카드 문구(`card.name`/`card.desc`)가 바뀌면 셸의 텍스트는 **자동으로 안 바뀐다** —
+  `test/og-shells.test.js`가 카드 데이터와 셸 파일 내용을 대조해서 벌어지면 빨간불을 낸다.
+- 로컬 검증: `serve.py`가 `_redirects`를 실제로 파싱해서 같은 규칙을 적용하므로,
+  `python3 serve.py 8766` 상태에서 `curl localhost:8766/test/adhd`로 그대로 확인할 수 있다.
 
 | 파일 | 무엇을 지키나 |
 |------|---------------|

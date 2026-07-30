@@ -19,7 +19,9 @@
 ## 식별자
 - 도메인 `https://fun.data-pantry.com` / 저장소 `xoggnseeeww/game-test`
 - 호스팅: Cloudflare Pages — 빌드 명령 없음, 출력 디렉터리 = 레포 루트
-- SPA 폴백: `_redirects` (`/*  /index.html  200`) — 없으면 하위 경로 직접 접속이 404
+- SPA 폴백: `_redirects` (`/*  /index.html  200`, 항상 마지막 줄) — 없으면 하위 경로 직접 접속이 404.
+  그 위에 페이지별 OG 셸로 보내는 rewrite 규칙 3개가 더 있다(D-47) — `_redirects`는 첫 매치 우선이라
+  더 구체적인 규칙이 항상 와일드카드보다 **위**에 있어야 한다. `test/og-shells.test.js`가 순서를 검사한다
 - 영속 데이터: 기본적으로 **없음** (예전엔 `localStorage["gt_reaction_best"]`로 반응속도 최고기록을 저장했으나 D-20에서 제거).
   **예외 하나**: 부부 체크의 짧은 매칭 코드(Cloudflare KV, `COUPLE_CODES` 바인딩, 7일 TTL 자동 만료) — 식별자 없는
   익명 점수 덩어리만 저장되고, 만료 외에 수동 삭제 경로는 없다(D-45). 시크릿·환경변수 **없음**은 그대로 유지.
@@ -40,8 +42,11 @@
 
 ## 구조 개요
 ```
-index.html            진입점 (메타·OG·referrer 정책은 전 주소 공통 — 페이지별 미리보기 불가)
-assets/                favicon(svg) · apple-touch-icon(png) · og-image(png, 1200×630)
+index.html            진입점 (메타·OG·referrer 정책은 기본값 — 아래 3곳 외 전 주소 공통)
+og-shells/             테스트·게임 진입 화면 3곳의 정적 OG 셸(og-shells/test-adhd.html 등).
+                      _redirects가 해당 경로만 이 파일로 rewrite한다 — index.html과 내용은
+                      거의 같고 <title>·og:*만 페이지별이다(D-47)
+assets/                favicon(svg) · apple-touch-icon(png) · og-image*.png(1200×630, 홈+테스트/게임별)
 js/main.js            부팅: 화면·테스트·게임을 라우터에 등록
 js/core/              router(레지스트리·guard·teardown·게임 레지스트리) · state · dom · share · util · ads
 js/screens/home.js    홈 · 심리테스트 목록(등록된 테스트에서 자동 생성) · 미니게임 목록(등록된 게임에서 자동 생성) · 개인정보처리방침
@@ -54,10 +59,11 @@ functions/api/couple-code/  부부 체크 짧은 코드 발급(index.js)·조회
                       그대로 가져다 쓴다(발급·조회·브라우저 검증이 같은 알파벳을 봐야 한다)
 wrangler.jsonc         위 Function의 KV 바인딩 설정. 빌드 명령은 여전히 없다 — 이 파일은 배포
                       산출물이 아니라 Cloudflare Pages가 Functions를 띄울 때만 읽는다
-test/                 node --test 스위트 (채점 로직 · 게임 로직 · 모듈 import/export 정합성)
+test/                 node --test 스위트 (채점 로직 · 게임 로직 · 모듈 import/export 정합성 · OG 셸 정합성).
+                      `og-shells/`와 이름이 비슷하지만 무관 — 여긴 순수 JS 유닛 테스트 폴더다
 styles.css            전체 스타일. 브랜드 색은 CSS custom properties + theme-* 클래스
-_redirects            Cloudflare Pages SPA 폴백
-serve.py              로컬 개발 서버 (SPA 폴백 포함, 개발 전용, functions/는 못 띄운다)
+_redirects            Cloudflare Pages SPA 폴백 + 페이지별 OG 셸 rewrite (순서 중요, 위 항목 참고)
+serve.py              로컬 개발 서버 — `_redirects`를 실제로 읽어 규칙대로 적용한다(개발 전용, functions/는 못 띄운다)
 scripts/verify.cjs     헤드리스 브라우저 회귀 스위트 (레포 의존성 아님 — 파일 헤더 참고)
 docs/design-draft.html  최초 디자인 목업. 배포·동작과 무관 (.claudeignore)
 ```
@@ -117,6 +123,8 @@ docs/design-draft.html  최초 디자인 목업. 배포·동작과 무관 (.clau
   로컬(`wrangler pages dev`)에서만 조용히 깨진다(배포본은 대시보드 바인딩이 남아있어 더 늦게 발견됨)
 - 구조 변경(모듈 추가·이동·삭제) → **같은 커밋에** `docs/architecture.md` 모듈맵과 위 구조 개요 트리 갱신
 - `styles.css` 클래스명 변경 → 템플릿 문자열은 타입 체크가 없다. `grep -rn '<클래스명>' js/ styles.css`로 양쪽 확인
+- 새 테스트/게임에 OG 미리보기 추가 → `og-shells/<이름>.html` 작성 + `_redirects`에 규칙 추가(**와일드카드 위**) + `assets/og-<이름>.png` + `test/og-shells.test.js`의 `SHELLS` 배열에 항목 추가. 카드(`card.name`/`card.desc`) 문구 변경 시 셸의 `<title>`·`og:title`·`og:description`도 같이 고친다 — 자동 반영 안 됨(D-47), `og-shells.test.js`가 불일치를 잡아준다
+- `assets/og-*.png` **내용**을 고칠 때 → **파일명도 반드시 같이 바꾼다**(예: `-v2`, `-v3`). URL이 그대로면 카카오·CDN·브라우저의 이미지 캐시가 옛 파일을 계속 서빙한다 — 제목·설명은 갱신되는데 이미지만 안 바뀌는 증상으로 나타나 원인 추적이 어렵다. 파일명을 바꾸면 셸의 `og:image`/`twitter:image`와 `test/og-shells.test.js`의 `SHELLS` 배열도 같이 갱신
 
 ## 절대 수정 금지
 `.git/` · `node_modules/` · `docs/design-draft.html`

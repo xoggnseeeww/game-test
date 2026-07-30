@@ -30,6 +30,7 @@ export function renderNumpathPlay() {
         <div class="back-title">NumPath</div>
         <button class="exit-btn" aria-label="홈으로 가기">🏠</button>
       </div>
+      ${adSlotMarkup("bannerTop", "margin-top:10px; margin-bottom:4px;")}
       <div class="np-goal">
         <div class="np-goal-row">
           <div class="np-goal-block">
@@ -57,7 +58,7 @@ export function renderNumpathPlay() {
         <button class="np-ctrl-btn" id="np-reset">↻ Reset</button>
         <button class="np-ctrl-btn np-mute-btn" id="np-mute" aria-label="효과음 켜고 끄기"></button>
       </div>
-      ${adSlotMarkup("banner", "margin-top:18px; margin-bottom:4px;")}
+      ${adSlotMarkup("bannerBottom", "margin-top:18px; margin-bottom:4px;")}
     </div>
   `));
   bindNav(app);

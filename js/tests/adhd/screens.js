@@ -30,7 +30,7 @@ export function renderTestIntro() {
         <div class="back-title">심리테스트</div>
         <button class="exit-btn" data-nav="home" aria-label="홈으로 가기">🏠</button>
       </div>
-      ${adSlotMarkup("banner", "margin-top:10px; margin-bottom:4px;")}
+      ${adSlotMarkup("bannerTop", "margin-top:10px; margin-bottom:4px;")}
       <div class="cover">
         <div class="emoji">🎯</div>
         <div class="tag">집중력 성향 체크</div>
@@ -45,7 +45,7 @@ export function renderTestIntro() {
       <div class="cta">
         <button class="cta-btn" id="start-btn">테스트 시작하기</button>
       </div>
-      ${adSlotMarkup("banner", "margin-top:6px; margin-bottom:22px;")}
+      ${adSlotMarkup("bannerBottom", "margin-top:6px; margin-bottom:22px;")}
     </div>
   `));
   bindNav(app);
@@ -78,13 +78,13 @@ export function renderQuestion() {
         <div class="progress-count" id="q-count"></div>
         <button class="exit-btn" aria-label="홈으로 가기">🏠</button>
       </div>
-      ${adSlotMarkup("banner", "margin-top:10px; margin-bottom:4px;")}
+      ${adSlotMarkup("bannerTop", "margin-top:10px; margin-bottom:4px;")}
       <div class="question-block">
         <div class="qno" id="q-no"></div>
         <h2 id="q-text"></h2>
       </div>
       <div class="options" id="q-options"></div>
-      ${adSlotMarkup("banner", "margin-top:18px; margin-bottom:4px;")}
+      ${adSlotMarkup("bannerBottom", "margin-top:18px; margin-bottom:4px;")}
     </div>
   `));
 
@@ -313,7 +313,7 @@ export function renderTestShared() {
         <button class="back-btn" data-nav="home">‹</button>
         <div class="back-title">심리테스트</div>
       </div>
-      ${adSlotMarkup("banner", "margin-top:10px; margin-bottom:4px;")}
+      ${adSlotMarkup("bannerTop", "margin-top:10px; margin-bottom:4px;")}
       <div class="result-card">
         <div class="eyebrow">친구의 집중 유형은</div>
         <div class="emoji">${type.emoji}</div>
@@ -327,7 +327,7 @@ export function renderTestShared() {
       <div class="cta" style="padding-top:10px;">
         <button class="cta-btn" data-nav="test-intro">나도 성향 체크해보기</button>
       </div>
-      ${adSlotMarkup("banner", "margin-top:6px; margin-bottom:22px;")}
+      ${adSlotMarkup("bannerBottom", "margin-top:6px; margin-bottom:22px;")}
     </div>
   `));
   bindNav(app);

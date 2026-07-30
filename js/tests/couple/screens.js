@@ -133,7 +133,7 @@ export function renderCoupleIntro() {
         <div class="back-title">심리테스트</div>
         <button class="exit-btn" data-nav="home" aria-label="홈으로 가기">🏠</button>
       </div>
-      ${adSlotMarkup("banner", "margin-top:10px; margin-bottom:4px;")}
+      ${adSlotMarkup("bannerTop", "margin-top:10px; margin-bottom:4px;")}
       <div class="cover">
         <div class="emoji">💞</div>
         <div class="tag">부부 관계 성향 체크</div>
@@ -152,7 +152,7 @@ export function renderCoupleIntro() {
       </div>
       <div class="cp-guide-link"><button data-nav="couple-pair">💌 부부 결과 매칭 — 배우자 코드가 있어요</button></div>
       <div class="cp-guide-link"><button data-nav="couple-guide">📖 이 체크, 어떻게 쓰는 건가요?</button></div>
-      ${adSlotMarkup("banner", "margin-top:6px; margin-bottom:22px;")}
+      ${adSlotMarkup("bannerBottom", "margin-top:6px; margin-bottom:22px;")}
     </div>
   `));
   bindNav(app);
@@ -202,7 +202,7 @@ export function renderCoupleSetup() {
       <div class="cta">
         <button class="cta-btn" id="cp-setup-next" disabled>문항 시작하기</button>
       </div>
-      ${adSlotMarkup("banner", "margin-top:6px; margin-bottom:22px;")}
+      ${adSlotMarkup("bannerBottom", "margin-top:6px; margin-bottom:22px;")}
     </div>
   `));
   bindNav(app);
@@ -247,7 +247,7 @@ export function renderCoupleQuestion() {
         <div class="progress-count" id="cp-count"></div>
         <button class="exit-btn" aria-label="홈으로 가기">🏠</button>
       </div>
-      ${adSlotMarkup("banner", "margin-top:10px; margin-bottom:4px;")}
+      ${adSlotMarkup("bannerTop", "margin-top:10px; margin-bottom:4px;")}
       <div class="cp-anchor-notice" id="cp-anchor-notice" hidden>
         🔒 거의 다 왔어요. 남은 문항도 <b>배우자에게 문항별로 보여지지 않습니다</b> —
         있는 그대로 답해주세요.
@@ -257,7 +257,7 @@ export function renderCoupleQuestion() {
         <h2 class="disc-scene" id="cp-text"></h2>
       </div>
       <div class="options cp-likert" id="cp-options"></div>
-      ${adSlotMarkup("banner", "margin-top:18px; margin-bottom:4px;")}
+      ${adSlotMarkup("bannerBottom", "margin-top:18px; margin-bottom:4px;")}
     </div>
   `));
 
@@ -604,7 +604,7 @@ export function renderCoupleInvite() {
       배우자 화면에도 내가 문항마다 어떻게 답했는지는 표시되지 않습니다.
       다만 링크 자체가 암호화된 것은 아니니 <b>배우자 외 다른 사람에게는 보내지 마세요.</b><br/>
       자녀 단계는 배우자도 <b>같은 항목</b>을 골라야 부모·연인 역할 게이지가 나옵니다.</p>
-      ${adSlotMarkup("banner", "margin-top:6px; margin-bottom:22px;")}
+      ${adSlotMarkup("bannerBottom", "margin-top:6px; margin-bottom:22px;")}
     </div>
   `));
   bindNav(app);
@@ -707,7 +707,7 @@ export function renderCouplePair() {
         <button class="back-btn" data-nav="home">‹</button>
         <div class="back-title">부부 관계 성향 체크</div>
       </div>
-      ${adSlotMarkup("banner", "margin-top:10px; margin-bottom:4px;")}
+      ${adSlotMarkup("bannerTop", "margin-top:10px; margin-bottom:4px;")}
       <div class="cover">
         <div class="emoji">💌</div>
         <div class="tag">${partner ? "배우자가 보낸 초대" : "부부 결과 매칭"}</div>
@@ -732,7 +732,7 @@ export function renderCouplePair() {
         </div>
       ` : ""}
       <div class="cp-guide-link"><button data-nav="couple-guide">📖 합치면 뭐가 달라지나요?</button></div>
-      ${adSlotMarkup("banner", "margin-top:6px; margin-bottom:22px;")}
+      ${adSlotMarkup("bannerBottom", "margin-top:6px; margin-bottom:22px;")}
     </div>
   `));
   bindNav(app);
@@ -985,7 +985,7 @@ export function renderCoupleShared() {
         <button class="back-btn" data-nav="home">‹</button>
         <div class="back-title">심리테스트</div>
       </div>
-      ${adSlotMarkup("banner", "margin-top:10px; margin-bottom:4px;")}
+      ${adSlotMarkup("bannerTop", "margin-top:10px; margin-bottom:4px;")}
       <div class="result-card">
         <div class="eyebrow">이 유형은</div>
         <div class="emoji">${t.emoji}</div>
@@ -1004,7 +1004,7 @@ export function renderCoupleShared() {
       <div class="cta" style="padding-top:18px;">
         <button class="cta-btn" data-nav="couple-intro">나는 어떤 유형인지 해보기</button>
       </div>
-      ${adSlotMarkup("banner", "margin-top:6px; margin-bottom:22px;")}
+      ${adSlotMarkup("bannerBottom", "margin-top:6px; margin-bottom:22px;")}
     </div>
   `));
   bindNav(app);
@@ -1165,7 +1165,7 @@ export function renderCoupleGuide() {
         <div class="back-title">이용 안내</div>
         <button class="exit-btn" data-nav="home" aria-label="홈으로 가기">🏠</button>
       </div>
-      ${adSlotMarkup("banner", "margin-top:10px; margin-bottom:4px;")}
+      ${adSlotMarkup("bannerTop", "margin-top:10px; margin-bottom:4px;")}
 
       <div class="cover">
         <div class="emoji">📖</div>
@@ -1267,7 +1267,7 @@ export function renderCoupleGuide() {
       <div class="cta">
         <button class="cta-btn" data-nav="couple-intro">시작하러 가기</button>
       </div>
-      ${adSlotMarkup("banner", "margin-top:6px; margin-bottom:22px;")}
+      ${adSlotMarkup("bannerBottom", "margin-top:6px; margin-bottom:22px;")}
     </div>
   `));
   bindNav(app);

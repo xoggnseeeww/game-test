@@ -1,15 +1,23 @@
 // 카카오 AdFit 광고 단위. 단위 코드는 여기 한 곳에서만 관리한다.
+//
+// 배너가 상단+하단으로 2개인 화면에서 둘 다 같은 단위 코드를 썼더니 하나만 채워지고
+// 나머지는 비어 있었다 — AdFit(다른 네트워크도 대개 마찬가지)은 같은 광고 단위 ID가
+// 한 페이지에 두 번 나오면 하나의 실물 지면을 나타낸다고 보고 뒤쪽 인스턴스를 채우지
+// 않는다. 그래서 배너는 위치별로 서로 다른 단위 코드(bannerTop/bannerBottom)를 쓴다.
+// cssClass는 실제 마크업/스타일이 참조하는 이름 — 위치가 늘어도 .ad-slot.banner CSS
+// 규칙은 그대로 재사용된다.
 const AD_UNITS = {
-  banner: { unit: "DAN-YtXY1keVu0glLXJQ", width: 320, height: 50 },
-  rect: { unit: "DAN-PKr3oCfRI9IIiXwz", width: 250, height: 250 },
+  bannerTop: { unit: "DAN-YtXY1keVu0glLXJQ", width: 320, height: 50, cssClass: "banner" },
+  bannerBottom: { unit: "DAN-o7v5hdDAgfmSu96C", width: 320, height: 50, cssClass: "banner" },
+  rect: { unit: "DAN-PKr3oCfRI9IIiXwz", width: 250, height: 250, cssClass: "rect" },
   // 게임(반응속도·딜레마)이 끝나고 결과로 넘어가기 직전에 한 번 보여주는 게이트 화면 전용.
-  interstitial: { unit: "DAN-tmLP8h8cur4SzSpG", width: 300, height: 250 },
+  interstitial: { unit: "DAN-tmLP8h8cur4SzSpG", width: 300, height: 250, cssClass: "interstitial" },
 };
 
 export function adSlotMarkup(kind, style = "") {
-  const { unit, width, height } = AD_UNITS[kind];
+  const { unit, width, height, cssClass } = AD_UNITS[kind];
   const styleAttr = style ? ` style="${style}"` : "";
-  return `<div class="ad-slot ${kind}"${styleAttr}><ins class="kakao_ad_area" style="display:none;" data-ad-unit="${unit}" data-ad-width="${width}" data-ad-height="${height}"></ins></div>`;
+  return `<div class="ad-slot ${cssClass}"${styleAttr}><ins class="kakao_ad_area" style="display:none;" data-ad-unit="${unit}" data-ad-width="${width}" data-ad-height="${height}"></ins></div>`;
 }
 
 // 게임 종료 → 결과 화면 사이에 끼우는 광고 게이트. AdFit 웹 SDK엔 몇 초 뒤 자동
