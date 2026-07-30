@@ -16,7 +16,7 @@ export const TETRADS = [
     options: [
       { axis: "D", text: "\"그럼 제가 정리할게요\" 하고 진행을 맡는다" },
       { axis: "I", text: "아이디어를 툭 던져서 분위기부터 연다" },
-      { axis: "S", text: "누가 먼저 얘기할 때까지 기다린다" },
+      { axis: "S", text: "먼저 나서진 않지만, 누가 얘기를 꺼내면 바로 힘을 보탠다" },
       { axis: "C", text: "자료를 다시 훑으며 빠진 게 없는지 본다" },
     ],
   },
@@ -25,7 +25,7 @@ export const TETRADS = [
     options: [
       { axis: "D", text: "바로 다른 계획으로 갈아탄다" },
       { axis: "I", text: "다른 친구한테 연락해 자리를 채운다" },
-      { axis: "S", text: "괜찮다고 하고 다음에 보자고 한다" },
+      { axis: "S", text: "동요하지 않고, 번거롭지 않게 다음 약속을 다시 잡는다" },
       { axis: "C", text: "왜 못 오는지, 다음엔 언제 되는지 확인한다" },
     ],
   },
@@ -34,7 +34,7 @@ export const TETRADS = [
     options: [
       { axis: "D", text: "날짜랑 장소부터 못 박는다" },
       { axis: "I", text: "가고 싶은 곳 사진을 잔뜩 공유한다" },
-      { axis: "S", text: "다들 편한 날짜에 맞추겠다고 한다" },
+      { axis: "S", text: "누가 정할 때까지 여유 있게 기다리며 필요한 걸 미리 챙겨둔다" },
       { axis: "C", text: "예산과 이동 시간을 정리해서 올린다" },
     ],
   },
@@ -43,7 +43,7 @@ export const TETRADS = [
     options: [
       { axis: "D", text: "끼어들어서 상황을 정리한다" },
       { axis: "I", text: "농담으로 분위기를 돌려본다" },
-      { axis: "S", text: "자리를 지키며 조용히 지켜본다" },
+      { axis: "S", text: "끼어들지 않고 자리를 지키다가, 끝나면 조용히 다독인다" },
       { axis: "C", text: "누구 말이 맞는지 사실관계를 따져본다" },
     ],
   },
@@ -52,7 +52,7 @@ export const TETRADS = [
     options: [
       { axis: "D", text: "덜 중요한 건 쳐내고 밀어붙인다" },
       { axis: "I", text: "도와줄 사람들을 불러 모은다" },
-      { axis: "S", text: "말없이 남아서 끝까지 붙잡는다" },
+      { axis: "S", text: "불평 없이 묵묵히 남아서 페이스대로 끝까지 붙잡는다" },
       { axis: "C", text: "남은 일을 목록으로 만들고 순서를 다시 짠다" },
     ],
   },
@@ -61,7 +61,7 @@ export const TETRADS = [
     options: [
       { axis: "D", text: "주최자를 찾아 대화의 중심으로 간다" },
       { axis: "I", text: "여기저기 인사하며 금방 친해진다" },
-      { axis: "S", text: "옆자리 한 사람과 천천히 이야기한다" },
+      { axis: "S", text: "아무나 붙잡지 않고, 옆자리 한 사람하고만 편하게 얘기한다" },
       { axis: "C", text: "한발 물러서서 분위기부터 파악한다" },
     ],
   },
@@ -70,7 +70,7 @@ export const TETRADS = [
     options: [
       { axis: "D", text: "마음에 들면 그냥 산다" },
       { axis: "I", text: "사진 찍어서 친구들 의견을 물어본다" },
-      { axis: "S", text: "좀 더 두고 보다가 정말 필요하면 산다" },
+      { axis: "S", text: "지금 급하게 정하지 않고, 쓰던 걸 좀 더 쓰다가 정말 필요할 때 산다" },
       { axis: "C", text: "리뷰와 최저가를 끝까지 비교한다" },
     ],
   },
@@ -79,7 +79,7 @@ export const TETRADS = [
     options: [
       { axis: "D", text: "즉석에서 새 계획을 정해 밀고 나간다" },
       { axis: "I", text: "\"이것도 재밌겠다\"며 그냥 즐긴다" },
-      { axis: "S", text: "상황에 맞춰 조용히 따라간다" },
+      { axis: "S", text: "동요하지 않고, 되는대로 차분히 맞춰가며 분위기를 안정시킨다" },
       { axis: "C", text: "어디서부터 틀어졌는지 되짚어본다" },
     ],
   },
@@ -88,7 +88,7 @@ export const TETRADS = [
     options: [
       { axis: "D", text: "바로 다음 목표 얘기로 넘어간다" },
       { axis: "I", text: "신나서 더 크게 반응한다" },
-      { axis: "S", text: "쑥스러워하며 팀 덕분이라고 한다" },
+      { axis: "S", text: "화제가 부담스러워서 얼른 원래 하던 일로 돌아간다" },
       { axis: "C", text: "어떤 점이 좋았는지 구체적으로 물어본다" },
     ],
   },
@@ -97,7 +97,7 @@ export const TETRADS = [
     options: [
       { axis: "D", text: "바로 짚고 어떻게 고칠지 말한다" },
       { axis: "I", text: "웃어넘기며 기분부터 풀어준다" },
-      { axis: "S", text: "티 안 내고 조용히 도와준다" },
+      { axis: "S", text: "내색하지 않고 옆에서 조용히 같이 수습한다" },
       { axis: "C", text: "왜 그렇게 됐는지 원인을 짚는다" },
     ],
   },
@@ -106,7 +106,7 @@ export const TETRADS = [
     options: [
       { axis: "D", text: "\"여기로 하자\" 하고 정해버린다" },
       { axis: "I", text: "먹고 싶은 걸 신나게 늘어놓는다" },
-      { axis: "S", text: "다들 좋다는 걸로 하겠다고 한다" },
+      { axis: "S", text: "새로운 데 모험하지 않고, 다 같이 자주 가던 곳으로 가자고 한다" },
       { axis: "C", text: "리뷰에서 사람들이 뭘 많이 시켰는지 찾아본다" },
     ],
   },
@@ -115,7 +115,7 @@ export const TETRADS = [
     options: [
       { axis: "D", text: "미뤄둔 일을 몰아서 끝낸다" },
       { axis: "I", text: "누구 만날지부터 연락을 돌린다" },
-      { axis: "S", text: "집에서 편하게 쉰다" },
+      { axis: "S", text: "특별한 거 없이, 평소 하던 루틴대로 하루를 보낸다" },
       { axis: "C", text: "하고 싶었던 걸 시간표처럼 짜본다" },
     ],
   },
@@ -362,7 +362,7 @@ export const DILEMMAS = [
     options: [
       { axis: "D", text: "이 부분이 틀렸다고 바로 짚어준다" },
       { axis: "I", text: "농담 섞어서 편하게 알려준다" },
-      { axis: "S", text: "상처받지 않게 조심스럽게 돌려 말한다" },
+      { axis: "S", text: "지금 당장 말하기보다, 편한 때 따로 조용히 알려준다" },
       { axis: "C", text: "틀린 곳을 전부 표시해서 정리해 보낸다" },
     ],
   },
