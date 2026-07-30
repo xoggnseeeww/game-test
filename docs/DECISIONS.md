@@ -43,3 +43,4 @@
 - 테스트·게임 3곳에 페이지별 OG 미리보기 추가 — `_redirects` rewrite + 정적 셸(빌드 없이) → [D-32](decisions/2027-h1.md#d-32-테스트게임-3곳에-페이지별-og-미리보기-추가--redirects-rewrite--정적-셸)
 - DISC 인트로에 "12가지 유형 미리보기" 화면 추가, 검사 없이도 유형을 훑어보게 함 → [D-33](decisions/2027-h1.md#d-33-disc-인트로에-12가지-유형-미리보기-화면-추가)
 - NumPath 난이도 3종·스테이지별 시드·마을 보상(localStorage 재도입, D-20과의 경계 포함) → [D-34](decisions/2027-h1.md#d-34-numpath-난이도-3종스테이지별-시드마을-보상localstorage-재도입)
+- NumPath 마을을 data-pantry.com 계정(Supabase)에 선택적으로 동기화 → [D-35](decisions/2027-h1.md#d-35-numpath-마을을-data-pantrycom-계정에-선택적으로-동기화)

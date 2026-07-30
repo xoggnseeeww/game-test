@@ -13,6 +13,7 @@ import {
   buildItem,
   villageProgress,
   loadVillage,
+  mergeVillages,
 } from "../js/games/numpath/village.js";
 import { DIFFICULTIES, MAX_STARS } from "../js/games/numpath/data.js";
 
@@ -84,4 +85,35 @@ test("전 건물을 순서대로 다 지으면 진행도가 완성이 되고 코
 
 test("node 환경(localStorage 없음)에서 loadVillage는 던지지 않고 빈 마을을 돌려준다", () => {
   assert.deepEqual(loadVillage(), emptyVillage());
+});
+
+// D-35: 로그인 시 로컬(localStorage)과 클라우드(Supabase)를 합치는 mergeVillages는 반드시
+// 멱등이어야 한다 — 재로그인·재동기화마다 다시 실행돼도 코인이 늘어나선 안 된다.
+test("mergeVillages: 코인은 더하지 않고 max, 건물은 합집합", () => {
+  const a = { coins: 10, built: [VILLAGE_ITEMS[0].id] };
+  const b = { coins: 7, built: [VILLAGE_ITEMS[1].id] };
+  const merged = mergeVillages(a, b);
+  assert.equal(merged.coins, 10, "coins가 max가 아니라 합이 됐다");
+  assert.deepEqual(merged.built.slice().sort(), [VILLAGE_ITEMS[0].id, VILLAGE_ITEMS[1].id].sort());
+});
+
+test("mergeVillages: 같은 입력을 반복 병합해도 결과가 계속 늘어나지 않는다 (멱등)", () => {
+  const a = { coins: 5, built: [VILLAGE_ITEMS[0].id] };
+  const b = { coins: 12, built: [VILLAGE_ITEMS[0].id, VILLAGE_ITEMS[1].id] };
+  const once = mergeVillages(a, b);
+  const twice = mergeVillages(once, b);
+  const thrice = mergeVillages(twice, b);
+  assert.deepEqual(once, twice);
+  assert.deepEqual(twice, thrice);
+});
+
+test("mergeVillages: 건물 목록에 없는 id가 섞여 있어도 걸러낸다", () => {
+  const merged = mergeVillages({ coins: 0, built: ["없는-건물"] }, { coins: 0, built: [] });
+  assert.deepEqual(merged.built, []);
+});
+
+test("mergeVillages: 결과의 built 순서가 VILLAGE_ITEMS 순서로 결정적이다", () => {
+  const reversedInput = { coins: 0, built: [VILLAGE_ITEMS[2].id, VILLAGE_ITEMS[0].id, VILLAGE_ITEMS[1].id] };
+  const merged = mergeVillages(reversedInput, emptyVillage());
+  assert.deepEqual(merged.built, [VILLAGE_ITEMS[0].id, VILLAGE_ITEMS[1].id, VILLAGE_ITEMS[2].id]);
 });

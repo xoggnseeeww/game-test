@@ -64,6 +64,17 @@ export function villageProgress(village) {
   return { built: village.built.length, total: VILLAGE_ITEMS.length };
 }
 
+// 로그인 시 로컬(localStorage)과 클라우드(Supabase) 마을을 하나로 합친다(D-35). coins는 더하지
+// 않고 max를 취하고 built는 합집합으로 — 그래야 이 함수를 반복 호출해도(재로그인·재동기화)
+// 코인이 중복 적립되지 않는다(멱등). built는 VILLAGE_ITEMS 순서로 정렬해 결과가 결정적이다.
+export function mergeVillages(a, b) {
+  const builtSet = new Set([...a.built, ...b.built]);
+  return {
+    coins: Math.max(a.coins, b.coins),
+    built: VILLAGE_ITEMS.filter((item) => builtSet.has(item.id)).map((item) => item.id),
+  };
+}
+
 function storage() {
   // node --test에는 localStorage가 없다 — 순수 함수들은 그와 무관하게 검증돼야 한다.
   return typeof localStorage === "undefined" ? null : localStorage;

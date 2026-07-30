@@ -3,17 +3,21 @@
 > 이 파일은 1~2k 토큰 이하를 유지한다 — "언젠가 할 일"이 아니라 "지금 유효한 작업"만.
 
 ## 현재 작업
-2026-07-30: NumPath 게임 개선 3종(사용자 요청) — ①**난이도 시스템**: `DIFFICULTIES`
-(쉬움/보통/어려움, 스테이지 수 5/7/9로 확충) + 어려움용 최고 레벨(5×5·pathLen 9) 신설,
-`STAGES_PER_RUN` 고정 상수 삭제 ②**리플레이성**: `stageSeed()` 도입 — 런 시드가 모든 스테이지에
-그대로 쓰여 레벨 설정이 같은 스테이지끼리 완전히 같은 보드가 나오던 버그를 함께 수정(회귀
-테스트 승격) ③**보상 체계**: 스테이지 클리어마다 코인(별 × 난이도 배수) 지급 → "넘버 마을"
-화면(`/game/numpath/village`, 신설)에서 건물을 지어 완성해 나감. 진행은
-`localStorage["gt_numpath_village"]`에 저장 — 앱에 영속 데이터가 다시 생겼다(D-20과의 경계는
-D-34에 기록, CLAUDE.md 식별자도 갱신). 신규 모듈 `village.js` + `test/numpath.village.test.js`.
-`npm test` 76/76, `scripts/verify.cjs` 91/91 통과(신규 검사는 버그 되살려 빨간불 확인함).
+2026-07-30: NumPath 마을을 data-pantry.com 계정에 선택적으로 동기화(D-35, 사용자가 "로그인
+체계 필요하지 않냐"고 물어 진행). data-pantry.com과 같은 Supabase 프로젝트(`duvpvwolgqurhgnhqezj`)에
+`numpath_village` 테이블(RLS, 본인 행만) 신설·적용 완료. 로그인은 선택 사항 — 게스트는 기존
+localStorage만 사용. 신규 `cloud.js`(Supabase JS, 구글·카카오 OAuth)는 **static import 금지** —
+CDN 실패가 모듈 그래프 전체를 깨뜨리지 않도록 `cloud-loader.js`(동적 import + 실패 캐시)로만
+연결했다. 로그인 감지 시 `mergeVillages()`(coins=max, built=합집합, 멱등)로 로컬·클라우드를
+합치고, 이후 코인 획득·건설마다 로그인 상태면 클라우드에도 반영. 마을 화면에 연동 패널 추가,
+XSS 방지용 `escapeHtml()` 신설(`core/util.js`, OAuth 표시 이름을 처음으로 템플릿에 꽂는 사례).
+`npm test` 80/80, `scripts/verify.cjs` 93/93 통과(CDN 차단 상태에서 패널이 "사용 불가"로 착지하고
+나머지 화면은 정상 동작하는 것까지 확인 — 샌드박스가 실제로 이 조건이라 폴백 경로가 검증됨).
 
-이전(2026-07-30): 배너가 상단+하단 2개인 화면에서 한쪽만 채워진다는 리포트 →
+이전(2026-07-30): NumPath 게임 개선 3종(난이도 시스템·리플레이성 강화·보상 체계) — 상세는
+`docs/decisions/2027-h1.md` D-34, `docs/numpath-architecture.md` 참고.
+
+더 이전(2026-07-30): 배너가 상단+하단 2개인 화면에서 한쪽만 채워진다는 리포트 →
 같은 AdFit 광고 단위 코드(`banner`)를 한 페이지에 두 번 써서 뒤쪽이 무시된 것이 원인
 (`docs/ERRORS.md` E-11). 320×50 단위를 하나 더 만들어(`DAN-o7v5hdDAgfmSu96C`)
 `AD_UNITS`를 `bannerTop`/`bannerBottom`으로 분리 — 마크업 클래스(`cssClass`)는 그대로
@@ -81,6 +85,15 @@ DISC 공유 이미지("🖼️ 이미지 저장")에 유형 설명 + "실제로�
   스토리지 삭제 정책에 걸리는지)은 실기기에서 확인 필요
 - **NumPath 마을 화면 광고 슬롯** — 신설 화면(`/game/numpath/village`) 상단·하단 배너도 기존
   항목과 같은 이유(`t1.daumcdn.net` 차단)로 실기기 확인 필요
+- **⚠️ Supabase Auth 리다이렉트 URL 허용 목록에 `fun.data-pantry.com` 추가 필요** — Supabase MCP에
+  Auth 설정(Site URL/Additional Redirect URLs) 관련 도구가 없어서 코드로는 못 건드렸다. 지금
+  상태로 배포하면 fun 쪽 로그인 버튼을 눌러도 `redirect_to not allowed` 에러가 날 가능성이 높다.
+  Supabase 대시보드 → 해당 프로젝트 → Authentication → URL Configuration에서
+  `https://fun.data-pantry.com/game/numpath/village`를 Redirect URLs에 추가해야 한다
+- **NumPath 클라우드 로그인 실기기 동작(D-35)** — 샌드박스는 esm.sh(Supabase JS) 자체가 차단돼
+  "CDN 실패 시 패널이 사용 불가로 착지하고 나머지는 정상"까지만 확인했다. 실제 로그인 성공
+  경로(구글·카카오 OAuth 왕복 → `numpath-village`로 돌아와 세션 인식 → 로컬·클라우드 병합)는
+  실기기·실배포에서 확인 필요. 위 리다이렉트 URL 허용부터 먼저 해결해야 시도 가능하다
 - **홈 화면 헤더 레이아웃** — 기능 없던 우측 상단 ☰ 아이콘 제거 후 로고만 남은 좌측 정렬이 실제 배포본에서도 깨지지 않는지 확인 필요
 - ~~`_redirects`의 `.html` 확장자 제거가 실제로 308을 없앴는지~~ — 사용자가 배포본에서
   직접 재현·확인함(2026-07-30, "된다"). `/test/adhd`·`/test/disc`·`/game/numpath` 셋 다

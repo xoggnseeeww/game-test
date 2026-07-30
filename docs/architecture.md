@@ -228,6 +228,6 @@ ADHD·DISC 채점 파이프라인 상세는 각각 `docs/adhd-architecture.md` �
 | `test/copy.test.js` | 화면 문구의 개수가 데이터에서 파생되는가 (`docs/ERRORS.md` E-1) |
 | `test/numpath.engine.test.js` | 순차 연산 · 이동 판정(나눗셈 정수·뺄셈 양수) · Undo 왕복 불변식 · 클리어/막힘/이동초과 판정 |
 | `test/numpath.generate.test.js` | 시드 재현성 · 스테이지별 시드 파생(같은 레벨 반복 시 보드 중복 금지) · 난이도 커브 유효성 · 커브의 모든 스테이지가 항상 solve() 가능한가(교차 검증) · 별 등급 임계값 |
-| `test/numpath.village.test.js` | 코인 보상 계산(별 × 난이도 배수) · 건설 불변식(차감·이중 건설 거부) · 첫 건물이 첫 런 보상으로 도달 가능한가 · localStorage 없는 환경 방어 |
+| `test/numpath.village.test.js` | 코인 보상 계산(별 × 난이도 배수) · 건설 불변식(차감·이중 건설 거부) · 첫 건물이 첫 런 보상으로 도달 가능한가 · localStorage 없는 환경 방어 · mergeVillages 멱등성(로컬×클라우드 병합, D-35) |
 
 **여기서 안 잡히는 것**: 라우팅·이벤트 바인딩·타이머·레이아웃 → `scripts/verify.cjs`(헤드리스 브라우저)의 몫이다.

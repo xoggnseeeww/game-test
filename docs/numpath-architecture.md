@@ -41,19 +41,41 @@
 있다(프라이버시 모드에서 throw해도 빈 마을로 폴백). 이 저장이 D-20(반응속도 최고기록 제거)과
 어떻게 다른지는 D-34 참고 — **반응속도 기록을 되살리는 근거로 쓰지 말 것**.
 
+## 클라우드 동기화 (D-35)
+
+마을 화면에 "☁️ 다른 기기와 이어하기" 패널이 있다. data-pantry.com과 같은 Supabase
+프로젝트(`duvpvwolgqurhgnhqezj`)의 `numpath_village` 테이블(RLS로 본인 행만 접근)에 로그인 시
+선택적으로 백업·동기화한다 — 완전히 새 계정 체계를 만들지 않고 기존 것을 재사용했다.
+
+**절대 static import하지 않는다**: `cloud.js`는 최상단에서 Supabase JS를 CDN(esm.sh)에서
+가져오는데, ES 모듈은 import 하나가 실패하면 그 모듈을 static import한 쪽까지 그래프 전체가
+깨진다. CDN이 막히면(오프라인·광고 차단 확장 등) 인트로·플레이·결과까지 전부 못 뜨는 사고가 될
+수 있다는 뜻이다. 그래서 `screens.js`/`play.js`는 `cloud-loader.js`의 `loadCloud()`(동적
+import + 실패 캐시)만 static import하고, 실제 `cloud.js`는 거기서만 불린다. CDN이 막히면
+마을 화면의 클라우드 패널만 "지금은 이 기능을 쓸 수 없어요"로 착지하고 나머지는 그대로 동작한다
+(`scripts/verify.cjs`가 이 상태로 실제로 착지하는지 확인한다 — 샌드박스 자체가 이 조건이다).
+
+로그인(구글·카카오 OAuth, `signInWithProvider`)이 감지되면(`supabase.auth.onAuthStateChange`)
+`mergeVillages()`로 로컬과 클라우드를 한 번 합치고 양쪽에 그 결과를 반영한다 — coins는 max,
+built는 합집합이라 **멱등**이다(재로그인·재동기화가 여러 번 일어나도 코인이 중복 적립되지 않는다).
+이후 코인 획득·건설 때마다 로그인 상태면 `pushIfLoggedIn()`으로 클라우드에도 반영한다
+(fire-and-forget — 실패해도 게임 진행을 막지 않고 `console.error`만 남긴다).
+
 ## 게임 로직 개요
 
 ```
 js/games/numpath/
-  data.js       레벨 커브(LEVELS) · 난이도(DIFFICULTIES·stageCountFor·levelFor) · MAX_STARS · starsFor()
-  engine.js     순차 연산 · 이동 가능 판정 · 이동/Undo · 클리어/막힘 판정 (DOM 모름)
-  generate.js   역산 생성기: 스테이지별 시드 파생(stageSeed) → 경로 → 수식 배치 → 더미/기믹 채우기 → solve()로 검증 (DOM 모름)
-  solve.js      DFS 솔버: 해 개수(상한까지) · 최적 이동수, 노드 예산으로 종료 보장 (DOM 모름)
-  village.js    보상: 코인 계산 · 건설 판정(순수 함수) + localStorage 저장 격리 (DOM 모름)
-  audio.js      Web Audio 피치 스케일링 SFX (외부 파일 없음)
-  play.js       플레이 화면 (in-place 렌더, screens.js와 분리)
-  screens.js    인트로(난이도 선택) · 광고 게이트 · 결과 · 넘버 마을
-  index.js      디스크립터
+  data.js         레벨 커브(LEVELS) · 난이도(DIFFICULTIES·stageCountFor·levelFor) · MAX_STARS · starsFor()
+  engine.js       순차 연산 · 이동 가능 판정 · 이동/Undo · 클리어/막힘 판정 (DOM 모름)
+  generate.js     역산 생성기: 스테이지별 시드 파생(stageSeed) → 경로 → 수식 배치 → 더미/기믹 채우기 → solve()로 검증 (DOM 모름)
+  solve.js        DFS 솔버: 해 개수(상한까지) · 최적 이동수, 노드 예산으로 종료 보장 (DOM 모름)
+  village.js      보상: 코인 계산 · 건설 판정 · mergeVillages(순수 함수) + localStorage 저장 격리 (DOM 모름)
+  cloud.js        Supabase 로그인·동기화 (네트워크 필요, CDN top-level import — 직접 static import 금지)
+  cloud-loader.js cloud.js를 동적 import + 실패 캐시로 감싸는 안전한 로더 (이것만 static import한다)
+  audio.js        Web Audio 피치 스케일링 SFX (외부 파일 없음)
+  play.js         플레이 화면 (in-place 렌더, screens.js와 분리)
+  screens.js      인트로(난이도 선택) · 광고 게이트 · 결과 · 넘버 마을(클라우드 패널 포함)
+  index.js        디스크립터
 ```
 
 ### 타일 모델

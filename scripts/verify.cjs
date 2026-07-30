@@ -211,11 +211,12 @@ async function playNumpathRun(page) {
 
   const errors = [];
   page.on("pageerror", (e) => errors.push(String(e)));
-  // 샌드박스는 아웃바운드가 프록시로 막혀 외부 자원(CDN 폰트 · AdFit 로더)이 항상 실패한다.
-  // 앱 버그가 아니므로 제외한다. 다만 "Failed to load resource: ... 403" 같은 메시지는 본문에
-  // 주소가 없어서 m.text()만 보면 걸러지지 않는다 — m.location().url까지 같이 본다.
-  // (AdFit 스크립트가 슬롯마다 붙었는지는 아래 "광고 슬롯" 검사가 DOM으로 따로 확인한다)
-  const EXTERNAL_NOISE = /ERR_TUNNEL_CONNECTION_FAILED|jsdelivr|pretendard|daumcdn|AdFit/i;
+  // 샌드박스는 아웃바운드가 프록시로 막혀 외부 자원(CDN 폰트 · AdFit 로더 · NumPath 클라우드용
+  // Supabase JS)이 항상 실패한다. 앱 버그가 아니므로 제외한다. 다만 "Failed to load resource:
+  // ... 403" 같은 메시지는 본문에 주소가 없어서 m.text()만 보면 걸러지지 않는다 —
+  // m.location().url까지 같이 본다. (AdFit 스크립트가 슬롯마다 붙었는지, NumPath 클라우드
+  // 패널이 실제로 "사용 불가" 상태로 착지하는지는 아래 각 전용 검사가 DOM으로 따로 확인한다)
+  const EXTERNAL_NOISE = /ERR_TUNNEL_CONNECTION_FAILED|jsdelivr|pretendard|daumcdn|AdFit|esm\.sh|NumPath 클라우드 기능을 불러오지 못했습니다/i;
   page.on("console", (m) => {
     if (m.type() !== "error") return;
     const t = m.text();
@@ -715,6 +716,26 @@ async function playNumpathRun(page) {
       `reload: 🪙 ${walletReloaded}, built=${await page.$$eval(".np-shop-item--built", (l) => l.length)}`
     );
   }
+
+  // === 넘버 마을 클라우드 연동 패널(D-35) — CDN 차단 상황에서도 화면이 안 죽는가 ===
+  // 샌드박스는 esm.sh(Supabase JS)로 나가는 요청이 막혀 있다. 이건 배포 환경에서도 오프라인·
+  // 네트워크 장애 시 똑같이 재현되는 상태라, "클라우드가 아예 안 뜨는 것"이 아니라 "패널이
+  // 사용 불가로 착지하고 나머지 화면은 멀쩡한 것"을 검증한다 — cloud-loader.js가 실패를
+  // 삼키지 않고 흡수하는 게 핵심이다. ("로딩 중" 초기 상태는 로컬 네트워크 실패가 너무 빨라
+  // 안정적으로 잡히지 않는 순간의 상태라 여기선 검사하지 않는다 — 최종 착지 상태만 본다.)
+  await page.waitForFunction(
+    () => document.querySelector(".np-cloud-hint")?.textContent.includes("확인 중") === false,
+    { timeout: 8000 }
+  );
+  check(
+    "CDN 차단 시 클라우드 패널이 '사용 불가'로 착지하고 로그인 버튼을 감춘다",
+    (await page.textContent(".np-cloud-hint")).includes("지금은 이 기능을 쓸 수 없어요") && (await page.$("#np-cloud-google")) === null,
+    (await page.textContent(".np-cloud-hint")).trim()
+  );
+  check(
+    "클라우드 모듈 로드 실패 후에도 마을 화면 나머지(지갑·건설 목록)는 정상 동작",
+    await page.isVisible(".np-shop") && await page.isVisible("#np-wallet"),
+  );
 
   // === 공유 슬러그 주소 (두 테스트 모두) ===
   // 불변식은 "결과 카드가 뜨고 홈이 아니다" — 화면 문구는 테스트마다 다르므로 문구로 검사하지 않는다.

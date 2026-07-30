@@ -1,13 +1,14 @@
 // NumPath의 게임 화면이 아닌 나머지 화면(인트로 · 광고 게이트 · 결과 · 넘버 마을). 플레이 화면은
 // in-place 렌더가 필요해서 play.js로 따로 뗐다(D-9 재검토 조건 — 모듈 하나가 커지기 전에 미리 나눔).
-import { app, go } from "../../core/router.js";
+import { app, go, onLeave } from "../../core/router.js";
 import { el, bindNav, bindAdGate, showModal } from "../../core/dom.js";
 import { adSlotMarkup, adGateMarkup } from "../../core/ads.js";
 import { shareBlockMarkup, wireShare } from "../../core/share.js";
-import { roundRect } from "../../core/util.js";
+import { roundRect, escapeHtml } from "../../core/util.js";
 import { state } from "../../core/state.js";
 import { DIFFICULTIES, difficultyById, stageCountFor, MAX_STARS } from "./data.js";
 import { VILLAGE_ITEMS, loadVillage, saveVillage, buildItem, canBuild, isBuilt, villageProgress } from "./village.js";
+import { loadCloud } from "./cloud-loader.js";
 
 function startRun() {
   state.numpath.run = {
@@ -274,6 +275,44 @@ export function renderNumpathVillage() {
 
   const body = app.querySelector("#np-village-body");
 
+  // 클라우드 상태 3단계: "loading"(로더 결과 기다리는 중) · "unavailable"(CDN 차단·오프라인 —
+  // cloud-loader.js가 실패를 흡수해 null을 돌려준 경우) · "ready"(cloud.js 로드 완료, 이제부터
+  // getCachedUser()로 로그인 여부를 물어볼 수 있다). 최초 렌더는 항상 "loading"으로 시작한다 —
+  // 로그인 확인 때문에 마을 화면 첫 페인트를 늦추지 않는다(오프라인에서도 로컬 마을은 즉시 보여야 한다).
+  let cloudState = { status: "loading" };
+  let unsubscribeCloud = null;
+
+  function cloudSectionMarkup() {
+    if (cloudState.status === "unavailable") {
+      return `
+        <div class="np-cloud">
+          <div class="np-cloud-title">☁️ 다른 기기와 이어하기</div>
+          <p class="np-cloud-hint">지금은 이 기능을 쓸 수 없어요. 나중에 다시 시도해주세요.</p>
+        </div>`;
+    }
+    const user = cloudState.status === "ready" ? cloudState.module.getCachedUser() : null;
+    if (user) {
+      const label = escapeHtml(user.user_metadata?.name || user.email || "계정");
+      return `
+        <div class="np-cloud">
+          <div class="np-cloud-title">☁️ 다른 기기와 이어하기</div>
+          <div class="np-cloud-row">
+            <span class="np-cloud-status">✅ ${label}님으로 연동됨</span>
+            <button class="np-cloud-btn" id="np-cloud-signout">로그아웃</button>
+          </div>
+        </div>`;
+    }
+    return `
+      <div class="np-cloud">
+        <div class="np-cloud-title">☁️ 다른 기기와 이어하기</div>
+        <p class="np-cloud-hint">${cloudState.status === "loading" ? "확인 중…" : "로그인하면 이 마을이 다른 기기에서도 이어져요."}</p>
+        <div class="np-cloud-row">
+          <button class="np-cloud-btn" id="np-cloud-google" ${cloudState.status === "ready" ? "" : "disabled"}>구글로 연동</button>
+          <button class="np-cloud-btn" id="np-cloud-kakao" ${cloudState.status === "ready" ? "" : "disabled"}>카카오로 연동</button>
+        </div>
+      </div>`;
+  }
+
   function renderBody() {
     const village = loadVillage();
     const progress = villageProgress(village);
@@ -294,6 +333,7 @@ export function renderNumpathVillage() {
           <span>건물 ${progress.built} / ${progress.total}</span>
         </div>
       </div>
+      ${cloudSectionMarkup()}
       <div class="section-title" style="padding:16px 20px 8px;">🧱 건설 목록</div>
       <div class="np-shop">
         ${VILLAGE_ITEMS.map((item) => {
@@ -319,11 +359,49 @@ export function renderNumpathVillage() {
       btn.addEventListener("click", () => {
         const next = buildItem(loadVillage(), btn.dataset.build);
         saveVillage(next);
+        if (cloudState.status === "ready") cloudState.module.pushIfLoggedIn(next);
         renderBody();
       });
     });
     body.querySelector("#np-village-play").addEventListener("click", () => go("numpath-intro"));
+
+    const signoutBtn = body.querySelector("#np-cloud-signout");
+    if (signoutBtn) {
+      signoutBtn.addEventListener("click", () => {
+        if (cloudState.status === "ready") {
+          cloudState.module.signOutCloud().catch((err) => console.error("NumPath 클라우드: 로그아웃 실패", err));
+        }
+      });
+    }
+    const googleBtn = body.querySelector("#np-cloud-google");
+    if (googleBtn) {
+      googleBtn.addEventListener("click", () => {
+        if (cloudState.status === "ready") {
+          cloudState.module.signInWithProvider("google").catch((err) => console.error("NumPath 클라우드: 구글 로그인 실패", err));
+        }
+      });
+    }
+    const kakaoBtn = body.querySelector("#np-cloud-kakao");
+    if (kakaoBtn) {
+      kakaoBtn.addEventListener("click", () => {
+        if (cloudState.status === "ready") {
+          cloudState.module.signInWithProvider("kakao").catch((err) => console.error("NumPath 클라우드: 카카오 로그인 실패", err));
+        }
+      });
+    }
   }
 
   renderBody();
+
+  // 첫 페인트(로컬 마을)를 클라우드 확인 때문에 늦추지 않는다 — 로드가 끝나면 상태를 갱신하고
+  // 다시 그린다. onCloudChange 구독은 화면을 떠나면(onLeave) 반드시 해제한다 — 안 그러면 이미
+  // 닫힌 이 렌더 클로저를 로그인 상태가 바뀔 때마다 계속 호출하게 된다.
+  loadCloud().then((cloud) => {
+    cloudState = cloud ? { status: "ready", module: cloud } : { status: "unavailable" };
+    if (cloud) unsubscribeCloud = cloud.onCloudChange(renderBody);
+    renderBody();
+  });
+  onLeave(() => {
+    if (unsubscribeCloud) unsubscribeCloud();
+  });
 }

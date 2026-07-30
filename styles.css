@@ -1462,6 +1462,59 @@ button.meta-chip {
   color: var(--accent-ink);
 }
 
+/* 로그인 연동 패널 — 마을 화면 전용. 로그인은 선택 사항이라 배지 톤으로 조용히 둔다. */
+.np-cloud {
+  margin: 12px 20px 0;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.05);
+  padding: 14px 16px;
+}
+
+.np-cloud-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: #17171A;
+}
+
+.np-cloud-hint {
+  margin: 6px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #75727B;
+}
+
+.np-cloud-row {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.np-cloud-status {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent-ink);
+}
+
+.np-cloud-btn {
+  background: #F4F2EC;
+  color: #3B3941;
+  border: none;
+  border-radius: 12px;
+  padding: 9px 14px;
+  font-size: 12px;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.np-cloud-btn[disabled] {
+  opacity: .5;
+  cursor: default;
+}
+
 .np-shop {
   margin: 4px 20px 0;
   background: #fff;
