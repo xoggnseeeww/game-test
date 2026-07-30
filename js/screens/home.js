@@ -12,7 +12,7 @@ export function renderHome() {
           <div class="logo-text">과몰입구역</div>
         </div>
       </div>
-      ${adSlotMarkup("banner")}
+      ${adSlotMarkup("bannerTop")}
       <div class="hero">
         <p class="hero-title">오늘, 뭐에 과몰입해볼까?</p>
         <p class="hero-sub">1분이면 끝나는 테스트 · 게임 · 퀴즈</p>
@@ -29,7 +29,7 @@ export function renderHome() {
           <div class="sub">머리 쓰는 잠깐의 퍼즐</div>
         </button>
       </div>
-      ${adSlotMarkup("banner", "margin-top:18px; margin-bottom:4px;")}
+      ${adSlotMarkup("bannerBottom", "margin-top:18px; margin-bottom:4px;")}
       <div class="site-footer">
         <a href="https://data-pantry.com" target="_blank" rel="noopener">by 데이터팬트리</a>
       </div>

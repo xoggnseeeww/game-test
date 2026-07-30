@@ -79,7 +79,7 @@ export function renderDiscIntro() {
         <div class="back-title">심리테스트</div>
         <button class="exit-btn" data-nav="home" aria-label="홈으로 가기">🏠</button>
       </div>
-      ${adSlotMarkup("banner", "margin-top:10px; margin-bottom:4px;")}
+      ${adSlotMarkup("bannerTop", "margin-top:10px; margin-bottom:4px;")}
       <div class="cover">
         <div class="emoji">🎭</div>
         <div class="tag">직장인 유형검사</div>
@@ -97,7 +97,7 @@ export function renderDiscIntro() {
       <div class="cta">
         <button class="cta-btn" id="disc-start">시작하기</button>
       </div>
-      ${adSlotMarkup("banner", "margin-top:6px; margin-bottom:22px;")}
+      ${adSlotMarkup("bannerBottom", "margin-top:6px; margin-bottom:22px;")}
     </div>
   `));
   bindNav(app);
@@ -158,14 +158,14 @@ export function renderDiscQuestion() {
         <div class="progress-count" id="disc-count"></div>
         <button class="exit-btn" aria-label="홈으로 가기">🏠</button>
       </div>
-      ${adSlotMarkup("banner", "margin-top:10px; margin-bottom:4px;")}
+      ${adSlotMarkup("bannerTop", "margin-top:10px; margin-bottom:4px;")}
       <div class="question-block">
         <div class="qno" id="disc-qno"></div>
         <h2 class="disc-scene" id="disc-scene"></h2>
       </div>
       <div class="disc-step-hint" id="disc-hint"></div>
       <div class="options" id="disc-options"></div>
-      ${adSlotMarkup("banner", "margin-top:18px; margin-bottom:4px;")}
+      ${adSlotMarkup("bannerBottom", "margin-top:18px; margin-bottom:4px;")}
     </div>
   `));
 
@@ -399,7 +399,7 @@ export function renderDiscShared() {
         <button class="back-btn" data-nav="home">‹</button>
         <div class="back-title">심리테스트</div>
       </div>
-      ${adSlotMarkup("banner", "margin-top:10px; margin-bottom:4px;")}
+      ${adSlotMarkup("bannerTop", "margin-top:10px; margin-bottom:4px;")}
       <div class="result-card">
         <div class="eyebrow">이 유형은</div>
         <div class="emoji">${t.emoji}</div>
@@ -415,7 +415,7 @@ export function renderDiscShared() {
       <div class="cta" style="padding-top:18px;">
         <button class="cta-btn" data-nav="disc-intro">나는 어떤 유형인지 해보기</button>
       </div>
-      ${adSlotMarkup("banner", "margin-top:6px; margin-bottom:22px;")}
+      ${adSlotMarkup("bannerBottom", "margin-top:6px; margin-bottom:22px;")}
     </div>
   `));
   bindNav(app);

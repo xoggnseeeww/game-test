@@ -21,7 +21,7 @@ export function renderNumpathIntro() {
         <div class="back-title">미니게임</div>
         <button class="exit-btn" data-nav="home" aria-label="홈으로 가기">🏠</button>
       </div>
-      ${adSlotMarkup("banner", "margin-top:10px; margin-bottom:4px;")}
+      ${adSlotMarkup("bannerTop", "margin-top:10px; margin-bottom:4px;")}
       <div class="cover">
         <div class="emoji">🧮</div>
         <div class="tag">숫자 경로 퍼즐</div>
@@ -55,7 +55,7 @@ export function renderNumpathIntro() {
       <div class="cta">
         <button class="cta-btn" id="start-btn">런 시작하기</button>
       </div>
-      ${adSlotMarkup("banner", "margin-top:6px; margin-bottom:22px;")}
+      ${adSlotMarkup("bannerBottom", "margin-top:6px; margin-bottom:22px;")}
     </div>
   `));
   bindNav(app);
