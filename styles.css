@@ -264,6 +264,53 @@ body {
   color: #8A8790;
 }
 
+.footer-link-btn {
+  display: block;
+  margin: 6px auto 0;
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 11px;
+  color: #B4B0A8;
+  text-decoration: none;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.footer-link-btn:hover { color: #8A8790; }
+
+/* 개인정보처리방침처럼 문단·목록 위주의 정적 안내 화면. 특정 테마에 속하지 않는
+   공통 화면이라 브랜드 색이 아니라 중립 색만 쓴다. */
+.legal-block {
+  padding: 4px 20px 30px;
+}
+
+.legal-updated {
+  font-size: 12px;
+  color: #8A8790;
+  margin: 0 0 18px;
+}
+
+.legal-block h3 {
+  font-size: 14px;
+  font-weight: 800;
+  color: #17171A;
+  margin: 22px 0 8px;
+}
+
+.legal-block h3:first-of-type { margin-top: 0; }
+
+.legal-block p {
+  font-size: 13px;
+  line-height: 1.75;
+  color: #4A4750;
+  margin: 0 0 4px;
+}
+
+.legal-block a {
+  color: var(--accent-ink, #5B44F2);
+}
+
 .section-title {
   font-size: 13px;
   font-weight: 800;

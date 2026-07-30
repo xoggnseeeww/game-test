@@ -29,7 +29,7 @@ js/core/
   share.js              공유 URL · navigator.share · 결과 카드 캔버스
   util.js               shuffle · normalizePath · roundRect · localStorage 방어 래퍼
   ads.js                카카오 AdFit — adSlotMarkup()(단위 코드 단일 소스) · adGateMarkup()(전면 게이트 마크업) · refreshAds()(로더 태그 재실행)
-js/screens/home.js      홈 · 심리테스트 목록 · 미니게임 목록 + commonScreens
+js/screens/home.js      홈 · 심리테스트 목록 · 미니게임 목록 · 개인정보처리방침 + commonScreens
 js/tests/<id>/
   data.js               문항·결과 유형·슬러그·게임 상수 (단일 소스)
   score.js              채점 (DOM을 모른다 → node --test로 직접 검증 가능)

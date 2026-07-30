@@ -24,7 +24,9 @@
   **예외 하나**: 부부 체크의 짧은 매칭 코드(Cloudflare KV, `COUPLE_CODES` 바인딩, 7일 TTL 자동 만료) — 식별자 없는
   익명 점수 덩어리만 저장되고, 만료 외에 수동 삭제 경로는 없다(D-45). 시크릿·환경변수 **없음**은 그대로 유지.
   백엔드는 이 하나의 기능에만 있다 — Cloudflare Pages Functions(`functions/api/couple-code/`) + KV,
-  `wrangler.jsonc`로 바인딩. 나머지 전부는 여전히 정적 파일 + 브라우저뿐이다
+  `wrangler.jsonc`로 바인딩. 나머지 전부는 여전히 정적 파일 + 브라우저뿐이다.
+  이 예외가 생기면서 개인정보처리방침(`/privacy`, 홈 하단 링크)을 신설했다 — 실제로 저장·처리하는
+  것만 적는다. 아직 안 하는 걸 미리 적어두면 나중에 그 기능이 생겼을 때 방침이 먼저 거짓말이 된다
 - 방문 분석: Cloudflare Web Analytics — `data-pantry.com` 존에 automatic setup으로 이미 등록돼 있고,
   `fun.data-pantry.com`은 같은 존의 서브도메인이라 **코드 변경 없이 자동으로 같이 잡힌다**(2026-07-28 확인).
   **이 레포에 분석 스크립트를 추가하지 말 것** — 페이지당 스니펫은 하나만 허용되는데 이미 상위 존에서
@@ -42,7 +44,7 @@ index.html            진입점 (메타·OG·referrer 정책은 전 주소 공�
 assets/                favicon(svg) · apple-touch-icon(png) · og-image(png, 1200×630)
 js/main.js            부팅: 화면·테스트·게임을 라우터에 등록
 js/core/              router(레지스트리·guard·teardown·게임 레지스트리) · state · dom · share · util · ads
-js/screens/home.js    홈 · 심리테스트 목록(등록된 테스트에서 자동 생성) · 미니게임 목록(등록된 게임에서 자동 생성)
+js/screens/home.js    홈 · 심리테스트 목록(등록된 테스트에서 자동 생성) · 미니게임 목록(등록된 게임에서 자동 생성) · 개인정보처리방침
 js/tests/<id>/        테스트 1개 = 폴더 1개: data · score · screens · index(디스크립터)
                       현재 adhd(+반응속도 게임), disc(+딜레마 게임),
                       couple(+assemble · match — 문항지 조립과 부부 매칭이 따로 검증돼야 해서 분리)

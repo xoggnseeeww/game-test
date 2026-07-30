@@ -1077,6 +1077,20 @@ async function playNumpathRun(page) {
   check("장식뿐이던 하단 네비게이션 제거됨", !(await page.$(".bottom-nav")));
   check("목업 잔재(가짜 상태바) 없음", !(await page.content()).includes("9:41"));
 
+  // === 개인정보처리방침 (부부 체크 짧은 코드 도입으로 "영속 데이터 없음"이 깨진 뒤 추가) ===
+  await goto("/");
+  await page.click('[data-nav="privacy"]');
+  check("홈 하단 링크 → 개인정보처리방침", page.url().endsWith("/privacy"), page.url());
+  const privacyBody = (await page.textContent("#app")).replace(/\s+/g, " ");
+  check(
+    "개인정보처리방침에 부부 체크 코드의 보유기간(7일)이 명시됨",
+    privacyBody.includes("7일이 지나면 자동으로 삭제"),
+    privacyBody.slice(0, 120)
+  );
+  check("개인정보처리방침에 문의처가 있다", privacyBody.includes("@"));
+  await page.click('[data-nav="home"]');
+  check("개인정보처리방침 뒤로가기 → 홈", page.url().endsWith("/") || new URL(page.url()).pathname === "/", page.url());
+
   // /api/couple-code 관련 콘솔 에러는 두 갈래로 나온다: ① 백엔드가 아예 없는 로컬 개발
   // (serve.py) — 위에서 shortCodeReady가 false로 이미 감지됐고, 그건 기대된 동작이라
   // 별도로 확인했다(브라우저 자체가 찍는 "Failed to load resource: ... 501"과 remote.js가
