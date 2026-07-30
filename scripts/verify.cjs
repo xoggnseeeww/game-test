@@ -766,6 +766,15 @@ async function playNumpathRun(page) {
   check("결과에 연속 프로필이 함께 나옴 (§6.1 — 라벨 단독 노출 금지)", cpProfileBars >= 6, `${cpProfileBars}개 막대`);
   check("애착 축에 중간값 선 표시", (await page.$$(".cp-bar-mid")).length >= 2);
   const cpBody = (await page.textContent("#app")).replace(/\s+/g, " ");
+  // 가까움·거리 막대는 예전엔 "경계에 가깝다"일 때만 문장이 붙어서, 그 외 경우엔 숫자만
+  // 보고 뭘 뜻하는지 알 길이 없었다. 항상 풀어주는 문장이 있는지 본다.
+  check(
+    "가까움·거리 점수를 항상 말로 풀어준다 (편안한/자주 확인 등)",
+    /(가까움을 자주 확인하고 싶어하는 편|가까움을 확인하지 않아도 편안한 편)이고, (혼자만의 거리를 두는 게 편한 편|거리를 크게 두지 않아도 괜찮은 편)이에요/.test(
+      cpBody
+    ),
+    cpBody.slice(0, 200)
+  );
   check("결과에 상시 안내 링크 노출 (§9.2)", await page.isVisible(".cp-support"));
   check("결과에 서비스 성격 고지 노출 (§9.3)", cpBody.includes("진단하거나 관계의 미래를 예측하지 않습니다"));
 

@@ -349,6 +349,16 @@ function confidenceText(behavior) {
   return `${first}과 ${second}이 거의 같은 크기로 나왔어요. 상황에 따라 두 모습이 번갈아 나오는 편일 수 있습니다.`;
 }
 
+// 성향 막대는 항상 confidenceText()로 풀어주는데, 가까움·거리 막대는 경계선(edge)일 때만
+// 문장이 붙어서 "19점이 뭘 뜻하는지" 자체를 알 수 없는 경우가 있었다(edge가 아니어도).
+// 두 축을 항상 말로 풀어준다 — 유형 이름(AT1~AT4)이 이미 위 카드에 나와 있지만, 그 이름과
+// 지금 이 두 막대가 같은 걸 가리킨다는 연결을 여기서도 한 번 더 지어준다.
+function attachmentText(attachment) {
+  const anxWord = attachment.anx.high ? "가까움을 자주 확인하고 싶어하는 편" : "가까움을 확인하지 않아도 편안한 편";
+  const avoWord = attachment.avo.high ? "혼자만의 거리를 두는 게 편한 편" : "거리를 크게 두지 않아도 괜찮은 편";
+  return `${anxWord}이고, ${avoWord}이에요.`;
+}
+
 // 한 화면에 전부 펼쳐놓으면 정보가 많아 무겁게 읽힌다. 핵심(유형 + 네 성향 점수 +
 // 실행 제안)만 펼쳐두고 나머지는 접는다 — 감추는 게 아니라 순서를 준 것이라, 펼치면
 // §6.4가 요구하는 블록이 전부 그대로 있다.
@@ -385,6 +395,7 @@ function profileMarkup(r) {
       <p class="cp-block-sub">가운데 선이 중간이에요.</p>
       ${barMarkup(AXIS_LABELS.ANX, r.norm.ANX, { midline: true })}
       ${barMarkup(AXIS_LABELS.AVO, r.norm.AVO, { midline: true })}
+      <p class="cp-note">${attachmentText(r.attachment)}</p>
       ${r.attachment.anx.edge || r.attachment.avo.edge
         ? `<p class="cp-note">${[
             r.attachment.anx.edge ? AXIS_LABELS.ANX : null,

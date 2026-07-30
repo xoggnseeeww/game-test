@@ -153,6 +153,19 @@ test("R5·R6은 세 역할 버전의 문장이 같다", () => {
   }
 });
 
+test("R1~R4·K1~K5는 축을 바꾸면 실제로 다른 문장을 준다", () => {
+  // 위 검사는 "같아야 하는 문항이 같은가"만 본다. 이건 그 반대 — 복사·붙여넣기 실수로
+  // 세 버전이 우연히 같은 문장이 되면(=축을 골라도 문항이 안 바뀌면) 위 검사는 못 잡는다.
+  for (const item of ROLE_ITEMS.filter((i) => !i.shared)) {
+    const texts = new Set(R_AXIS.map((ax) => item.variants[ax.code]));
+    assert.equal(texts.size, R_AXIS.length, `${item.code}는 역할마다 문장이 달라야 한다`);
+  }
+  for (const item of CHILD_ITEMS) {
+    const texts = new Set(K_AXIS.map((ax) => item.variants[ax.code]));
+    assert.equal(texts.size, K_AXIS.length, `${item.code}는 자녀 단계마다 문장이 달라야 한다`);
+  }
+});
+
 // ---------------------------------------------------------------- 문항지 조립
 
 test("어떤 축 조합이든 문항 수와 코드 구성이 같다", () => {
