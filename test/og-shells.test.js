@@ -43,9 +43,9 @@ test("_redirects: 와일드카드(/*)는 항상 마지막 줄", () => {
 
 // { 경로, 카드 소유자, og:image 파일명 } — card.screen이 가리키는 실제 diskPath 확인용
 const SHELLS = [
-  { path: "/test/adhd", dest: "/og-shells/test-adhd.html", card: adhdTest.card, image: "og-adhd.png" },
-  { path: "/test/disc", dest: "/og-shells/test-disc.html", card: discTest.card, image: "og-disc.png" },
-  { path: "/game/numpath", dest: "/og-shells/game-numpath.html", card: numpathGame.card, image: "og-numpath.png" },
+  { path: "/test/adhd", dest: "/og-shells/test-adhd.html", card: adhdTest.card, image: "og-adhd-v2.png" },
+  { path: "/test/disc", dest: "/og-shells/test-disc.html", card: discTest.card, image: "og-disc-v2.png" },
+  { path: "/game/numpath", dest: "/og-shells/game-numpath.html", card: numpathGame.card, image: "og-numpath-v2.png" },
 ];
 
 test("_redirects: OG 셸 규칙 3개가 전부 존재하고 대상 파일도 실재한다", () => {

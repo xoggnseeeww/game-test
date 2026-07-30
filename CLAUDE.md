@@ -94,6 +94,7 @@ docs/design-draft.html  최초 디자인 목업. 배포·동작과 무관 (.clau
 - 구조 변경(모듈 추가·이동·삭제) → **같은 커밋에** `docs/architecture.md` 모듈맵과 위 구조 개요 트리 갱신
 - `styles.css` 클래스명 변경 → 템플릿 문자열은 타입 체크가 없다. `grep -rn '<클래스명>' js/ styles.css`로 양쪽 확인
 - 새 테스트/게임에 OG 미리보기 추가 → `og-shells/<이름>.html` 작성 + `_redirects`에 규칙 추가(**와일드카드 위**) + `assets/og-<이름>.png` + `test/og-shells.test.js`의 `SHELLS` 배열에 항목 추가. 카드(`card.name`/`card.desc`) 문구 변경 시 셸의 `<title>`·`og:title`·`og:description`도 같이 고친다 — 자동 반영 안 됨(D-32), `og-shells.test.js`가 불일치를 잡아준다
+- `assets/og-*.png` **내용**을 고칠 때 → **파일명도 반드시 같이 바꾼다**(예: `-v2`, `-v3`). URL이 그대로면 카카오·CDN·브라우저의 이미지 캐시가 옛 파일을 계속 서빙한다 — 제목·설명은 갱신되는데 이미지만 안 바뀌는 증상으로 나타나 원인 추적이 어렵다. 파일명을 바꾸면 셸의 `og:image`/`twitter:image`와 `test/og-shells.test.js`의 `SHELLS` 배열도 같이 갱신
 
 ## 절대 수정 금지
 `.git/` · `node_modules/` · `docs/design-draft.html`
