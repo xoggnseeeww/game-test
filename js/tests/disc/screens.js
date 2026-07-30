@@ -392,10 +392,43 @@ export function renderDiscShared() {
 
 // ---------------------------------------------------------------- 공유 카드
 
+// data.js의 "\n" 줄바꿈은 온스크린 좁은 컬럼 기준이라, 1080px 캔버스에 그대로 그리면
+// 가장 긴 줄이 여백 없이 캔버스 폭에 거의 맞닿는다(측정 결과 1040px, 캔버스 1080px).
+// 단어 단위로 다시 감싸서 항상 여백 안에 들어오게 한다.
+function wrapLine(ctx, text, maxWidth) {
+  const words = text.split(" ");
+  const lines = [];
+  let current = "";
+  for (const word of words) {
+    const test = current ? `${current} ${word}` : word;
+    if (current && ctx.measureText(test).width > maxWidth) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = test;
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
+}
+
 async function drawDiscCard(r) {
   const t = r.type;
   const W = 1080;
-  const H = 1080;
+  const DESC_FONT = "500 32px Pretendard, sans-serif";
+  const DESC_MAX_WIDTH = W - 160; // 좌우 80px 여백
+
+  // 높이를 정하기 전에 실제로 감싼 줄 수를 알아야 해서, 측정용으로 먼저 컨텍스트를 만든다.
+  const measureCanvas = document.createElement("canvas");
+  const measureCtx = measureCanvas.getContext("2d");
+  measureCtx.font = DESC_FONT;
+  const descLines = t.desc.split("\n").flatMap((line) => wrapLine(measureCtx, line, DESC_MAX_WIDTH));
+
+  const DESC_TOP = 970;
+  const DESC_LINE_H = 44;
+  const descBottom = DESC_TOP + (descLines.length - 1) * DESC_LINE_H;
+  const H = descBottom + 210;
+
   const canvas = document.createElement("canvas");
   canvas.width = W;
   canvas.height = H;
@@ -447,12 +480,19 @@ async function drawDiscCard(r) {
   ctx.fillStyle = "#FFE2D2";
   ctx.fillText(t.tags.join("   "), W / 2, 920);
 
+  // 어떤 유형인지 설명하는 본문 — 온스크린 결과 카드(.result-card p)와 같은 문구.
+  ctx.font = DESC_FONT;
+  ctx.fillStyle = "rgba(255,255,255,.92)";
+  descLines.forEach((line, i) => {
+    ctx.fillText(line, W / 2, DESC_TOP + i * DESC_LINE_H);
+  });
+
   ctx.font = "700 34px Pretendard, sans-serif";
   ctx.fillStyle = "#fff";
-  ctx.fillText("너는 무슨 유형이야?", W / 2, 990);
+  ctx.fillText("너는 무슨 유형이야?", W / 2, descBottom + 110);
   ctx.font = "600 26px Pretendard, sans-serif";
   ctx.fillStyle = "rgba(255,255,255,.7)";
-  ctx.fillText(`${location.origin}/test/disc`, W / 2, 1032);
+  ctx.fillText(`${location.origin}/test/disc`, W / 2, descBottom + 152);
 
   return canvas;
 }
