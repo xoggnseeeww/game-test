@@ -1152,3 +1152,20 @@ OG 셸(D-32→D-47로 재번호), DISC 12유형 미리보기(D-33→D-48), 목�
   본다"(5점)로 답해 순화된 `burdenOverlap` 문구가 실제로 뜨는지, (b) 개인 결과 화면에
   `ATTACH_TYPES.desc`·`CONFLICT_STYLES.desc`가 실제로 렌더되는지, (c) "~입니다" 이중 어미가
   생기지 않는지 직접 브라우저로 확인했다.
+
+### 2026-07-30(11) — main 머지 (D-51·D-52·D-53 반영, 3차)
+
+- 결과 설명 상세화·짧은 코드 즉시 노출·뒤로가기 버그 수정(D-51), AN3 자기참조형 재작성 +
+  일치 인사이트(D-52), 문구 순화 + 개인 성향 설명 확장(D-53) 세 커밋을 main에 반영했다.
+- 이번엔 main이 그사이 독립적으로 커밋 4개를 더 받은 상태였다 — `SessionStart` 훅
+  (`.claude/hooks/session-start.sh`, Ponytail/Graphify 자동 재설치)과 `graphify-out/`
+  지식그래프 산출물 보관. 부부 체크가 건드리는 파일과 전혀 겹치지 않아(파일 경로 기준
+  완전히 분리된 디렉터리) `git merge`가 충돌 없이 자동으로 처리했다 — 지난 두 번의 머지와
+  달리 순수 fast-forward는 아니었고 실제 병합 커밋(`ort` 전략)이 생겼다.
+- 머지 전 `npm test` 132/132 확인, 병합 후 `scripts/verify.cjs`를 `serve.py`로 재확인(전체
+  통과) — `wrangler pages dev`까지는 이번엔 별도로 다시 띄우지 않았다. 병합 대상 파일이
+  couple 관련 로직·문구뿐이고 방금 전 턴에서 이미 wrangler 포함 전체 통과를 확인했던
+  터라, 병합 자체가 새 충돌 없이 clean했다는 사실(diff 대상 파일 완전 분리)로 backend
+  경로까지 다시 도는 것은 생략했다.
+- `git push origin main`으로 배포 트리거 후 작업 브랜치로 복귀, `CURRENT_TASK.md`에 병합
+  완료 기록 추가.
