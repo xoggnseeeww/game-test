@@ -59,3 +59,5 @@
 - DISC 인트로에 "12가지 유형 미리보기" 화면 추가, 검사 없이도 유형을 훑어보게 함 → [D-48](decisions/2027-h1.md#d-48-disc-인트로에-12가지-유형-미리보기-화면-추가)
 - 목록 화면(심리테스트·미니게임)에도 배너 추가 + 홈 하단 배너를 모바일 전용 고정(sticky) 도크로 → [D-49](decisions/2027-h1.md#d-49-목록-화면에도-배너-추가--홈-하단-배너를-모바일-전용-고정sticky-도크로)
 - 부부 체크 화면 파일 분리 (screens.js → +screens-match.js +card.js) → [D-50](decisions/2027-h1.md#d-50-부부-체크-screensjs를-screensjs--screens-matchjs--cardjs로-분리)
+- NumPath 난이도 3종·스테이지별 시드·마을 보상(localStorage 재도입, D-20과의 경계 포함) → [D-51](decisions/2027-h1.md#d-51-numpath-난이도-3종스테이지별-시드마을-보상localstorage-재도입)
+- NumPath 마을을 data-pantry.com 계정(Supabase)에 선택적으로 동기화 → [D-52](decisions/2027-h1.md#d-52-numpath-마을을-data-pantrycom-계정에-선택적으로-동기화)

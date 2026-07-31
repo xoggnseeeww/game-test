@@ -114,12 +114,14 @@ js/games/<id>/          테스트에 속하지 않는 독립 미니게임(예: n
 | `/game/numpath/play` | `numpath-play` | game | 런 없음 → `numpath-intro` |
 | `/game/numpath/ad` | `numpath-ad` | game | 런 없음 → `numpath-intro`, 런 미완료 → `numpath-play` |
 | `/game/numpath/result` | `numpath-result` | game | 런 없음 → `numpath-intro`, 런 미완료 → `numpath-play` |
+| `/game/numpath/village` | `numpath-village` | game | — (런과 무관한 영속 진행이라 guard 없음, D-51) |
 
 > ADHD 화면 id가 `test-*`인 것은 DISC보다 먼저 만들어졌기 때문이다. **이름을 바꾸지 않는다**(위 §2).
 
 **NumPath는 반응속도·딜레마 게임과 달리 테스트에 속하지 않는 독립 미니게임이다** — `/game/numpath/*`
 경로에 있고 `registerGame()`으로 `/game` 목록에 자동 노출된다(`docs/decisions/2027-h1.md` D-28).
 `numpath-play`는 `theme-game`(반응속도 게임과 같은 초록 팔레트)을 재사용한다 — 새 테마를 만들지 않았다.
+난이도(3커브)·스테이지별 시드·마을 보상(localStorage) 구조는 `docs/numpath-architecture.md`와 D-51 참고.
 
 **두 테스트 모두 딸린 게임이 결과 화면 뒤의 선택 보너스가 아니라, 마지막 문항 직후 반드시
 거쳐야 하는 필수 단계로 통합돼 있다.** 게임 없이는(직접 URL 접속 포함) 결과를 볼 수 없고,
@@ -252,6 +254,7 @@ ADHD·DISC 채점 파이프라인 상세는 각각 `docs/adhd-architecture.md` �
 | `test/couple.match.test.js` | ΔDISC 정규화 · Risk Matrix 대칭 · Gap 방향 보존 · 게이지 방향(K2 가산/K4 감산) · 등급 완충 · 구간 문구에 숫자 없음 · 배우자 코드 왕복/체크섬 |
 | `test/couple.shortcode.test.js` | 짧은 코드 형식(8자·Crockford Base32) · 혼동 글자(I·L·O·U) 미포함 · 바이트→문자 매핑이 치우치지 않는가 · 정규화(대소문자·대시) |
 | `test/numpath.engine.test.js` | 순차 연산 · 이동 판정(나눗셈 정수·뺄셈 양수) · Undo 왕복 불변식 · 클리어/막힘/이동초과 판정 |
-| `test/numpath.generate.test.js` | 시드 재현성 · 레벨마다 생성된 퍼즐이 항상 solve() 가능한가(교차 검증) · 별 등급 임계값 |
+| `test/numpath.generate.test.js` | 시드 재현성 · 스테이지별 시드 파생(같은 레벨 반복 시 보드 중복 금지) · 난이도 커브 유효성 · 커브의 모든 스테이지가 항상 solve() 가능한가(교차 검증) · 별 등급 임계값 |
+| `test/numpath.village.test.js` | 코인 보상 계산(별 × 난이도 배수) · 건설 불변식(차감·이중 건설 거부) · 첫 건물이 첫 런 보상으로 도달 가능한가 · localStorage 없는 환경 방어 · mergeVillages 멱등성(로컬×클라우드 병합, D-52) |
 
 **여기서 안 잡히는 것**: 라우팅·이벤트 바인딩·타이머·레이아웃 → `scripts/verify.cjs`(헤드리스 브라우저)의 몫이다.

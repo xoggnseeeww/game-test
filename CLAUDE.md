@@ -22,13 +22,20 @@
 - SPA 폴백: `_redirects` (`/*  /index.html  200`, 항상 마지막 줄) — 없으면 하위 경로 직접 접속이 404.
   그 위에 페이지별 OG 셸로 보내는 rewrite 규칙 3개가 더 있다(D-47) — `_redirects`는 첫 매치 우선이라
   더 구체적인 규칙이 항상 와일드카드보다 **위**에 있어야 한다. `test/og-shells.test.js`가 순서를 검사한다
-- 영속 데이터: 기본적으로 **없음** (예전엔 `localStorage["gt_reaction_best"]`로 반응속도 최고기록을 저장했으나 D-20에서 제거).
-  **예외 하나**: 부부 체크의 짧은 매칭 코드(Cloudflare KV, `COUPLE_CODES` 바인딩, 7일 TTL 자동 만료) — 식별자 없는
-  익명 점수 덩어리만 저장되고, 만료 외에 수동 삭제 경로는 없다(D-45). 시크릿·환경변수 **없음**은 그대로 유지.
-  백엔드는 이 하나의 기능에만 있다 — Cloudflare Pages Functions(`functions/api/couple-code/`) + KV,
-  `wrangler.jsonc`로 바인딩. 나머지 전부는 여전히 정적 파일 + 브라우저뿐이다.
+- 영속 데이터: 예전엔 기본적으로 없었다(`localStorage["gt_reaction_best"]`로 반응속도 최고기록을
+  저장했으나 D-20에서 제거). 지금은 예외가 둘이다.
+  **① 부부 체크의 짧은 매칭 코드**(Cloudflare KV, `COUPLE_CODES` 바인딩, 7일 TTL 자동 만료) — 식별자
+  없는 익명 점수 덩어리만 저장되고, 만료 외에 수동 삭제 경로는 없다(D-45). 백엔드는 이 기능에만
+  있다 — Cloudflare Pages Functions(`functions/api/couple-code/`) + KV, `wrangler.jsonc`로 바인딩.
   이 예외가 생기면서 개인정보처리방침(`/privacy`, 홈 하단 링크)을 신설했다 — 실제로 저장·처리하는
-  것만 적는다. 아직 안 하는 걸 미리 적어두면 나중에 그 기능이 생겼을 때 방침이 먼저 거짓말이 된다
+  것만 적는다. 아직 안 하는 걸 미리 적어두면 나중에 그 기능이 생겼을 때 방침이 먼저 거짓말이 된다.
+  **② NumPath 마을**(`localStorage["gt_numpath_village"]`, 코인·건설 목록, D-51) — 로그인 시
+  data-pantry.com과 같은 Supabase 프로젝트(`duvpvwolgqurhgnhqezj`)의 `numpath_village` 테이블과
+  선택적으로 동기화된다(D-52, `js/games/numpath/cloud.js`). 이쪽은 이 레포 자체엔 백엔드가 없고
+  data-pantry.com의 기존 계정 체계를 재사용할 뿐이다.
+  반응속도 최고기록(`gt_reaction_best`)은 D-20에서 제거됐고 **되살리지 말 것** — D-20의 금지는
+  "검사에서 빠름을 성취로 프레이밍"하는 것이지 게임 진행 저장이 아니다(경계는 D-51 참고).
+  시크릿·환경변수 **없음**은 그대로 유지(Supabase anon key는 공개 키라 시크릿이 아니다 — D-52)
 - 방문 분석: Cloudflare Web Analytics — `data-pantry.com` 존에 automatic setup으로 이미 등록돼 있고,
   `fun.data-pantry.com`은 같은 존의 서브도메인이라 **코드 변경 없이 자동으로 같이 잡힌다**(2026-07-28 확인).
   **이 레포에 분석 스크립트를 추가하지 말 것** — 페이지당 스니펫은 하나만 허용되는데 이미 상위 존에서
@@ -36,9 +43,12 @@
   → Manage site에서 경로별로 필터링해서 본다.
 
 ## 기술 스택
-빌드 없는 정적 SPA. 브라우저 네이티브 ES 모듈(`<script type="module">`), 런타임 의존성 0.
-외부 의존은 CDN 폰트 하나. 라우팅은 History API 직접 구현 + **레지스트리 방식 라우터**.
-상태는 메모리 내 단일 `state` 객체(새로고침하면 날아감).
+빌드 없는 정적 SPA. 브라우저 네이티브 ES 모듈(`<script type="module">`), 런타임 의존성 0(npm 설치
+기준 — 브라우저가 직접 불러오는 CDN 모듈은 있다). 외부 CDN 의존: 폰트 하나 + NumPath 마을의 클라우드
+로그인용 Supabase JS(`js/games/numpath/cloud.js`, D-52) — 후자는 **동적 import로만** 연결돼 있어
+CDN이 막혀도 그 화면 하나만 로그인 기능이 빠지고 나머지 앱은 정상 동작한다(`cloud-loader.js` 참고).
+라우팅은 History API 직접 구현 + **레지스트리 방식 라우터**. 상태는 메모리 내 단일 `state`
+객체(새로고침하면 날아감).
 
 ## 구조 개요
 ```
