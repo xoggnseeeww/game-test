@@ -13,6 +13,7 @@ import {
   envCompare,
   ENV_ITEMS,
   roleOverlap,
+  burdenOverlap,
   combine,
   coupleReportBlock,
   personaName,
@@ -154,6 +155,34 @@ test("두 사람이 같은 역할을 고르면 인식 불일치 인사이트가 
   // 둘 다 동등 분담이면 인식이 일치한 정상 상태
   assert.equal(roleOverlap({ r: "R-S" }, { r: "R-S" }), null);
   assert.equal(roleOverlap({ r: "R-E" }, { r: "R-C" }), null);
+});
+
+// ---------------------------------------------------------------- §7.3 분담 인식 일치 (D-51/D-52)
+
+test("둘 다 분담이 자신에게 불리하다고 느끼면 일치 인사이트가 나온다", () => {
+  // AN3(분담 공정성)를 자기참조형으로 재작성한 뒤(D-51) 생긴 인사이트. AN1·AN2 점수는
+  // 인사이트에 영향이 없어야 한다 — burdenOverlap은 AN3만 본다.
+  const bothHigh = burdenOverlap(anchorsOf([3, 3, 4]), anchorsOf([1, 1, 5]));
+  assert.ok(bothHigh, "둘 다 AN3 점수가 중앙값(3) 이상인데 인사이트가 없다");
+  assert.equal(bothHigh.pattern, "both-carry-more");
+});
+
+test("분담 인식 일치 인사이트는 방향을 드러내지 않는다 — 한쪽만 높으면 아무 말도 안 한다", () => {
+  // 한쪽만 "나는 손해 본다"고 답한 경우까지 뭔가 말하면, 그 자체로 방향 노출이 된다
+  // (n=2 설문에서는 내 답을 아는 사람이 이 말만 듣고도 상대 답을 역산할 수 있다).
+  assert.equal(burdenOverlap(anchorsOf([3, 3, 5]), anchorsOf([3, 3, 1])), null);
+  assert.equal(burdenOverlap(anchorsOf([3, 3, 1]), anchorsOf([3, 3, 5])), null);
+});
+
+test("둘 다 낮으면(둘 다 손해 안 본다고 느낌) 인사이트를 내지 않는다", () => {
+  // "괜찮다"는 굳이 별도로 짚어줄 필요가 없다 — 일반 Gap Score의 "비슷함" 처리로 충분하다.
+  assert.equal(burdenOverlap(anchorsOf([3, 3, 1]), anchorsOf([3, 3, 1])), null);
+});
+
+test("AN3 내부 일관성이 깨진 응답은 일치 인사이트의 근거로 쓰지 않는다", () => {
+  const inconsistent = anchorsOf([3, 3, 5]);
+  inconsistent.AN3.consistent = false;
+  assert.equal(burdenOverlap(inconsistent, anchorsOf([3, 3, 5])), null);
 });
 
 // ---------------------------------------------------------------- §7.6 발급 조건

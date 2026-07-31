@@ -1951,6 +1951,17 @@ button.meta-chip {
   text-align: center;
 }
 
+/* 결과 화면의 "배우자와 결과를 합쳐볼까요?" 카드(.cp-invite-cta) 안에 곧바로 얹힐 때는
+   그 카드가 이미 자체 padding을 갖고 있어, 기본 20px 좌우 여백을 그대로 쓰면 이중으로
+   들어가 보인다. */
+.cp-shortcode-block--inline {
+  margin: 14px 0 0;
+}
+
+.cp-shortcode-block .share-mini {
+  margin-top: 2px;
+}
+
 .cp-shortcode {
   margin: 10px 0 14px;
   font-family: "SF Mono", Menlo, Consolas, monospace;
