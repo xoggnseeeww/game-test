@@ -59,3 +59,6 @@
 - DISC 인트로에 "12가지 유형 미리보기" 화면 추가, 검사 없이도 유형을 훑어보게 함 → [D-48](decisions/2027-h1.md#d-48-disc-인트로에-12가지-유형-미리보기-화면-추가)
 - 목록 화면(심리테스트·미니게임)에도 배너 추가 + 홈 하단 배너를 모바일 전용 고정(sticky) 도크로 → [D-49](decisions/2027-h1.md#d-49-목록-화면에도-배너-추가--홈-하단-배너를-모바일-전용-고정sticky-도크로)
 - 부부 체크 화면 파일 분리 (screens.js → +screens-match.js +card.js) → [D-50](decisions/2027-h1.md#d-50-부부-체크-screensjs를-screensjs--screens-matchjs--cardjs로-분리)
+- 결과 유형·결합 결과 설명 상세화 + 짧은 코드 즉시 노출 + 코드 입력 화면 뒤로가기 수정 → [D-51](decisions/2027-h1.md#d-51-결과-유형결합-결과-설명-상세화--짧은-코드-즉시-노출--코드-입력-화면-뒤로가기-수정)
+- AN3(분담 공정성)를 자기참조형 문항으로 재작성 + "둘 다 손해 본다" 일치 인사이트 추가 → [D-52](decisions/2027-h1.md#d-52-an3분담-공정성를-자기참조형-문항으로-재작성--둘-다-손해-본다-일치-인사이트-추가)
+- AN3·burdenOverlap 문구 순화 + 개인 성향 설명(ATTACH_TYPES·CONFLICT_STYLES) 확장 → [D-53](decisions/2027-h1.md#d-53-an3burdenoverlap-문구-순화--개인-성향-설명attach_typesconflict_styles-확장)
