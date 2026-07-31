@@ -211,13 +211,13 @@ async function playNumpathRun(page) {
 
   const errors = [];
   page.on("pageerror", (e) => errors.push(String(e)));
-  // 샌드박스는 아웃바운드가 프록시로 막혀 외부 자원(CDN 폰트 · AdFit 로더)이 항상 실패한다.
+  // 샌드박스는 아웃바운드가 프록시로 막혀 외부 자원(CDN 폰트 · AdFit 로더 · 클라우드 로그인용
+  // Supabase JS — NumPath 마을 동기화·우상단 관리자 로그인이 공유해서 쓴다)이 항상 실패한다.
   // 앱 버그가 아니므로 제외한다. 다만 "Failed to load resource: ... 403" 같은 메시지는 본문에
   // 주소가 없어서 m.text()만 보면 걸러지지 않는다 — m.location().url까지 같이 본다.
-  // (AdFit 스크립트가 슬롯마다 붙었는지는 아래 "광고 슬롯" 검사가 DOM으로 따로 확인한다)
-  // accounts.google.com/gsi/client: 우상단 관리자 로그인(js/core/auth.js)이 쓰는 GIS 스크립트.
-  // 다른 CDN 자원과 같은 이유로 샌드박스 프록시가 막는다 — 앱 버그가 아니다.
-  const EXTERNAL_NOISE = /ERR_TUNNEL_CONNECTION_FAILED|jsdelivr|pretendard|daumcdn|AdFit|accounts\.google\.com/i;
+  // (AdFit 스크립트가 슬롯마다 붙었는지, NumPath 클라우드 패널이 실제로 "사용 불가" 상태로
+  // 착지하는지는 아래 각 전용 검사가 DOM으로 따로 확인한다)
+  const EXTERNAL_NOISE = /ERR_TUNNEL_CONNECTION_FAILED|jsdelivr|pretendard|daumcdn|AdFit|esm\.sh|불러오지 못했습니다/i;
   page.on("console", (m) => {
     if (m.type() !== "error") return;
     const t = m.text();
@@ -515,6 +515,35 @@ async function playNumpathRun(page) {
 
   await page.click('[data-nav="numpath-intro"]');
   check("NumPath 인트로 주소", page.url().endsWith("/game/numpath"), page.url());
+
+  // === 난이도 선택 UI — 카드 수·기본 선택·난이도별 스테이지 수 확충·선택 토글 ===
+  // 스테이지 수는 상수를 import하지 않고 카드 문구("N스테이지")에서 읽는다(D-17).
+  const diffCards = await page.$$eval(".np-diff", (nodes) =>
+    nodes.map((n) => ({
+      id: n.dataset.diff,
+      selected: n.classList.contains("np-diff--selected"),
+      stages: parseInt((n.textContent.match(/(\d+)\s*스테이지/) || [])[1], 10),
+    }))
+  );
+  check(
+    "NumPath 난이도 카드가 여러 개 있고 기본 선택이 정확히 하나다",
+    diffCards.length >= 2 && diffCards.filter((d) => d.selected).length === 1,
+    JSON.stringify(diffCards)
+  );
+  check(
+    "난이도별 스테이지 수가 전부 다르다(회차 확충)",
+    diffCards.every((d) => Number.isInteger(d.stages) && d.stages > 0) &&
+      new Set(diffCards.map((d) => d.stages)).size === diffCards.length,
+    diffCards.map((d) => `${d.id}:${d.stages}`).join(" ")
+  );
+  // 이후 검사는 첫 카드(가장 쉬운 난이도)로 돈다 — 런이 짧아 빠르고, 선택 토글도 같이 검증된다.
+  await page.click(".np-diff:first-child");
+  check(
+    "난이도 카드 클릭 → 선택 표시가 그 카드로 옮겨감",
+    await page.$eval(".np-diff:first-child", (n) => n.classList.contains("np-diff--selected")),
+  );
+  const easyStageCount = diffCards[0].stages;
+
   await page.click("#start-btn");
   await page.click(".modal-btn-primary").catch(() => {});
   await page.waitForSelector(".np-board .np-tile", { timeout: 5000 });
@@ -524,6 +553,13 @@ async function playNumpathRun(page) {
     /\d/.test(await page.textContent("#np-current")) &&
     /\d\s*\/\s*\d/.test(await page.textContent("#np-moves"));
   check("NumPath HUD(TARGET/CURRENT/MOVES) 채워짐", npHudFilled);
+  const npStageTotal = parseInt((await page.textContent("#np-stage")).split("/")[1], 10);
+  check(
+    "HUD 스테이지 총수 = 인트로에서 고른 난이도의 스테이지 수",
+    npStageTotal === easyStageCount,
+    `HUD=${npStageTotal}, 카드=${easyStageCount}`
+  );
+  check("HUD에 선택한 난이도 표시", (await page.textContent("#np-diff")).trim().length > 0);
 
   // Undo/Reset: 한 칸 이동 → Undo로 되돌리고 → 다시 이동 → Reset으로 처음 상태까지 되돌린다.
   {
@@ -633,13 +669,78 @@ async function playNumpathRun(page) {
     (await page.textContent(".result-card")).includes("⭐"),
     (await page.textContent(".result-card")).replace(/\s+/g, " ").trim().slice(0, 80)
   );
+  check(
+    "NumPath 결과에 이번 런 코인 보상 표시",
+    (await page.textContent(".result-card")).includes("🪙"),
+    (await page.textContent(".result-subtitle")).trim()
+  );
 
   // 다시 시작 → 인트로로 (자동으로 새 런을 시작하지 않는다 — ADHD "테스트 다시하기"와 같은 패턴)
   await page.click("#retry-btn");
   check("NumPath 다시하기 → 인트로로(자동 재시작 아님)", page.url().endsWith("/game/numpath"), page.url());
 
+  // === 넘버 마을: 코인 적립 → 건설 → 영속(localStorage) ===
+  // 방금 런(+앞의 부분 클리어들)에서 별×난이도 배수만큼 코인이 쌓였어야 하고, 첫 건물은
+  // 최저 난이도 한 런 보상으로 살 수 있게 잡혀 있다(test/numpath.village.test.js의 경제 검증).
+  await page.click("#np-village-btn");
+  await page.waitForSelector(".np-shop", { timeout: 5000 });
+  check("마을 화면 주소", page.url().endsWith("/game/numpath/village"), page.url());
+  const walletBefore = parseInt((await page.textContent("#np-wallet")).replace(/\D/g, ""), 10);
+  check("런에서 번 코인이 마을 지갑에 적립됨", Number.isInteger(walletBefore) && walletBefore > 0, `wallet=${walletBefore}`);
+
+  const buildBtn = await page.$(".np-build-btn:not([disabled])");
+  check("지갑 코인으로 살 수 있는 건물이 있다", !!buildBtn);
+  if (buildBtn) {
+    await markLoader(page, "numpath-village");
+    await buildBtn.click();
+    await page.waitForFunction(
+      (prev) => document.querySelector("#np-wallet")?.textContent.replace(/\D/g, "") !== prev,
+      String(walletBefore),
+      { timeout: 3000 }
+    );
+    const walletAfter = parseInt((await page.textContent("#np-wallet")).replace(/\D/g, ""), 10);
+    const builtCount = await page.$$eval(".np-shop-item--built", (l) => l.length);
+    check("건설 → 코인 차감 + 완공 표시 + 마을 풍경에 등장", walletAfter < walletBefore && builtCount >= 1 && (await page.$$eval(".np-scene-item", (l) => l.length)) >= 1, `🪙 ${walletBefore}→${walletAfter}, built=${builtCount}`);
+    check(
+      "마을 건설 재렌더 후에도 광고 로더 태그 유지(in-place, 재마운트 아님)",
+      (await loaderMark(page)) === "numpath-village",
+      `mark=${await loaderMark(page)}`
+    );
+
+    // 영속성: 새로고침해도 지갑·건설 목록이 남는다 (localStorage["gt_numpath_village"], D-51)
+    await page.reload({ waitUntil: "networkidle" });
+    await page.waitForSelector(".np-shop", { timeout: 5000 });
+    const walletReloaded = parseInt((await page.textContent("#np-wallet")).replace(/\D/g, ""), 10);
+    check(
+      "새로고침 후에도 마을 진행 유지(localStorage)",
+      walletReloaded === walletAfter && (await page.$$eval(".np-shop-item--built", (l) => l.length)) === builtCount,
+      `reload: 🪙 ${walletReloaded}, built=${await page.$$eval(".np-shop-item--built", (l) => l.length)}`
+    );
+  }
+
+  // === 넘버 마을 클라우드 연동 패널(D-52) — CDN 차단 상황에서도 화면이 안 죽는가 ===
+  // 샌드박스는 esm.sh(Supabase JS)로 나가는 요청이 막혀 있다. 이건 배포 환경에서도 오프라인·
+  // 네트워크 장애 시 똑같이 재현되는 상태라, "클라우드가 아예 안 뜨는 것"이 아니라 "패널이
+  // 사용 불가로 착지하고 나머지 화면은 멀쩡한 것"을 검증한다 — cloud-loader.js가 실패를
+  // 삼키지 않고 흡수하는 게 핵심이다. ("로딩 중" 초기 상태는 로컬 네트워크 실패가 너무 빨라
+  // 안정적으로 잡히지 않는 순간의 상태라 여기선 검사하지 않는다 — 최종 착지 상태만 본다.)
+  await page.waitForFunction(
+    () => document.querySelector(".np-cloud-hint")?.textContent.includes("확인 중") === false,
+    { timeout: 8000 }
+  );
+  check(
+    "CDN 차단 시 클라우드 패널이 '사용 불가'로 착지하고 로그인 버튼을 감춘다",
+    (await page.textContent(".np-cloud-hint")).includes("지금은 이 기능을 쓸 수 없어요") && (await page.$("#np-cloud-google")) === null,
+    (await page.textContent(".np-cloud-hint")).trim()
+  );
+  check(
+    "클라우드 모듈 로드 실패 후에도 마을 화면 나머지(지갑·건설 목록)는 정상 동작",
+    await page.isVisible(".np-shop") && await page.isVisible("#np-wallet")
+  );
+
   // === 관리자 전용 게이트: 부부 체크는 아직 출시 전이라 관리자(js/core/auth.js의
-  // ADMIN_EMAIL)만 들어갈 수 있어야 한다. 아래는 로그인 전(비관리자) 상태로 확인한다 ===
+  // ADMIN_EMAIL)만 들어갈 수 있어야 한다. 로그인은 NumPath 마을과 같은 Supabase Auth를
+  // 공유해서 쓴다(D-56) — 아래는 로그인 전(비관리자) 상태로 확인한다 ===
   await goto("/test");
   check("부부 체크 카드에 '출시 예정' 배지 (비관리자)", await page.isVisible(".coming-soon-badge"));
   await page.click('[data-nav="couple-intro"]');
@@ -662,8 +763,10 @@ async function playNumpathRun(page) {
   await page.click("#modal-confirm").catch(() => {});
 
   // 이후 부부 체크 회귀는 관리자 권한으로 진행한다 — 관리자 전용 기능이라 다른 방법이 없다.
-  // 실제 Google 로그인은 헤드리스에서 재현할 수 없어(GIS 팝업), localStorage를 auth.js와
-  // 같은 형식으로 직접 채워 로그인 상태를 흉내낸다.
+  // 실제 Google 로그인(Supabase OAuth 리다이렉트)은 헤드리스에서 재현할 수 없어, localStorage를
+  // js/core/auth.js와 같은 형식으로 직접 채워 "이미 로그인된" 상태를 흉내낸다 — 이 캐시는
+  // 원래 Supabase 세션이 확인될 때 auth.js가 채워주는 값이라, CDN이 막힌 이 샌드박스에서도
+  // NumPath 마을의 localStorage 폴백(D-52)과 같은 방식으로 유효하다.
   await page.evaluate(() => localStorage.setItem("gt_admin_email", "xogns022@gmail.com"));
   check(
     "관리자 로그인 후 배지가 사라진다",
@@ -758,8 +861,8 @@ async function playNumpathRun(page) {
     "들이는 노력을 잘 알고",
     "몫이 버겁게",
     "감당하기에 벅차다",
-    "모두에게 공정하다",
-    "몫의 크기는 서로 비슷",
+    "감당하는 몫이 배우자보다 크다고 느낀다",
+    "조금 더 많이 짊어지고 있다고 느낀다",
   ];
 
   let noticeSeenAt = [];
@@ -845,6 +948,43 @@ async function playNumpathRun(page) {
     "결과 화면에도 '부부 결과 매칭' 보조 버튼이 있다 (초대 링크 만들기와 별개 경로)",
     await page.isVisible('.cp-invite-secondary[data-nav="couple-pair"]')
   );
+  // 유형 설명이 한 줄 요약에 그치지 않고 실제로 풀어써졌는지 본다(D-51). 예전 한 줄
+  // 요약은 40자 안팎이었다 — 길이만으로도 "한 줄짜리 요약"과 구분된다.
+  check(
+    "결과 유형 설명이 한 줄 요약을 넘어서는 길이로 풀어써졌다",
+    (await page.$eval(".result-card p", (p) => p.textContent.trim().length)) > 80,
+    await page.textContent(".result-card p")
+  );
+
+  // 짧은 코드는 예전엔 "배우자 초대 링크 만들기"를 눌러 별도 화면까지 가야 보였다 —
+  // 결과 화면에 뜨자마자(클릭 없이) 바로 노출되는지 본다(D-51).
+  const resultShortCodeReady = await page
+    .waitForFunction(
+      () => {
+        const el = document.querySelector("#cp-shortcode-inline");
+        return el && /^[0-9A-Z]{4}-[0-9A-Z]{4}$/.test(el.textContent.trim());
+      },
+      { timeout: 8000 }
+    )
+    .then(() => true)
+    .catch(() => false);
+  if (resultShortCodeReady) {
+    check(
+      "결과 화면에 짧은 코드가 클릭 없이 바로 노출된다",
+      /^[0-9A-Z]{4}-[0-9A-Z]{4}$/.test((await page.textContent("#cp-shortcode-inline")).trim()),
+      await page.textContent("#cp-shortcode-inline")
+    );
+    check(
+      "짧은 코드가 뜬 뒤에도 여전히 결과 화면에 있다 (별도 화면으로 안 넘어감)",
+      page.url().endsWith("/test/couple/result"),
+      page.url()
+    );
+  } else {
+    check(
+      "백엔드가 없을 때는 결과 화면의 코드 노출도 조용히 폴백 문구로 넘어간다",
+      (await page.textContent("#cp-shortcode-inline")).includes("발급이 지금 안 돼요")
+    );
+  }
 
   // === 배우자 초대 링크 왕복 ===
   await page.click('[data-nav="couple-invite"]');
@@ -900,6 +1040,20 @@ async function playNumpathRun(page) {
   await page.waitForSelector(".cp-invite-secondary");
   await page.click(".cp-invite-secondary");
   check("결과 화면 매칭 버튼 → 코드 입력 화면", page.url().endsWith("/test/couple/pair"), page.url());
+
+  // 코드 입력 화면의 뒤로가기는 예전엔 항상 "home"에 고정돼 있었다 — 이미 결과가 있는
+  // 사람이 배우자 코드를 입력하러 왔다가 코드를 넣지 않고 뒤로 가면, 자기 결과 화면이
+  // 아니라 홈으로 튕겨서 결과를 다시 찾아가야 했다(D-51).
+  check(
+    "코드 입력 화면의 뒤로가기가 내 결과로 향한다 (홈으로 고정되지 않음)",
+    (await page.$eval(".back-btn", (b) => b.dataset.nav)) === "couple-result"
+  );
+  await page.click(".back-btn");
+  check("뒤로가기 클릭 → 실제로 내 결과 화면으로 돌아간다", page.url().endsWith("/test/couple/result"), page.url());
+
+  // 원래 시나리오(자기 코드로 매칭)를 이어간다.
+  await page.click(".cp-invite-secondary");
+  check("결과 화면 매칭 버튼 → 코드 입력 화면 (재진입)", page.url().endsWith("/test/couple/pair"), page.url());
   await page.fill("#cp-code-input", inviteUrl);
   await page.click("#cp-code-submit");
   await page.waitForFunction(() => !location.pathname.endsWith("/pair"), { timeout: 5000 });
@@ -992,6 +1146,27 @@ async function playNumpathRun(page) {
   const reportBody = (await page.textContent("#app")).replace(/\s+/g, " ");
   check("결합 결과에 두 유형 조합 이름이 나온다", (await page.textContent(".cp-pair-name")).includes("×"));
   check("성향 조합 해석이 나온다 (§7.2)", reportBody.includes("두 분의 성향은"));
+  // 애착 조합 해석(attachTag)이 한 줄 요약을 넘어서는지 본다(D-51).
+  check(
+    "성향 조합 헤드라인 설명이 한 줄 요약을 넘어서는 길이로 풀어써졌다",
+    (await page.$eval(".result-card p", (p) => p.textContent.trim().length)) > 80,
+    await page.textContent(".result-card p")
+  );
+  // 예전엔 "많이 다른(contrast)" 축에만 설명을 붙이고, 닮았거나(similar) 보완하는(complement)
+  // 축은 칩 라벨만 보여줬다 — 칩에 등장하는 구간 수만큼 설명 문장이 있는지로 확인한다
+  // (구간이 3개(닮음/보완/대비) 다 나오면 설명도 3줄, 2개만 나오면 2줄이어야 한다).
+  const dynamicsNoteCount = await page.$$eval(".cp-profile", (blocks) => {
+    const b = blocks.find((el) => el.querySelector(".cp-block-title")?.textContent.trim() === "두 분의 성향은");
+    return b ? b.querySelectorAll(".cp-note").length : -1;
+  });
+  const dynamicsLevelCount = await page.$$eval(".cp-chip-row .cp-chip", (chips) =>
+    new Set(chips.map((c) => [...c.classList].find((cl) => cl.startsWith("cp-chip-")))).size
+  );
+  check(
+    "성향 조합 설명이 축마다(닮음·보완·대비 구간별로) 붙는다 — 대비되는 축에만 몰아주지 않음",
+    dynamicsNoteCount === dynamicsLevelCount && dynamicsNoteCount >= 1,
+    `note=${dynamicsNoteCount} distinctLevels=${dynamicsLevelCount}`
+  );
   check("앵커 기반 체감 비교가 나온다 (§7.3)", reportBody.includes("같은 질문, 서로의 대답"));
   check("환경축 비교가 나온다 (§7.4)", reportBody.includes("역할과 자녀 이야기"));
   // "격차가 큰 항목에는 반드시 대화 스크립트를 함께 붙인다"(§6.5.3)를 구조로 확인한다.
@@ -1106,6 +1281,10 @@ async function playNumpathRun(page) {
     await page.isVisible(".cover") && await page.isVisible("#cp-code-input"),
     page.url()
   );
+
+  // 넘버 마을은 런과 무관한 영속 진행이라 guard가 없다 — 직접 접속해도 마을이 그대로 떠야 한다.
+  await goto("/game/numpath/village");
+  check("넘버 마을 주소 직접 접속 → 폴백 없이 마을 표시", await page.isVisible(".np-shop"), page.url());
 
   // === OG 셸: 특정 경로만 og-shells/*.html로 rewrite되고, 그 안에서도 SPA가 그대로 뜨는가 ===
   // _redirects가 /test/adhd·/test/disc·/game/numpath 세 경로만 og-shells/*.html로 rewrite한다

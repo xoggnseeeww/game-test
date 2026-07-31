@@ -6,33 +6,76 @@
 
 ## 흐름
 
-`numpath-intro`에서 "시작하기"가 `state.numpath.run`(시드·스테이지·별점)을 만들고 `numpath-play`로
+`numpath-intro`에서 난이도(쉬움/보통/어려움)를 고르고 "런 시작하기"를 누르면
+`state.numpath.run`(시드·난이도·스테이지·별점·이번 런 코인)을 만들고 `numpath-play`로
 이동한다. `numpath-play`는 스테이지가 바뀔 때마다 `go()`로 화면을 다시 그리지 않고 HUD·보드만
 갈아끼운다(ADHD `test-question`/반응속도 게임과 같은 in-place 렌더 패턴 — 안 그러면 광고 슬롯이
 스테이지마다 새로 만들어져 `refreshAds()`가 반복 실행된다). 마지막 스테이지를 클리어하면
 `numpath-ad` → `numpath-result`로 이어진다.
 
-**퍼즐 보드 자체는 `state`에 저장하지 않는다** — `generatePuzzle(seed, stageIndex)`가 결정적이라
-매번 다시 만들어도 완전히 같은 보드가 나오고, 그래야 뒤로가기(popstate)로 재진입해도 최소한
-"몇 번째 스테이지인지"는 잃지 않는다(진행 중이던 이동·소멸은 다른 게임들처럼 화면 지역 변수라
-초기화됨).
+**퍼즐 보드 자체는 `state`에 저장하지 않는다** — `generatePuzzle(seed, stageIndex, difficultyId)`가
+결정적이라 매번 다시 만들어도 완전히 같은 보드가 나오고, 그래야 뒤로가기(popstate)로 재진입해도
+최소한 "몇 번째 스테이지인지"는 잃지 않는다(진행 중이던 이동·소멸은 다른 게임들처럼 화면 지역
+변수라 초기화됨). 런 시드는 시작할 때마다 `Math.random`으로 새로 뽑으므로 **매 런 보드가 다르다** —
+결정성은 "한 런 안에서의 재현"용이지 판마다 같은 문제를 내려는 게 아니다.
 
 `numpath-play`는 `theme-game`(반응속도 게임과 같은 초록 팔레트)을 재사용한다 — 새 테마를 만들지
 않았다. 공유 URL은 심리테스트와 달리 슬러그 없는 게임 주소 `${origin}/game/numpath` 그대로다
 (`docs/architecture.md` §7 참고, `docs/decisions/2027-h1.md` D-29).
 
+## 난이도 (D-51)
+
+`data.js`의 `DIFFICULTIES` — 난이도 하나는 `LEVELS` 인덱스 배열(`stages`)로 자기 커브와
+스테이지 수를 함께 정의한다(쉬움 5 · 보통 7 · 어려움 9). 레벨 파라미터 튜닝은 `LEVELS` 표
+한 곳에만 있고, 난이도는 그 표를 어떤 순서·길이로 도는지만 정한다. 커브 밖 인덱스는 마지막
+레벨을 이어 쓰는 안전망(`levelFor`)이 있다. 인트로에서 고른 난이도는 `state.numpath.difficulty`
+(세션 한정)에 남아 다음 런의 기본값이 된다.
+
+## 보상 — 넘버 마을 (D-51)
+
+스테이지를 클리어하면 그 자리에서 코인(받은 별 × 난이도의 `coinsPerStar`)을 지급하고
+`localStorage["gt_numpath_village"]` 지갑에 적립한다 — 런을 끝까지 못 가도 클리어한 만큼은 남는다.
+코인으로 `numpath-village` 화면(`/game/numpath/village`, 런과 무관하니 guard 없음)에서 건물을
+하나씩 지어 마을을 완성해 나간다. 판정·계산(`coinsFor`/`buildItem`/`canBuild` 등)은
+`village.js`의 순수 함수고, localStorage 접근은 `loadVillage`/`saveVillage` 두 곳에만 격리돼
+있다(프라이버시 모드에서 throw해도 빈 마을로 폴백). 이 저장이 D-20(반응속도 최고기록 제거)과
+어떻게 다른지는 D-51 참고 — **반응속도 기록을 되살리는 근거로 쓰지 말 것**.
+
+## 클라우드 동기화 (D-52)
+
+마을 화면에 "☁️ 다른 기기와 이어하기" 패널이 있다. data-pantry.com과 같은 Supabase
+프로젝트(`duvpvwolgqurhgnhqezj`)의 `numpath_village` 테이블(RLS로 본인 행만 접근)에 로그인 시
+선택적으로 백업·동기화한다 — 완전히 새 계정 체계를 만들지 않고 기존 것을 재사용했다.
+
+**절대 static import하지 않는다**: `cloud.js`는 최상단에서 Supabase JS를 CDN(esm.sh)에서
+가져오는데, ES 모듈은 import 하나가 실패하면 그 모듈을 static import한 쪽까지 그래프 전체가
+깨진다. CDN이 막히면(오프라인·광고 차단 확장 등) 인트로·플레이·결과까지 전부 못 뜨는 사고가 될
+수 있다는 뜻이다. 그래서 `screens.js`/`play.js`는 `cloud-loader.js`의 `loadCloud()`(동적
+import + 실패 캐시)만 static import하고, 실제 `cloud.js`는 거기서만 불린다. CDN이 막히면
+마을 화면의 클라우드 패널만 "지금은 이 기능을 쓸 수 없어요"로 착지하고 나머지는 그대로 동작한다
+(`scripts/verify.cjs`가 이 상태로 실제로 착지하는지 확인한다 — 샌드박스 자체가 이 조건이다).
+
+로그인(구글·카카오 OAuth, `signInWithProvider`)이 감지되면(`supabase.auth.onAuthStateChange`)
+`mergeVillages()`로 로컬과 클라우드를 한 번 합치고 양쪽에 그 결과를 반영한다 — coins는 max,
+built는 합집합이라 **멱등**이다(재로그인·재동기화가 여러 번 일어나도 코인이 중복 적립되지 않는다).
+이후 코인 획득·건설 때마다 로그인 상태면 `pushIfLoggedIn()`으로 클라우드에도 반영한다
+(fire-and-forget — 실패해도 게임 진행을 막지 않고 `console.error`만 남긴다).
+
 ## 게임 로직 개요
 
 ```
 js/games/numpath/
-  data.js       레벨 커브(LEVELS) · STAGES_PER_RUN · MAX_STARS · starsFor()
-  engine.js     순차 연산 · 이동 가능 판정 · 이동/Undo · 클리어/막힘 판정 (DOM 모름)
-  generate.js   역산 생성기: 경로 → 수식 배치 → 더미/기믹 채우기 → solve()로 검증 (DOM 모름)
-  solve.js      DFS 솔버: 해 개수(상한까지) · 최적 이동수, 노드 예산으로 종료 보장 (DOM 모름)
-  audio.js      Web Audio 피치 스케일링 SFX (외부 파일 없음)
-  play.js       플레이 화면 (in-place 렌더, screens.js와 분리)
-  screens.js    인트로 · 광고 게이트 · 결과 화면
-  index.js      디스크립터
+  data.js         레벨 커브(LEVELS) · 난이도(DIFFICULTIES·stageCountFor·levelFor) · MAX_STARS · starsFor()
+  engine.js       순차 연산 · 이동 가능 판정 · 이동/Undo · 클리어/막힘 판정 (DOM 모름)
+  generate.js     역산 생성기: 스테이지별 시드 파생(stageSeed) → 경로 → 수식 배치 → 더미/기믹 채우기 → solve()로 검증 (DOM 모름)
+  solve.js        DFS 솔버: 해 개수(상한까지) · 최적 이동수, 노드 예산으로 종료 보장 (DOM 모름)
+  village.js      보상: 코인 계산 · 건설 판정 · mergeVillages(순수 함수) + localStorage 저장 격리 (DOM 모름)
+  cloud.js        Supabase 로그인·동기화 (네트워크 필요, CDN top-level import — 직접 static import 금지)
+  cloud-loader.js cloud.js를 동적 import + 실패 캐시로 감싸는 안전한 로더 (이것만 static import한다)
+  audio.js        Web Audio 피치 스케일링 SFX (외부 파일 없음)
+  play.js         플레이 화면 (in-place 렌더, screens.js와 분리)
+  screens.js      인트로(난이도 선택) · 광고 게이트 · 결과 · 넘버 마을(클라우드 패널 포함)
+  index.js        디스크립터
 ```
 
 ### 타일 모델
@@ -51,14 +94,16 @@ Lock·Warp 기믹은 1차 범위에서 뺐다.
 
 ### 생성 → 검증 루프
 
-`generatePuzzle(seed, stageIndex)`: ①시드 PRNG로 self-avoiding 경로를 백트래킹으로 찾는다
-②경로에 순차 배치하며 목표값 산출, 레벨의 `targetRange` 밖이면 재시도 ③경로 밖 칸에
+`generatePuzzle(seed, stageIndex, difficultyId)`: ⓪런 시드에서 `stageSeed()`로 스테이지 전용
+시드를 파생한다 — 예전엔 런 시드를 그대로 써서 레벨 설정이 같은 두 스테이지가 완전히 같은
+보드로 나오는 버그가 있었다(회귀 테스트 있음) ①시드 PRNG로 self-avoiding 경로를 백트래킹으로
+찾는다 ②경로에 순차 배치하며 목표값 산출, 레벨의 `targetRange` 밖이면 재시도 ③경로 밖 칸에
 Block/Multiplier 기믹과 더미 타일 배치 ④`solve()`로 해 개수 검증 — 상한을 넘으면 다음 시도로,
 시도 예산(`GENERATION_ATTEMPTS`)을 다 쓰면 마지막 후보를 그대로 채택한다(역산이라 해가 최소
 1개는 있다는 게 보장돼 있다).
 
 ### 별 판정 (`starsFor()`)
 
-3성 = 최적 이동수(`solve()`의 `minMoves`)와 동일, 2성 = 이동 제한의 80% 이하로 클리어, 1성 =
+3성 = 최적 이동수(`solve()`의 `minMoves`)와 동일, 2성 = 남은 여유(slack)의 절반 이하 사용, 1성 =
 클리어. 힌트가 없는 1차 범위라 "힌트 미사용" 조건은 없다 — 힌트를 넣을 때 `solve()`를 그대로
 재사용해 추가한다.

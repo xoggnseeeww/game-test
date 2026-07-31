@@ -9,6 +9,13 @@ export function shuffle(arr) {
   return a;
 }
 
+// 앱 문구는 전부 우리가 직접 쓴 리터럴이라 여태 이스케이프가 필요 없었다. NumPath 클라우드
+// 로그인(D-52)이 처음으로 외부(OAuth 제공자) 표시 이름을 템플릿 문자열 안에 그대로 꽂는
+// 사례라, XSS를 막으려면 이걸 거쳐야 한다.
+export function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
 export function normalizePath(pathname) {
   if (pathname.length > 1 && pathname.endsWith("/")) pathname = pathname.slice(0, -1);
   return pathname || "/";

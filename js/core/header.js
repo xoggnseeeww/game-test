@@ -2,7 +2,7 @@
 // #app 밖(document.body)에 한 번만 붙여서, 화면이 바뀌어도(render()가 #app을 통째로
 // 지워도) 살아남게 한다 — showModal()과 같은 이유(router.js 참고).
 import { el } from "./dom.js";
-import { currentEmail, isAdmin, logout, onAuthChange, renderSignInButton } from "./auth.js";
+import { currentEmail, isAdmin, initAuth, logout, onAuthChange, renderSignInButton } from "./auth.js";
 
 export function initHeader() {
   const root = el(`
@@ -46,4 +46,5 @@ export function initHeader() {
   });
 
   onAuthChange(renderPanel);
+  initAuth();
 }

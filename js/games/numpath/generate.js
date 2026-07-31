@@ -11,6 +11,15 @@ import { levelFor } from "./data.js";
 const GENERATION_ATTEMPTS = 200;
 const MULTIPLIER_PROBABILITY = 0.35;
 
+// 런 시드 하나에서 스테이지별 시드를 파생한다. 예전엔 런 시드를 모든 스테이지가 그대로 써서,
+// 레벨 설정이 같은 두 스테이지(난이도 커브는 같은 레벨을 여러 번 반복한다)가 **완전히 같은
+// 보드**로 나오는 버그가 있었다 — 시드가 같고 레벨 파라미터도 같으면 생성 과정 전체가 동일하다.
+// stageIndex를 정수 해시로 섞어 스테이지마다 독립된 수열을 만든다(여전히 결정적이라
+// 뒤로가기 재진입 시 같은 보드가 재현된다는 계약은 그대로다).
+export function stageSeed(seed, stageIndex) {
+  return Math.imul(seed ^ (stageIndex + 1), 0x9e3779b1) >>> 0;
+}
+
 export function mulberry32(seed) {
   let a = seed >>> 0;
   return function rng() {
@@ -179,12 +188,12 @@ function buildBoard(rng, level, path, assignment) {
   return board;
 }
 
-// 스테이지 하나의 퍼즐을 만든다. 같은 (seed, stageIndex)는 항상 같은 보드를 낸다.
+// 스테이지 하나의 퍼즐을 만든다. 같은 (seed, stageIndex, difficultyId)는 항상 같은 보드를 낸다.
 // 시도 예산 안에서 해 개수가 레벨 상한을 넘지 않는 후보를 찾으면 그걸 쓰고, 예산을 다
 // 썼으면 그때까지 찾은 마지막 후보를 그대로 채택한다(역산이라 해가 최소 1개는 있다).
-export function generatePuzzle(seed, stageIndex) {
-  const level = levelFor(stageIndex);
-  const rng = mulberry32(seed);
+export function generatePuzzle(seed, stageIndex, difficultyId) {
+  const level = levelFor(difficultyId, stageIndex);
+  const rng = mulberry32(stageSeed(seed, stageIndex));
   let candidate = null;
 
   for (let attempt = 0; attempt < GENERATION_ATTEMPTS; attempt++) {
