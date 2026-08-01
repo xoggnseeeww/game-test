@@ -8,8 +8,6 @@ import { state } from "../../core/state.js";
 import { generatePuzzle } from "./generate.js";
 import { initState, applyMove, undo, canEnter, availableMoves, isCleared, isStuck, isOutOfMoves, posKey } from "./engine.js";
 import { stageCountFor, difficultyById, starsFor } from "./data.js";
-import { coinsFor, loadVillage, earnCoins, saveVillage } from "./village.js";
-import { loadCloud } from "./cloud-loader.js";
 import { playMoveTone, playClearChord, playBlockedTone } from "./audio.js";
 
 const OP_LABEL = { "+": "+", "-": "−", "*": "×", "/": "÷" };
@@ -185,17 +183,7 @@ export function renderNumpathPlay() {
       const stars = starsFor({ movesUsed: playState.movesUsed, moveLimit: puzzle.moveLimit, minMoves });
       run.stars.push(stars);
 
-      // 라운드 클리어 보상: 별 × 난이도 배수만큼 코인을 즉시 지급하고 마을 지갑에 적립한다.
-      // 런 도중 이탈해도 여기까지 번 코인은 남는다 — "클리어한 만큼"이 보상 단위라서다(D-51).
-      const coinAmount = coinsFor(stars, run.difficulty);
-      run.coins += coinAmount;
-      const nextVillage = earnCoins(loadVillage(), coinAmount);
-      saveVillage(nextVillage);
-      // 로그인 상태면 클라우드에도 반영한다(D-52) — fire-and-forget, 실패해도 게임 진행에
-      // 영향 없다(cloud-loader.js가 CDN 실패까지 흡수한다).
-      loadCloud().then((cloud) => cloud && cloud.pushIfLoggedIn(nextVillage));
-
-      msgEl.textContent = `🎉 클리어! ${"⭐".repeat(stars)} +${coinAmount}🪙`;
+      msgEl.textContent = `🎉 클리어! ${"⭐".repeat(stars)}`;
       msgEl.className = "np-msg np-msg--visible np-msg--clear";
       boardEl.classList.add("np-board--locked");
       undoBtn.disabled = true;

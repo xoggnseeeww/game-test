@@ -1,7 +1,7 @@
 // NumPath: Stack & Clear 디스크립터: 화면 정의와 미니게임 목록 카드 정보를 라우터에 넘긴다.
 import { state } from "../../core/state.js";
 import { DIFFICULTIES, stageCountFor } from "./data.js";
-import { renderNumpathIntro, renderNumpathAd, renderNumpathResult, renderNumpathVillage } from "./screens.js";
+import { renderNumpathIntro, renderNumpathAd, renderNumpathResult } from "./screens.js";
 import { renderNumpathPlay } from "./play.js";
 
 export const numpathGame = {
@@ -11,7 +11,7 @@ export const numpathGame = {
     emoji: "🧮",
     color: "#1FAE6A",
     name: "NumPath: Stack & Clear",
-    desc: `숫자 경로 퍼즐 · 난이도 ${DIFFICULTIES.length}종 · 마을 키우기`,
+    desc: `숫자 경로 퍼즐 · 난이도 ${DIFFICULTIES.length}종`,
   },
 };
 
@@ -58,13 +58,5 @@ export const numpathScreens = [
       if (!runFinished()) return "numpath-play";
       return null;
     },
-  },
-  {
-    // 마을은 런과 무관한 영속 진행(localStorage)이라 guard가 없다 — 주소로 바로 들어와도 항상 보인다.
-    id: "numpath-village",
-    path: "/game/numpath/village",
-    title: "NumPath 넘버 마을 | 과몰입구역",
-    render: renderNumpathVillage,
-    theme: "game",
   },
 ];

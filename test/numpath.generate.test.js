@@ -56,7 +56,6 @@ test("난이도 표가 유효하다: 스테이지 수가 서로 다르게 확충
   assert.equal(new Set(counts).size, counts.length, "난이도별 스테이지 수가 구분되지 않는다");
   for (const d of DIFFICULTIES) {
     assert.ok(d.stages.length > 0);
-    assert.ok(Number.isInteger(d.coinsPerStar) && d.coinsPerStar > 0, `${d.id}의 coinsPerStar가 이상하다`);
     for (const idx of d.stages) {
       assert.ok(Number.isInteger(idx) && idx >= 0 && idx < LEVELS.length, `${d.id} 커브의 레벨 인덱스 ${idx}가 LEVELS 밖`);
     }

@@ -211,12 +211,11 @@ async function playNumpathRun(page) {
 
   const errors = [];
   page.on("pageerror", (e) => errors.push(String(e)));
-  // 샌드박스는 아웃바운드가 프록시로 막혀 외부 자원(CDN 폰트 · AdFit 로더 · NumPath 클라우드용
-  // Supabase JS)이 항상 실패한다. 앱 버그가 아니므로 제외한다. 다만 "Failed to load resource:
-  // ... 403" 같은 메시지는 본문에 주소가 없어서 m.text()만 보면 걸러지지 않는다 —
-  // m.location().url까지 같이 본다. (AdFit 스크립트가 슬롯마다 붙었는지, NumPath 클라우드
-  // 패널이 실제로 "사용 불가" 상태로 착지하는지는 아래 각 전용 검사가 DOM으로 따로 확인한다)
-  const EXTERNAL_NOISE = /ERR_TUNNEL_CONNECTION_FAILED|jsdelivr|pretendard|daumcdn|AdFit|esm\.sh|NumPath 클라우드 기능을 불러오지 못했습니다/i;
+  // 샌드박스는 아웃바운드가 프록시로 막혀 외부 자원(CDN 폰트 · AdFit 로더)이 항상 실패한다.
+  // 앱 버그가 아니므로 제외한다. 다만 "Failed to load resource: ... 403" 같은 메시지는 본문에
+  // 주소가 없어서 m.text()만 보면 걸러지지 않는다 — m.location().url까지 같이 본다.
+  // (AdFit 스크립트가 슬롯마다 붙었는지는 아래 "광고 슬롯" 검사가 DOM으로 따로 확인한다)
+  const EXTERNAL_NOISE = /ERR_TUNNEL_CONNECTION_FAILED|jsdelivr|pretendard|daumcdn|AdFit/i;
   page.on("console", (m) => {
     if (m.type() !== "error") return;
     const t = m.text();
@@ -668,74 +667,10 @@ async function playNumpathRun(page) {
     (await page.textContent(".result-card")).includes("⭐"),
     (await page.textContent(".result-card")).replace(/\s+/g, " ").trim().slice(0, 80)
   );
-  check(
-    "NumPath 결과에 이번 런 코인 보상 표시",
-    (await page.textContent(".result-card")).includes("🪙"),
-    (await page.textContent(".result-subtitle")).trim()
-  );
 
   // 다시 시작 → 인트로로 (자동으로 새 런을 시작하지 않는다 — ADHD "테스트 다시하기"와 같은 패턴)
   await page.click("#retry-btn");
   check("NumPath 다시하기 → 인트로로(자동 재시작 아님)", page.url().endsWith("/game/numpath"), page.url());
-
-  // === 넘버 마을: 코인 적립 → 건설 → 영속(localStorage) ===
-  // 방금 런(+앞의 부분 클리어들)에서 별×난이도 배수만큼 코인이 쌓였어야 하고, 첫 건물은
-  // 최저 난이도 한 런 보상으로 살 수 있게 잡혀 있다(test/numpath.village.test.js의 경제 검증).
-  await page.click("#np-village-btn");
-  await page.waitForSelector(".np-shop", { timeout: 5000 });
-  check("마을 화면 주소", page.url().endsWith("/game/numpath/village"), page.url());
-  const walletBefore = parseInt((await page.textContent("#np-wallet")).replace(/\D/g, ""), 10);
-  check("런에서 번 코인이 마을 지갑에 적립됨", Number.isInteger(walletBefore) && walletBefore > 0, `wallet=${walletBefore}`);
-
-  const buildBtn = await page.$(".np-build-btn:not([disabled])");
-  check("지갑 코인으로 살 수 있는 건물이 있다", !!buildBtn);
-  if (buildBtn) {
-    await markLoader(page, "numpath-village");
-    await buildBtn.click();
-    await page.waitForFunction(
-      (prev) => document.querySelector("#np-wallet")?.textContent.replace(/\D/g, "") !== prev,
-      String(walletBefore),
-      { timeout: 3000 }
-    );
-    const walletAfter = parseInt((await page.textContent("#np-wallet")).replace(/\D/g, ""), 10);
-    const builtCount = await page.$$eval(".np-shop-item--built", (l) => l.length);
-    check("건설 → 코인 차감 + 완공 표시 + 마을 풍경에 등장", walletAfter < walletBefore && builtCount >= 1 && (await page.$$eval(".np-scene-item", (l) => l.length)) >= 1, `🪙 ${walletBefore}→${walletAfter}, built=${builtCount}`);
-    check(
-      "마을 건설 재렌더 후에도 광고 로더 태그 유지(in-place, 재마운트 아님)",
-      (await loaderMark(page)) === "numpath-village",
-      `mark=${await loaderMark(page)}`
-    );
-
-    // 영속성: 새로고침해도 지갑·건설 목록이 남는다 (localStorage["gt_numpath_village"], D-51)
-    await page.reload({ waitUntil: "networkidle" });
-    await page.waitForSelector(".np-shop", { timeout: 5000 });
-    const walletReloaded = parseInt((await page.textContent("#np-wallet")).replace(/\D/g, ""), 10);
-    check(
-      "새로고침 후에도 마을 진행 유지(localStorage)",
-      walletReloaded === walletAfter && (await page.$$eval(".np-shop-item--built", (l) => l.length)) === builtCount,
-      `reload: 🪙 ${walletReloaded}, built=${await page.$$eval(".np-shop-item--built", (l) => l.length)}`
-    );
-  }
-
-  // === 넘버 마을 클라우드 연동 패널(D-52) — CDN 차단 상황에서도 화면이 안 죽는가 ===
-  // 샌드박스는 esm.sh(Supabase JS)로 나가는 요청이 막혀 있다. 이건 배포 환경에서도 오프라인·
-  // 네트워크 장애 시 똑같이 재현되는 상태라, "클라우드가 아예 안 뜨는 것"이 아니라 "패널이
-  // 사용 불가로 착지하고 나머지 화면은 멀쩡한 것"을 검증한다 — cloud-loader.js가 실패를
-  // 삼키지 않고 흡수하는 게 핵심이다. ("로딩 중" 초기 상태는 로컬 네트워크 실패가 너무 빨라
-  // 안정적으로 잡히지 않는 순간의 상태라 여기선 검사하지 않는다 — 최종 착지 상태만 본다.)
-  await page.waitForFunction(
-    () => document.querySelector(".np-cloud-hint")?.textContent.includes("확인 중") === false,
-    { timeout: 8000 }
-  );
-  check(
-    "CDN 차단 시 클라우드 패널이 '사용 불가'로 착지하고 로그인 버튼을 감춘다",
-    (await page.textContent(".np-cloud-hint")).includes("지금은 이 기능을 쓸 수 없어요") && (await page.$("#np-cloud-google")) === null,
-    (await page.textContent(".np-cloud-hint")).trim()
-  );
-  check(
-    "클라우드 모듈 로드 실패 후에도 마을 화면 나머지(지갑·건설 목록)는 정상 동작",
-    await page.isVisible(".np-shop") && await page.isVisible("#np-wallet"),
-  );
 
   // === 부부 관계 성향 체크: 3축 선택 → 46문항 → 결과 → 배우자 코드 왕복 ===
   await goto("/test/couple");
@@ -1245,10 +1180,6 @@ async function playNumpathRun(page) {
     await page.isVisible(".cover") && await page.isVisible("#cp-code-input"),
     page.url()
   );
-
-  // 넘버 마을은 런과 무관한 영속 진행이라 guard가 없다 — 직접 접속해도 마을이 그대로 떠야 한다.
-  await goto("/game/numpath/village");
-  check("넘버 마을 주소 직접 접속 → 폴백 없이 마을 표시", await page.isVisible(".np-shop"), page.url());
 
   // === OG 셸: 특정 경로만 og-shells/*.html로 rewrite되고, 그 안에서도 SPA가 그대로 뜨는가 ===
   // _redirects가 /test/adhd·/test/disc·/game/numpath 세 경로만 og-shells/*.html로 rewrite한다

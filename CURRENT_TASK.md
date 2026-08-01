@@ -3,7 +3,18 @@
 > 이 파일은 1~2k 토큰 이하를 유지한다 — "언젠가 할 일"이 아니라 "지금 유효한 작업"만.
 
 ## 현재 작업
-**main 머지 완료(2026-07-30, 4차)** — NumPath 난이도·리플레이성·보상 체계(D-54) + 마을
+2026-07-30: **NumPath 마을(코인·건설·클라우드 동기화, D-54/D-55) 되돌림.** 사용자 판단 —
+"채울 공간이랄 게 없어서 메리트가 크지 않다, 나중에 더 큰 그림 그린 다음 다시." 코인 지급·
+마을 화면(`/game/numpath/village`)·클라우드 로그인 코드를 전부 제거하고 게임(난이도·리플레이성)만
+남겼다. 삭제: `village.js`·`cloud.js`·`cloud-loader.js`·`test/numpath.village.test.js`,
+`DIFFICULTIES`의 `coinsPerStar` 필드, `screens.js`/`play.js`/`index.js`/`data.js`/`state.js`의
+관련 코드, `styles.css`의 `.np-village-*`/`.np-cloud-*`/`.np-scene-*`/`.np-shop-*`/`.np-progress`/
+`.np-wallet`/`.np-build-btn` 블록, `verify.cjs`의 관련 검사. Supabase `numpath_village` 테이블은
+남겨둠(비용 없음, 나중에 재사용 가능) — 관련 결정은 `docs/decisions/2027-h1.md` D-54/D-55에
+그대로 두고 되돌림만 여기 기록(반복 제안 방지, `docs/DECISIONS.md`의 "되돌린 접근" 관례).
+`npm test` 134/134, `scripts/verify.cjs` 154/154(`serve.py`) 통과.
+
+이전(2026-07-30, 4차 main 머지): NumPath 난이도·리플레이성·보상 체계(D-54) + 마을
 클라우드 동기화(D-55) 브랜치를 main에 병합. 첫 push 시도가 "fetch first"로 거부돼(그 사이
 병렬 세션이 부부 체크 D-51~53을 먼저 main에 합침) 다시 fetch 후 origin/main을 로컬 main에
 merge — **코드 파일은 전부 자동 병합**, 문서 3개(CURRENT_TASK.md·docs/DECISIONS.md·
@@ -180,18 +191,6 @@ KV에 들어간다. 인트로·결과 화면에 "부부 결과 매칭" 버튼 �
   `/test/couple/*` 9화면과 광고 게이트(`couple-ad`)의 300×250 포함 실기기 확인 필요
 - **`docs/architecture.md` 크기** — 부부 결과 매칭 설명이 늘면서 17.6KB가 됐다(이전 16.6KB).
   다음에 테스트를 또 추가하면 화면 표를 테스트별 문서로 마저 쪼갤지 판단 필요
-- **NumPath 마을 localStorage 실기기 동작** — 헤드리스에서는 새로고침 후 유지까지 확인했지만,
-  iOS Safari 프라이버시 모드(접근 시 throw → 빈 마을 폴백)와 일반 모드의 장기 보존(ITP 7일
-  스토리지 삭제 정책에 걸리는지)은 실기기에서 확인 필요
-- **NumPath 마을 화면 광고 슬롯** — 신설 화면(`/game/numpath/village`) 상단·하단 배너도 기존
-  항목과 같은 이유(`t1.daumcdn.net` 차단)로 실기기 확인 필요
-- ~~Supabase Auth 리다이렉트 URL 허용 목록에 `fun.data-pantry.com` 추가~~ — 사용자가 Supabase
-  대시보드에서 `https://fun.data-pantry.com/**`을 Redirect URLs에 직접 등록 완료(2026-07-30).
-  Supabase MCP엔 Auth URL 설정 도구가 없어 코드로는 못 건드리는 부분이라 수동으로 처리됨
-- **NumPath 클라우드 로그인 실기기 동작(D-52)** — 샌드박스는 esm.sh(Supabase JS) 자체가 차단돼
-  "CDN 실패 시 패널이 사용 불가로 착지하고 나머지는 정상"까지만 확인했다. 실제 로그인 성공
-  경로(구글·카카오 OAuth 왕복 → `numpath-village`로 돌아와 세션 인식 → 로컬·클라우드 병합)는
-  실기기·실배포에서 확인 필요. 위 리다이렉트 URL 허용부터 먼저 해결해야 시도 가능하다
 - **홈 화면 헤더 레이아웃** — 기능 없던 우측 상단 ☰ 아이콘 제거 후 로고만 남은 좌측 정렬이 실제 배포본에서도 깨지지 않는지 확인 필요
 - **부부 결과 매칭 백엔드 실배포 확인** — `wrangler pages dev`로 로컬에서는 KV 발급·조회
   왕복을 실제로 확인했지만, **Cloudflare Pages가 `wrangler.jsonc`의 KV 바인딩을 git 연동

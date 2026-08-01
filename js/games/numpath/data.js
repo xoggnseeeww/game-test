@@ -1,5 +1,5 @@
 // NumPath 레벨 커브 · 난이도 · 별 판정 상수. 로직은 engine.js/generate.js/solve.js,
-// 보상(코인·마을)은 village.js, 화면은 play.js/screens.js.
+// 화면은 play.js/screens.js.
 //
 // 난이도는 그리드 크기 · 허용 연산자 · 경로 길이(pathLen) · 이동 여유(slack) · 기믹 수 4가지로 결정한다.
 // 기획서의 Difficulty Rating = GridArea*1.5 + OpComplexity*2.0 + GimmickCount*3.0 산출식은 이 표를
@@ -16,11 +16,10 @@ export const LEVELS = [
 
 // 난이도 하나 = 레벨 표(LEVELS)를 참조하는 스테이지 커브 하나. stages는 LEVELS의 인덱스 배열이라
 // "몇 스테이지짜리 런인지"(길이)와 "몇 번째 스테이지에 어떤 레벨이 나오는지"(값)를 한 곳에서 정한다.
-// coinsPerStar는 스테이지 클리어 보상(별 1개당 코인, village.js가 쓴다) — 어려울수록 마을이 빨리 큰다.
 export const DIFFICULTIES = [
-  { id: "easy", name: "쉬움", emoji: "🌱", desc: "작은 보드로 가볍게 몸풀기", stages: [0, 0, 1, 1, 2], coinsPerStar: 1 },
-  { id: "normal", name: "보통", emoji: "🌿", desc: "사칙연산과 기믹이 다 나와요", stages: [0, 1, 2, 3, 3, 4, 4], coinsPerStar: 2 },
-  { id: "hard", name: "어려움", emoji: "🌶️", desc: "큰 보드 + 기믹 총출동", stages: [2, 3, 3, 4, 4, 5, 5, 5, 5], coinsPerStar: 3 },
+  { id: "easy", name: "쉬움", emoji: "🌱", desc: "작은 보드로 가볍게 몸풀기", stages: [0, 0, 1, 1, 2] },
+  { id: "normal", name: "보통", emoji: "🌿", desc: "사칙연산과 기믹이 다 나와요", stages: [0, 1, 2, 3, 3, 4, 4] },
+  { id: "hard", name: "어려움", emoji: "🌶️", desc: "큰 보드 + 기믹 총출동", stages: [2, 3, 3, 4, 4, 5, 5, 5, 5] },
 ];
 
 export const DEFAULT_DIFFICULTY = "normal";
