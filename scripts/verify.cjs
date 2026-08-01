@@ -211,13 +211,13 @@ async function playNumpathRun(page) {
 
   const errors = [];
   page.on("pageerror", (e) => errors.push(String(e)));
-  // 샌드박스는 아웃바운드가 프록시로 막혀 외부 자원(CDN 폰트 · AdFit 로더 · 클라우드 로그인용
+  // 샌드박스는 아웃바운드가 프록시로 막혀 외부 자원(CDN 폰트 · AdSense 로더 · 클라우드 로그인용
   // Supabase JS — NumPath 마을 동기화·우상단 관리자 로그인이 공유해서 쓴다)이 항상 실패한다.
   // 앱 버그가 아니므로 제외한다. 다만 "Failed to load resource: ... 403" 같은 메시지는 본문에
   // 주소가 없어서 m.text()만 보면 걸러지지 않는다 — m.location().url까지 같이 본다.
-  // (AdFit 스크립트가 슬롯마다 붙었는지, NumPath 클라우드 패널이 실제로 "사용 불가" 상태로
+  // (AdSense 스크립트가 슬롯마다 붙었는지, NumPath 클라우드 패널이 실제로 "사용 불가" 상태로
   // 착지하는지는 아래 각 전용 검사가 DOM으로 따로 확인한다)
-  const EXTERNAL_NOISE = /ERR_TUNNEL_CONNECTION_FAILED|jsdelivr|pretendard|daumcdn|AdFit|esm\.sh|불러오지 못했습니다/i;
+  const EXTERNAL_NOISE = /ERR_TUNNEL_CONNECTION_FAILED|jsdelivr|pretendard|daumcdn|googlesyndication|pagead2|esm\.sh|불러오지 못했습니다/i;
   page.on("console", (m) => {
     if (m.type() !== "error") return;
     const t = m.text();
@@ -232,23 +232,29 @@ async function playNumpathRun(page) {
   await goto("/");
   check("ES 모듈 부팅", await page.isVisible(".hero-title"), page.url());
 
-  // === 광고 슬롯에 AdFit 로더가 실제로 붙는가 ===
-  // ba.min.js는 실행 시점의 문서만 훑는다. refreshAds()가 그 <script> 태그 자체를 통째로
-  // 갈아끼워(replaceWith) 재실행시키는 방식으로 화면 전환마다 재스캔시킨다 — index.html에
-  // 한 번만 심어두는 방식으로 되돌아가면 슬롯은 그려지는데 광고만 조용히 안 나온다.
-  // (샌드박스에선 로더 자체가 차단되므로 "태그가 실제로 갈아끼워지는가"까지만 본다)
-  const adSlotCount = (root) => root.$$eval(".ad-slot ins.kakao_ad_area", (list) => list.length);
-  const loaderExists = (root) => root.$eval('script[src*="ba.min.js"]', () => true).catch(() => false);
-  // 지금 붙어있는 로더 태그에 표시를 남겨서, 다음 화면 전환 때 refreshAds()가 그 태그를
-  // 실제로 갈아끼웠는지(표시가 사라졌는지) 확인한다 — 태그 존재만으로는 "한 번도 안
-  // 갈아끼워졌다"와 구분이 안 된다.
+  // === 광고 슬롯에 AdSense 로더가 실제로 붙는가 ===
+  // AdSense 스크립트는 (AdFit과 달리) 갈아끼우지 않고 한 번만 로드된 채로 남는다.
+  // 화면 전환마다 새로 생긴 슬롯은 refreshAds()가 슬롯 하나당 adsbygoogle.push({})를
+  // 호출해서 채운다 — window.adsbygoogle 배열 길이가 push 호출 횟수와 같으므로,
+  // "새 슬롯이 생겨서 refreshAds가 실제로 실행됐는가"를 이 길이 변화로 판별한다.
+  // (샌드박스에선 진짜 adsbygoogle.js 자체가 차단되므로 배열이 진짜 광고 API로
+  // 대체되지 않는다 — push()가 그냥 배열에 쌓이는 것까지만 확인 가능)
+  const adSlotCount = (root) => root.$$eval(".ad-slot ins.adsbygoogle", (list) => list.length);
+  const loaderExists = (root) => root.$eval('script[src*="adsbygoogle.js"]', () => true).catch(() => false);
+  const pushCount = (root) => root.evaluate(() => (window.adsbygoogle || []).length);
+  // 현재 push 카운트를 라벨과 함께 스냅샷해두고, 이후 loaderMark()로 그때 대비 변화 여부를
+  // 확인한다 — 카운트가 그대로면 라벨 그대로, 늘었으면 "라벨+N"을 돌려준다.
   const markLoader = (root, mark) =>
     root.evaluate((m) => {
-      const s = document.querySelector('script[src*="ba.min.js"]');
-      if (s) s.dataset.verifyMark = m;
+      window.__verifyAdMark = { mark: m, count: (window.adsbygoogle || []).length };
     }, mark);
   const loaderMark = (root) =>
-    root.evaluate(() => document.querySelector('script[src*="ba.min.js"]')?.dataset.verifyMark || null);
+    root.evaluate(() => {
+      const rec = window.__verifyAdMark;
+      if (!rec) return null;
+      const cur = (window.adsbygoogle || []).length;
+      return cur === rec.count ? rec.mark : `${rec.mark}+${cur - rec.count}`;
+    });
 
   const homeAdCount = await adSlotCount(page);
   check("홈 광고 슬롯 존재", homeAdCount > 0, `${homeAdCount}개`);
