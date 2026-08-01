@@ -16,6 +16,10 @@
 동작·취소·확인·재시작 시 실제 초기화 확인) 후 `serve.py`로 통과 확인.
 **미해결**: 햄버거 `top` 위치는 계산 근사치라 실기기(`.header`/`.back-row` 양쪽) 확인 필요.
 
+**main 머지 완료(2026-07-30, 6차)** — 위 D-57 커밋이 충돌 없이 main에 머지됨
+(`3a8bff2` → `654d78e`). main이 그 사이 더 앞서가지 않아 CURRENT_TASK.md 한 곳만
+자동 병합, 코드는 순수 병합. 머지 전 `npm test` 146/146 재확인 후 push.
+
 이전(2026-07-30(8)): **우상단 햄버거 메뉴 + 관리자 로그인을 main에 합치며 중복 정리**(D-56).
 main을 먼저 merge해보니 main이 이미 NumPath 마을 동기화용 Supabase Auth(Google·카카오
 OAuth, D-55)를 실제로 배포까지 끝낸 상태였다 — 내 쪽은 Google Identity Services(GIS)를
