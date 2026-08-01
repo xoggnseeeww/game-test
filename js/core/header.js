@@ -24,7 +24,14 @@ export function initHeader() {
     goHome();
   });
 
+  // initAuth()가 Supabase 세션을 확인하는 동안 sync()가 여러 번 불릴 수 있다(초기 확인 1회 +
+  // onAuthStateChange의 INITIAL_SESSION 등). 상태가 실제로 안 바뀌었는데도 매번 로그인
+  // 버튼을 통째로 지우고 새로 그리면, 사용자가 막 렌더된 버튼을 클릭하는 순간 그 버튼이
+  // 이미 교체되어 클릭이 허공에 뜨는 경우가 생긴다 — 이전 렌더와 이메일이 같으면 건너뛴다.
+  let lastRenderedEmail;
   function renderPanel() {
+    if (lastRenderedEmail === currentEmail) return;
+    lastRenderedEmail = currentEmail;
     accountBox.innerHTML = "";
     if (currentEmail) {
       accountBox.appendChild(el(`

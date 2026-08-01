@@ -76,7 +76,23 @@ export function renderSignInButton(container) {
     btn.className = "hamburger-signin-btn";
     btn.textContent = "Google로 로그인";
     btn.addEventListener("click", () => {
-      cloud.signInWithProvider("google", `${location.origin}/`).catch((err) => console.error("관리자 로그인 실패", err));
+      // signInWithOAuth()는 실패해도 보통 reject하지 않고 { error }를 담아 resolve한다
+      // (provider 미설정 등) — catch만 걸어두면 이런 실패가 조용히 사라진다.
+      btn.disabled = true;
+      btn.textContent = "이동 중…";
+      cloud
+        .signInWithProvider("google", `${location.origin}/`)
+        .then(({ error }) => {
+          if (!error) return; // 성공하면 곧 페이지가 이동하므로 여기까지 안 옴
+          console.error("관리자 로그인 실패", error);
+          btn.disabled = false;
+          btn.textContent = `로그인 실패: ${error.message || "다시 시도해 주세요"}`;
+        })
+        .catch((err) => {
+          console.error("관리자 로그인 실패", err);
+          btn.disabled = false;
+          btn.textContent = "로그인 실패, 다시 시도해 주세요";
+        });
     });
     container.appendChild(btn);
   });
