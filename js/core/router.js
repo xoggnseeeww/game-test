@@ -104,7 +104,7 @@ function runTeardowns() {
 function render() {
   app.innerHTML = "";
   screens.get(state.screen).render();
-  if (app.querySelector(".kakao_ad_area")) refreshAds();
+  if (app.querySelector(".adsbygoogle")) refreshAds();
 }
 
 // 뒤로/앞으로가기로 URL만 바뀌었을 때 화면-상태 불일치를 막기 위한 보정.
