@@ -2,16 +2,14 @@
 // (임시) AdFit ↔ AdSense 수익 비교용 교체 — 기존 4개 지면(위치·크기)은 그대로 두고
 // 네트워크만 갈아끼웠다. adSlotMarkup()/adGateMarkup() 호출부(각 화면)는 손대지 않는다.
 //
-// data-ad-slot 값은 AdSense에서 같은 크기(320x50/250x250/300x250)로 만든 디스플레이
-// 광고 단위의 실제 슬롯 ID로 교체해야 광고가 뜬다 — 지금은 자리표시자다.
 const AD_CLIENT = "ca-pub-2220762633547591";
 
 const AD_UNITS = {
-  bannerTop: { slot: "REPLACE_BANNER_TOP", width: 320, height: 50, cssClass: "banner" },
-  bannerBottom: { slot: "REPLACE_BANNER_BOTTOM", width: 320, height: 50, cssClass: "banner" },
-  rect: { slot: "REPLACE_RECT", width: 250, height: 250, cssClass: "rect" },
+  bannerTop: { slot: "4753517232", width: 320, height: 50, cssClass: "banner" },
+  bannerBottom: { slot: "3440435567", width: 320, height: 50, cssClass: "banner" },
+  rect: { slot: "1921525677", width: 250, height: 250, cssClass: "rect" },
   // 게임(반응속도·딜레마)이 끝나고 결과로 넘어가기 직전에 한 번 보여주는 게이트 화면 전용.
-  interstitial: { slot: "REPLACE_INTERSTITIAL", width: 300, height: 250, cssClass: "interstitial" },
+  interstitial: { slot: "6649052831", width: 300, height: 250, cssClass: "interstitial" },
 };
 
 export function adSlotMarkup(kind, style = "") {
