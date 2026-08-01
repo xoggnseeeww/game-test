@@ -1,6 +1,6 @@
 // 성인 ADHD 성향 체크의 모든 화면 + 반응속도 게임 화면.
-import { app, go, onLeave, parseSharedPath } from "../../core/router.js";
-import { el, bindNav, bindExit, bindAdGate, showModal } from "../../core/dom.js";
+import { app, go, onLeave, parseSharedPath, setExitGuard } from "../../core/router.js";
+import { el, bindNav, bindAdGate, showModal } from "../../core/dom.js";
 import { shareBlockMarkup, wireShare } from "../../core/share.js";
 import { adSlotMarkup, adGateMarkup } from "../../core/ads.js";
 import { state } from "../../core/state.js";
@@ -28,7 +28,6 @@ export function renderTestIntro() {
       <div class="back-row">
         <button class="back-btn" data-nav="psych-list">‹</button>
         <div class="back-title">심리테스트</div>
-        <button class="exit-btn" data-nav="home" aria-label="홈으로 가기">🏠</button>
       </div>
       ${adSlotMarkup("bannerTop", "margin-top:10px; margin-bottom:4px;")}
       <div class="cover">
@@ -76,7 +75,6 @@ export function renderQuestion() {
         <button class="back-btn" id="q-back">‹</button>
         <div class="progress-track"><div class="progress-fill" id="q-fill" style="width:0%;"></div></div>
         <div class="progress-count" id="q-count"></div>
-        <button class="exit-btn" aria-label="홈으로 가기">🏠</button>
       </div>
       ${adSlotMarkup("bannerTop", "margin-top:10px; margin-bottom:4px;")}
       <div class="question-block">
@@ -134,7 +132,7 @@ export function renderQuestion() {
     }
   });
 
-  bindExit(app, () => {
+  setExitGuard(() => {
     state.answers = [];
     state.lastReaction = null;
   });
@@ -225,9 +223,6 @@ export function renderResult() {
   const g = state.lastReaction;
   app.appendChild(el(`
     <div>
-      <div class="back-row">
-        <button class="exit-btn" data-nav="home" aria-label="홈으로 가기">🏠</button>
-      </div>
       <div class="result-card">
         <div class="eyebrow">설문 + 반응속도 게임으로 본 나의 집중 유형은</div>
         <div class="emoji">${r.type.emoji}</div>
@@ -339,7 +334,6 @@ export function renderReactionIntro() {
       <div class="back-row">
         <button class="back-btn" data-nav="test-question">‹</button>
         <div class="back-title">성인 ADHD 성향 체크</div>
-        <button class="exit-btn" aria-label="홈으로 가기">🏠</button>
       </div>
       <div class="cover">
         <div class="emoji">⚡</div>
@@ -367,7 +361,7 @@ export function renderReactionIntro() {
       onConfirm: () => go("reaction-play"),
     });
   });
-  bindExit(app, () => {
+  setExitGuard(() => {
     state.answers = [];
     state.lastReaction = null;
   });
@@ -379,7 +373,6 @@ export function renderReactionPlay() {
       <div class="back-row">
         <button class="back-btn" data-nav="reaction-intro">‹</button>
         <div class="back-title">반응속도 게임</div>
-        <button class="exit-btn" aria-label="홈으로 가기">🏠</button>
       </div>
       <div class="progress-row">
         <div class="progress-track"><div class="progress-fill" id="round-fill" style="width:0%;"></div></div>
@@ -391,7 +384,7 @@ export function renderReactionPlay() {
     </div>
   `));
   bindNav(app);
-  bindExit(app, () => {
+  setExitGuard(() => {
     state.answers = [];
     state.lastReaction = null;
   });
@@ -524,7 +517,6 @@ export function renderReactionAd() {
     <div>
       <div class="back-row">
         <div class="back-title">결과 준비 중</div>
-        <button class="exit-btn" data-nav="home" aria-label="홈으로 가기">🏠</button>
       </div>
       ${adGateMarkup("게임 끝! 결과 보러 가기 전에\n광고 하나만 보고 갈게요 🙏")}
     </div>

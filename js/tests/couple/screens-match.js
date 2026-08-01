@@ -48,7 +48,6 @@ export function renderCoupleInvite() {
       <div class="back-row">
         <button class="back-btn" data-nav="couple-result">‹</button>
         <div class="back-title">배우자 초대</div>
-        <button class="exit-btn" data-nav="home" aria-label="홈으로 가기">🏠</button>
       </div>
       <div class="cover">
         <div class="emoji">🔗</div>
@@ -379,9 +378,6 @@ export function renderCoupleReport() {
           };
     app.appendChild(el(`
       <div>
-        <div class="back-row">
-          <button class="exit-btn" data-nav="home" aria-label="홈으로 가기">🏠</button>
-        </div>
         <div class="empty-state">
           <div class="emoji">🙏</div>
           <div class="msg">${body.msg}</div>
@@ -402,9 +398,6 @@ export function renderCoupleReport() {
 
   app.appendChild(el(`
     <div>
-      <div class="back-row">
-        <button class="exit-btn" data-nav="home" aria-label="홈으로 가기">🏠</button>
-      </div>
       <div class="result-card">
         <div class="eyebrow">두 분의 조합</div>
         <div class="cp-pair-emoji">${myType.emoji}<span>×</span>${partnerType.emoji}</div>

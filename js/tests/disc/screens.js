@@ -1,6 +1,6 @@
 // DISC 검사의 모든 화면 + 딜레마 미니게임 화면.
-import { app, go, onLeave, parseSharedPath } from "../../core/router.js";
-import { el, bindNav, bindExit, bindAdGate } from "../../core/dom.js";
+import { app, go, onLeave, parseSharedPath, setExitGuard } from "../../core/router.js";
+import { el, bindNav, bindAdGate } from "../../core/dom.js";
 import { state } from "../../core/state.js";
 import { shuffle, roundRect } from "../../core/util.js";
 import { shareBlockMarkup, wireShare } from "../../core/share.js";
@@ -77,7 +77,6 @@ export function renderDiscIntro() {
       <div class="back-row">
         <button class="back-btn" data-nav="psych-list">‹</button>
         <div class="back-title">심리테스트</div>
-        <button class="exit-btn" data-nav="home" aria-label="홈으로 가기">🏠</button>
       </div>
       ${adSlotMarkup("bannerTop", "margin-top:10px; margin-bottom:4px;")}
       <div class="cover">
@@ -119,7 +118,6 @@ export function renderDiscTypes() {
       <div class="back-row">
         <button class="back-btn" data-nav="disc-intro">‹</button>
         <div class="back-title">${entries.length}가지 유형 미리보기</div>
-        <button class="exit-btn" data-nav="home" aria-label="홈으로 가기">🏠</button>
       </div>
       <div class="test-list" style="padding-top:8px;">
         ${entries.map((t) => `
@@ -156,7 +154,6 @@ export function renderDiscQuestion() {
         <button class="back-btn" id="disc-back">‹</button>
         <div class="progress-track"><div class="progress-fill" id="disc-fill" style="width:0%;"></div></div>
         <div class="progress-count" id="disc-count"></div>
-        <button class="exit-btn" aria-label="홈으로 가기">🏠</button>
       </div>
       ${adSlotMarkup("bannerTop", "margin-top:10px; margin-bottom:4px;")}
       <div class="question-block">
@@ -238,7 +235,7 @@ export function renderDiscQuestion() {
     }
   });
 
-  bindExit(app, startDiscTest);
+  setExitGuard(startDiscTest);
 
   renderCurrent();
 }
@@ -320,9 +317,6 @@ export function renderDiscResult() {
 
   app.appendChild(el(`
     <div>
-      <div class="back-row">
-        <button class="exit-btn" data-nav="home" aria-label="홈으로 가기">🏠</button>
-      </div>
       <div class="result-card">
         <div class="eyebrow">나의 직장인 유형은</div>
         <div class="emoji">${t.emoji}</div>
@@ -581,7 +575,6 @@ export function renderDilemmaIntro() {
       <div class="back-row">
         <button class="back-btn" id="dilemma-intro-back">‹</button>
         <div class="back-title">딜레마 게임</div>
-        <button class="exit-btn" aria-label="홈으로 가기">🏠</button>
       </div>
       <div class="cover">
         <div class="emoji">⚖️</div>
@@ -603,7 +596,7 @@ export function renderDilemmaIntro() {
   // 지우고 그 자리로 되돌려준다.
   app.querySelector("#dilemma-intro-back").addEventListener("click", () => go("disc-question"));
 
-  bindExit(app, startDiscTest);
+  setExitGuard(startDiscTest);
 }
 
 export function renderDilemmaPlay() {
@@ -624,7 +617,6 @@ export function renderDilemmaPlay() {
         <button class="back-btn" data-nav="dilemma-intro">‹</button>
         <div class="progress-track"><div class="progress-fill" id="d-fill" style="width:0%;"></div></div>
         <div class="progress-count" id="d-count">1<span class="total">/${DILEMMAS.length}</span></div>
-        <button class="exit-btn" aria-label="홈으로 가기">🏠</button>
       </div>
       <div class="question-block">
         <div class="qno">보너스 1.</div>
@@ -634,7 +626,7 @@ export function renderDilemmaPlay() {
     </div>
   `));
   bindNav(app);
-  bindExit(app, startDiscTest);
+  setExitGuard(startDiscTest);
 
   const sceneEl = app.querySelector("#d-scene");
   const optionsEl = app.querySelector("#d-options");
@@ -680,7 +672,6 @@ export function renderDilemmaAd() {
     <div>
       <div class="back-row">
         <div class="back-title">결과 준비 중</div>
-        <button class="exit-btn" data-nav="home" aria-label="홈으로 가기">🏠</button>
       </div>
       ${adGateMarkup("게임 끝! 결과 보러 가기 전에\n광고 하나만 보고 갈게요 🙏")}
     </div>

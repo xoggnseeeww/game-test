@@ -24,7 +24,7 @@ export function adSlotMarkup(kind, style = "") {
 // 전환되는 진짜 전면광고 포맷이 없어서, 고정 크기 광고 단위(interstitial)를 화면
 // 하나로 채우고 짧은 카운트다운 뒤에 "계속하기" 버튼을 활성화하는 것으로 대신한다.
 // 카운트다운 진행/버튼 활성화는 core/dom.js의 bindAdGate()가 맡는다 — 여긴 마크업만.
-// 홈 버튼(.exit-btn)은 이 카운트다운과 무관하게 항상 즉시 동작한다(트래픽 이탈 방지).
+// 햄버거 메뉴의 "홈으로 가기"는 이 카운트다운과 무관하게 항상 즉시 동작한다(트래픽 이탈 방지).
 export function adGateMarkup(message) {
   return `
     <div class="ad-gate">

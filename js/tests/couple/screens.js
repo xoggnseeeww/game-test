@@ -2,8 +2,8 @@
 // (초대·코드 입력·결합 결과)은 screens-match.js에 있다. 그쪽이 이 파일의
 // resetCouple·coupleReady·partnerFromUrl·result·foldMarkup과 아래 세 상수를
 // 가져다 쓴다 — 반대 방향은 없다(이 파일은 screens-match.js를 모른다).
-import { app, go, onLeave, parseSharedPath } from "../../core/router.js";
-import { el, bindNav, bindExit, bindAdGate } from "../../core/dom.js";
+import { app, go, onLeave, parseSharedPath, setExitGuard } from "../../core/router.js";
+import { el, bindNav, bindAdGate } from "../../core/dom.js";
 import { state } from "../../core/state.js";
 import { roundRect } from "../../core/util.js";
 import { shareBlockMarkup, wireShare } from "../../core/share.js";
@@ -127,7 +127,6 @@ export function renderCoupleIntro() {
       <div class="back-row">
         <button class="back-btn" data-nav="psych-list">‹</button>
         <div class="back-title">심리테스트</div>
-        <button class="exit-btn" data-nav="home" aria-label="홈으로 가기">🏠</button>
       </div>
       ${adSlotMarkup("bannerTop", "margin-top:10px; margin-bottom:4px;")}
       <div class="cover">
@@ -185,7 +184,6 @@ export function renderCoupleSetup() {
       <div class="back-row">
         <button class="back-btn" data-nav="couple-intro">‹</button>
         <div class="back-title">상황 고르기</div>
-        <button class="exit-btn" data-nav="home" aria-label="홈으로 가기">🏠</button>
       </div>
       <div class="question-block">
         <div class="qno">시작 전에</div>
@@ -241,7 +239,6 @@ export function renderCoupleQuestion() {
         <button class="back-btn" id="cp-back">‹</button>
         <div class="progress-track"><div class="progress-fill" id="cp-fill" style="width:0%;"></div></div>
         <div class="progress-count" id="cp-count"></div>
-        <button class="exit-btn" aria-label="홈으로 가기">🏠</button>
       </div>
       ${adSlotMarkup("bannerTop", "margin-top:10px; margin-bottom:4px;")}
       <div class="cp-anchor-notice" id="cp-anchor-notice" hidden>
@@ -313,7 +310,7 @@ export function renderCoupleQuestion() {
     }
   });
 
-  bindExit(app, resetCouple);
+  setExitGuard(resetCouple);
   renderCurrent();
 }
 
@@ -324,7 +321,6 @@ export function renderCoupleAd() {
     <div>
       <div class="back-row">
         <div class="back-title">결과 준비 중</div>
-        <button class="exit-btn" data-nav="home" aria-label="홈으로 가기">🏠</button>
       </div>
       ${adGateMarkup("수고하셨어요! 결과 보러 가기 전에\n광고 하나만 보고 갈게요 🙏")}
     </div>
@@ -532,9 +528,6 @@ export function renderCoupleResult() {
   if (r.validity.verdict === "blocked") {
     app.appendChild(el(`
       <div>
-        <div class="back-row">
-          <button class="exit-btn" data-nav="home" aria-label="홈으로 가기">🏠</button>
-        </div>
         <div class="empty-state">
           <div class="emoji">🙏</div>
           <div class="msg">응답을 다시 한 번 천천히 진행해 주세요</div>
@@ -559,9 +552,6 @@ export function renderCoupleResult() {
 
   app.appendChild(el(`
     <div>
-      <div class="back-row">
-        <button class="exit-btn" data-nav="home" aria-label="홈으로 가기">🏠</button>
-      </div>
       ${warnMarkup(r.validity)}
       <div class="result-card">
         <div class="eyebrow">나의 관계 성향은</div>
@@ -721,7 +711,6 @@ export function renderCoupleGuide() {
       <div class="back-row">
         <button class="back-btn" data-nav="couple-intro">‹</button>
         <div class="back-title">이용 안내</div>
-        <button class="exit-btn" data-nav="home" aria-label="홈으로 가기">🏠</button>
       </div>
       ${adSlotMarkup("bannerTop", "margin-top:10px; margin-bottom:4px;")}
 
