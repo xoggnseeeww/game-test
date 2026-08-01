@@ -305,6 +305,56 @@ async function playNumpathRun(page) {
   await page.click("#q-back"); // 첫 문항에서 뒤로가기 → 인트로
   check("ADHD 첫 문항에서 뒤로가기 → 인트로", page.url().endsWith("/test/adhd"), page.url());
 
+  // === 전역 햄버거 메뉴의 "홈으로 가기"(goHome(), D-57) — 화면마다 있던 홈 버튼(옛
+  // .exit-btn)을 여기로 흡수했다. 진행 상황이 없으면 곧장 이동, router.js의
+  // setExitGuard()로 등록된 게 있으면(문항 풀이 중 등) 확인 모달을 거친다 ===
+  await page.click(".hamburger-btn");
+  await page.click(".hamburger-home");
+  check(
+    "진행 상황 없는 화면(인트로)에서 햄버거 '홈으로' → 곧장 홈",
+    page.url().endsWith("/") || new URL(page.url()).pathname === "/",
+    page.url()
+  );
+
+  await goto("/test/adhd");
+  await page.click(".cta-btn");
+  await page.click(".modal-btn-primary").catch(() => {});
+  await page.waitForSelector(".option-btn");
+  const guardQ1Text = await page.textContent("#q-text");
+  await page.click(".options .option-btn:nth-child(1)"); // Q1 답변 → 진행 상황 생김(exitGuard 등록)
+
+  await page.click(".hamburger-btn");
+  await page.click(".hamburger-home");
+  await page.waitForSelector(".modal-overlay", { timeout: 3000 });
+  check(
+    "진행 중(문항)에 햄버거 '홈으로' → 확인 모달",
+    (await page.textContent(".modal-title")) === "테스트를 그만둘까요?"
+  );
+  await page.click("#modal-cancel");
+  check("확인 모달 취소 → 진행 화면에 그대로 남음(나가지 않음)", page.url().endsWith("/test/adhd/play"), page.url());
+
+  await page.click(".hamburger-btn");
+  await page.click(".hamburger-home");
+  await page.waitForSelector(".modal-overlay", { timeout: 3000 });
+  await page.click("#modal-confirm");
+  check(
+    "확인 모달에서 확인 → 홈으로 이동",
+    page.url().endsWith("/") || new URL(page.url()).pathname === "/",
+    page.url()
+  );
+
+  await goto("/test/adhd");
+  await page.click(".cta-btn");
+  await page.click(".modal-btn-primary").catch(() => {});
+  await page.waitForSelector(".option-btn");
+  const afterExitQ1Text = await page.textContent("#q-text");
+  check(
+    "확인 후 나가기가 진행 상황을 실제로 초기화함(재시작하면 Q1부터)",
+    afterExitQ1Text === guardQ1Text,
+    `"${afterExitQ1Text}" vs "${guardQ1Text}"`
+  );
+  await goto("/test/adhd"); // 아래 "다시 시작"부터는 인트로(.cta-btn)에서 이어진다
+
   // 다시 시작 (state.answers는 #start-btn 핸들러가 리셋한다)
   await page.click(".cta-btn");
   await page.click(".modal-btn-primary").catch(() => {});

@@ -26,7 +26,8 @@ js/main.js              부팅. registerScreens / registerTest / registerGame �
 js/core/
   router.js             화면 레지스트리 · 테스트/게임 레지스트리 · 경로 해석 · guard · teardown · 테마 · history · 렌더 후 refreshAds()
   state.js              단일 상태 객체 (테스트별·게임별 네임스페이스)
-  dom.js                el() · bindNav() · showModal() · bindAdGate()(광고 게이트 카운트다운)
+  dom.js                el() · bindNav() · showModal() · bindAdGate()(광고 게이트 카운트다운) ·
+                        goHome()(전역 햄버거 메뉴의 "홈으로 가기" — router.js의 exitGuard를 봄)
   auth.js               관리자 로그인 — Google Identity Services로 받은 이메일이 ADMIN_EMAIL과
                         같은지만 본다(서버 검증 없음). localStorage에 이메일만 보관, isAdmin()/logout()/
                         renderSignInButton() 제공
@@ -76,6 +77,11 @@ js/games/<id>/          테스트에 속하지 않는 독립 미니게임(예: n
 
 **`onLeave(fn)`** — 화면을 떠날 때 정리할 것을 등록한다. 타이머뿐 아니라 `requestAnimationFrame`도 여기로 보낸다.
 `runTeardowns()`는 각 콜백을 try/catch로 감싸므로, 정리 중 하나가 터져도 화면 전환은 계속된다.
+
+**`setExitGuard(onExit)` / `getExitGuard()`** — 진행 중인 화면(문항·게임 풀이 등)이 "지금 나가면
+답이 사라진다"는 걸 등록한다. `onLeave()`와 같은 생명주기로 매 화면 전환마다 자동으로 비워진다.
+전역 햄버거 메뉴(`core/header.js`)의 "홈으로 가기"가 `core/dom.js`의 `goHome()`을 통해 이걸 보고
+확인 모달을 거칠지 정한다 — 화면마다 있던 홈 버튼(옛 `.exit-btn`)을 대신한다(D-57).
 
 **공유 주소 해석**: `parseSharedPath()`가 `/test/<testId>/result/<slug>`를 등록된 테스트의 `slugToKey`로 푼다.
 슬러그가 없는 `/test/adhd/result`는 여기 안 걸리고 일반 경로로 처리된다.
@@ -144,8 +150,9 @@ js/games/<id>/          테스트에 속하지 않는 독립 미니게임(예: n
 - **광고 게이트(`reaction-ad`/`dilemma-ad`/`numpath-ad`)**: `core/ads.js`의 `adGateMarkup()` +
   `core/dom.js`의 `bindAdGate()`로 구성. 300×250 AdFit 광고 단위(`interstitial`)를 3초
   카운트다운 뒤 "결과 보러 가기" 버튼이 활성화되는 방식으로, AdFit 웹 SDK에 없는 자동 전환
-  전면광고를 대신한다. `.exit-btn`(홈)은 카운트다운과 무관하게 항상 즉시 동작 — 강제 시청이
-  아니라 잠깐 보게 하는 정도로, 이탈률을 올리지 않는 선에서 노출 기회를 하나 늘리는 게 목적이다.
+  전면광고를 대신한다. 햄버거 메뉴의 "홈으로 가기"는 카운트다운과 무관하게 항상 즉시 동작 —
+  강제 시청이 아니라 잠깐 보게 하는 정도로, 이탈률을 올리지 않는 선에서 노출 기회를 하나 늘리는
+  게 목적이다.
 
 ## 4. 상태(state) 모양
 
