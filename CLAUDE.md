@@ -16,6 +16,14 @@
 | 브라우저 회귀 | `mkdir -p /tmp/pw && cd /tmp/pw && npm i playwright` → `NODE_PATH=/tmp/pw/node_modules node scripts/verify.cjs` (서버 먼저). `VERIFY_BASE=http://localhost:8788`로 wrangler dev를 가리키면 짧은 코드 발급·조회까지 실제로 검증된다 — 안 하면 그 부분만 폴백 경로로 대체 확인된다 |
 | 배포 | `main` push → Cloudflare Pages 자동 배포 (Functions·KV 바인딩도 `wrangler.jsonc`에서 같이 배포됨) |
 
+## Claude Code 세션 (`.claude/`)
+`.claude/hooks/session-start.sh`는 원격(Claude Code on the web) 세션에서 컨테이너가 새로 뜰 때마다
+`/root/.claude`가 초기화되는 걸 메우는 재설치 훅이다. **여기 새 플러그인/마켓플레이스를 추가하기 전에
+`claude plugin details <name>`으로 always-on 토큰 비용을 반드시 확인할 것** — 세션마다, 그리고
+서브에이전트를 띄울 때마다 매번 다시 주입되는 항목은 여기 넣지 않는다(2026-08-01 제거된 `ponytail`이
+세션당 ~983 tok + 서브에이전트마다 재주입되던 사례). 필요한 도구는 텍스트를 매번 컨텍스트에 주입하지
+않는 순수 CLI(예: graphify)로만 추가한다.
+
 ## 식별자
 - 도메인 `https://fun.data-pantry.com` / 저장소 `xoggnseeeww/game-test`
 - 호스팅: Cloudflare Pages — 빌드 명령 없음, 출력 디렉터리 = 레포 루트
