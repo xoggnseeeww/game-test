@@ -34,7 +34,9 @@ js/core/
   header.js             #app 밖(body)에 붙는 전역 우상단 햄버거 메뉴 — 로그인 상태 표시·로그인/로그아웃
   share.js              공유 URL · navigator.share · 결과 카드 캔버스
   util.js               shuffle · normalizePath · roundRect
-  ads.js                카카오 AdFit — adSlotMarkup()(단위 코드 단일 소스) · adGateMarkup()(전면 게이트 마크업) · refreshAds()(로더 태그 재실행)
+  ads.js                카카오 AdFit — adSlotMarkup()(단위 코드 단일 소스) · adGateMarkup()(전면 게이트 마크업) · refreshAds()(로더 태그 재실행).
+                        구글 애드센스는 ADSENSE_ENABLED 플래그로 같은 파일에 대기 중(승인 전 기본 false,
+                        반응형 슬롯 2개를 bannerTop/bannerBottom에 대응) · refreshAdSense()(슬롯별 push)
 js/screens/home.js      홈 · 심리테스트 목록 · 미니게임 목록 · 개인정보처리방침 + commonScreens
 js/tests/<id>/
   data.js               문항·결과 유형·슬러그·게임 상수 (단일 소스)

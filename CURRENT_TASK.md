@@ -3,7 +3,18 @@
 > 이 파일은 1~2k 토큰 이하를 유지한다 — "언젠가 할 일"이 아니라 "지금 유효한 작업"만.
 
 ## 현재 작업
-2026-08-01: **세션 토큰 소모량 점검 — `ponytail` 플러그인 제거**. "요청마다 과정이 과한 것 같다"는
+2026-08-01: **구글 애드센스 세팅(대기 상태)**. data-pantry-web-site도 같은 계정으로 애드센스를
+준비 중이라 fun 쪽에도 동일하게 세팅만 해둠 — 심사 승인 전이라 실제 전환은 하지 않는다.
+`js/core/ads.js`에 `ADSENSE_CLIENT`(`ca-pub-2220762633547591`) + `ADSENSE_ENABLED`(기본 `false`) +
+`ADSENSE_UNITS`(반응형 슬롯 2개: `8195471167`→bannerTop, `4256226152`→bannerBottom) 추가,
+`adSlotMarkup()`이 플래그가 꺼져 있으면 기존 카카오 AdFit 분기를 그대로 타 화면상 변화 없음.
+새 `refreshAdSense()`는 SPA 화면 전환마다 새로 생기는 `ins.adsbygoogle`마다 `push({})`를 호출하고
+스크립트 태그를 최초 1회만 주입한다(카카오 `refreshAds()`의 "스크립트 재실행" 방식과 달리 애드센스는
+슬롯 단위 push가 필요해서 별도 함수로 분리) — `router.js`의 `render()` 끝에서 함께 호출.
+**승인 확인되면**: `ADSENSE_ENABLED`를 `true`로 바꾸면 전환 끝(추가 배포 설정 불필요, env 자체가
+없는 레포라 이 플래그가 유일한 스위치). `npm test` 통과 확인.
+
+이전(2026-08-01): **세션 토큰 소모량 점검 — `ponytail` 플러그인 제거**. "요청마다 과정이 과한 것 같다"는
 사용자 피드백으로 조사. 계정 전역에 설치돼 있던 `ponytail` 플러그인(`.claude/hooks/session-start.sh`가
 원격 세션이 새로 뜰 때마다 재설치하던 것)이 세션 시작·서브에이전트 실행마다 ~90줄 지침을 컨텍스트에
 재주입하고 있었다 — `claude plugin details`로 실측하니 세션당 always-on ~983 tok, 서브에이전트를

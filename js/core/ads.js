@@ -14,9 +14,25 @@ const AD_UNITS = {
   interstitial: { unit: "DAN-tmLP8h8cur4SzSpG", width: 300, height: 250, cssClass: "interstitial" },
 };
 
+// Google AdSense — 승인 대기 중이라 ADSENSE_ENABLED=false로 꺼둔다. data-pantry-web-site의
+// AdSlot.astro는 env로 카카오→애드센스를 전환하지만, 이 레포엔 env 자체가 없어서 같은 역할을
+// 이 플래그 하나로 대신한다. 승인되면 이 값만 true로 바꾸면 되고, 그 전까지는 아래 adSlotMarkup()이
+// 항상 기존 AD_UNITS(카카오) 분기를 타서 화면에 아무 변화가 없다. 반응형 슬롯은 2개뿐이라
+// bannerTop/bannerBottom에만 대응시켰다 — rect·interstitial은 계속 카카오를 쓴다.
+const ADSENSE_CLIENT = "ca-pub-2220762633547591";
+const ADSENSE_ENABLED = false;
+const ADSENSE_UNITS = {
+  bannerTop: { slot: "8195471167" },
+  bannerBottom: { slot: "4256226152" },
+};
+
 export function adSlotMarkup(kind, style = "") {
-  const { unit, width, height, cssClass } = AD_UNITS[kind];
   const styleAttr = style ? ` style="${style}"` : "";
+  if (ADSENSE_ENABLED && ADSENSE_UNITS[kind]) {
+    const { slot } = ADSENSE_UNITS[kind];
+    return `<div class="ad-slot banner"${styleAttr}><ins class="adsbygoogle" style="display:block" data-ad-client="${ADSENSE_CLIENT}" data-ad-slot="${slot}" data-ad-format="auto" data-full-width-responsive="true"></ins></div>`;
+  }
+  const { unit, width, height, cssClass } = AD_UNITS[kind];
   return `<div class="ad-slot ${cssClass}"${styleAttr}><ins class="kakao_ad_area" style="display:none;" data-ad-unit="${unit}" data-ad-width="${width}" data-ad-height="${height}"></ins></div>`;
 }
 
@@ -46,4 +62,28 @@ export function refreshAds() {
   next.src = prev.src;
   next.async = true;
   prev.replaceWith(next);
+}
+
+// adsbygoogle.js는 <ins class="adsbygoogle"> 태그 하나당 push({}) 호출을 한 번씩 받아야
+// 채워진다(카카오처럼 스크립트 재실행으로 전체 재스캔되는 방식이 아니다). ADSENSE_ENABLED가
+// false인 동안은 adSlotMarkup()이 이 클래스를 아예 그리지 않으므로 이 함수는 항상 조용히 리턴한다.
+function ensureAdSenseScript() {
+  if (document.querySelector('script[src*="pagead2.googlesyndication.com"]')) return;
+  const script = document.createElement("script");
+  script.async = true;
+  script.crossOrigin = "anonymous";
+  script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`;
+  document.head.appendChild(script);
+}
+
+export function refreshAdSense() {
+  if (!ADSENSE_ENABLED) return;
+  ensureAdSenseScript();
+  document.querySelectorAll("ins.adsbygoogle:not([data-adsbygoogle-status])").forEach(() => {
+    try {
+      (window.adsbygoogle = window.adsbygoogle || []).push({});
+    } catch (err) {
+      console.error(err);
+    }
+  });
 }
