@@ -24,6 +24,11 @@
 세션당 ~983 tok + 서브에이전트마다 재주입되던 사례). 필요한 도구는 텍스트를 매번 컨텍스트에 주입하지
 않는 순수 CLI(예: graphify)로만 추가한다.
 
+`.claude/settings.json`의 `alwaysThinkingEnabled: false` + `env.MAX_THINKING_TOKENS`(1024)는
+이 저장소에서 확장 사고(extended thinking)를 기본 꺼둔 것이다(2026-08-01, 토큰 소모량 절감).
+정말 복잡한 문제라 사고 과정이 필요하면 프롬프트에 "ultrathink"를 넣어 그 턴만 켤 수 있다 —
+지우지 말 것.
+
 ## 식별자
 - 도메인 `https://fun.data-pantry.com` / 저장소 `xoggnseeeww/game-test`
 - 호스팅: Cloudflare Pages — 빌드 명령 없음, 출력 디렉터리 = 레포 루트

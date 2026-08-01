@@ -9,7 +9,12 @@
 재주입하고 있었다 — `claude plugin details`로 실측하니 세션당 always-on ~983 tok, 서브에이전트를
 띄울 때마다 추가 재주입. `claude plugin uninstall`로 제거하고 `session-start.sh`의 재설치 블록도
 삭제(graphify는 텍스트 주입 없는 순수 CLI라 별개로 유지). 재발 방지로 CLAUDE.md에 "새 플러그인
-추가 전 `claude plugin details`로 always-on 토큰 비용 확인" 가드레일 한 줄 추가. 앱 코드 변경
+추가 전 `claude plugin details`로 always-on 토큰 비용 확인" 가드레일 한 줄 추가.
+이어서 "자동화 대신 필요할 때 직접 정리하겠다"는 사용자 결정에 따라, 출력·추론 토큰 절감
+설정만 우선 적용: `.claude/settings.json`에 `alwaysThinkingEnabled: false` +
+`env.MAX_THINKING_TOKENS: "1024"` 추가 — 확장 사고를 기본 꺼두고(필요하면 프롬프트에
+"ultrathink"로 그 턴만 켤 수 있음), 켜지는 경우에도 상한을 낮게 잡아 무의미하게 길어지는 걸
+막았다. `outputStyle`은 이미 기본값(Default)이 가장 간결한 옵션이라 변경 없음. 앱 코드 변경
 없음 — `npm test`/`scripts/verify.cjs` 대상 아님.
 
 이전(2026-07-30(9)): **햄버거 버튼 위치 조정 + 화면별 홈 버튼을 메뉴로 흡수**(D-57). 실기기
