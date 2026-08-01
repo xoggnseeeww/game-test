@@ -1,5 +1,4 @@
 {
-  "alwaysThinkingEnabled": false,
   "env": {
     "MAX_THINKING_TOKENS": "1024"
   },

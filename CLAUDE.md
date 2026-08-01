@@ -24,10 +24,16 @@
 세션당 ~983 tok + 서브에이전트마다 재주입되던 사례). 필요한 도구는 텍스트를 매번 컨텍스트에 주입하지
 않는 순수 CLI(예: graphify)로만 추가한다.
 
-`.claude/settings.json`의 `alwaysThinkingEnabled: false` + `env.MAX_THINKING_TOKENS`(1024)는
-이 저장소에서 확장 사고(extended thinking)를 기본 꺼둔 것이다(2026-08-01, 토큰 소모량 절감).
-정말 복잡한 문제라 사고 과정이 필요하면 프롬프트에 "ultrathink"를 넣어 그 턴만 켤 수 있다 —
-지우지 말 것.
+`.claude/settings.json`의 `env.MAX_THINKING_TOKENS`(1024)는 확장 사고(extended thinking)가
+켜지는 경우의 상한선이다(2026-08-01). `alwaysThinkingEnabled`는 **일부러 설정하지 않고
+기본값(자동 판단)으로 둔다** — 이 값이 없거나 `true`면 모델이 요청 난이도를 보고 사고 과정을
+쓸지 스스로 판단하고, `false`로 박아두면 쉬운 요청까지 사고를 완전히 못 쓰게 막아버려서 오히려
+어려운 문제에서 품질이 떨어진다(처음엔 `false`로 뒀다가 "필요한지 아닌지 파악해서 자동 적용"
+요청으로 되돌림). 정말 복잡한 문제는 프롬프트에 "ultrathink"를 넣으면 그 턴만 확실히 켤 수 있다.
+
+작업 중 사용자에게 보내는 텍스트도 출력 토큰이다 — 중간 과정(무엇을 확인했다, 무엇을 읽었다)을
+전부 나열하지 말고, 꼭 필요한 방향 전환·발견만 한 줄로 알리고 **끝에 결과 요약만** 남긴다
+(2026-08-01, 과다 서술 지적으로 추가).
 
 ## 식별자
 - 도메인 `https://fun.data-pantry.com` / 저장소 `xoggnseeeww/game-test`

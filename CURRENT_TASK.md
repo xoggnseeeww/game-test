@@ -12,10 +12,14 @@
 추가 전 `claude plugin details`로 always-on 토큰 비용 확인" 가드레일 한 줄 추가.
 이어서 "자동화 대신 필요할 때 직접 정리하겠다"는 사용자 결정에 따라, 출력·추론 토큰 절감
 설정만 우선 적용: `.claude/settings.json`에 `alwaysThinkingEnabled: false` +
-`env.MAX_THINKING_TOKENS: "1024"` 추가 — 확장 사고를 기본 꺼두고(필요하면 프롬프트에
-"ultrathink"로 그 턴만 켤 수 있음), 켜지는 경우에도 상한을 낮게 잡아 무의미하게 길어지는 걸
-막았다. `outputStyle`은 이미 기본값(Default)이 가장 간결한 옵션이라 변경 없음. 앱 코드 변경
-없음 — `npm test`/`scripts/verify.cjs` 대상 아님.
+`env.MAX_THINKING_TOKENS: "1024"` 추가.
+**정정(같은 세션)**: 처음엔 `alwaysThinkingEnabled: false`로 확장 사고를 완전히 꺼뒀는데,
+사용자가 "필요한 문제인지 파악해서 자동 적용"을 요청 — `false`는 쉬운/어려운 요청 구분 없이
+사고를 막아버리는 것이라 요청과 반대였다. `alwaysThinkingEnabled` 키 자체를 지워 기본값(모델이
+난이도 보고 자동 판단)으로 되돌리고, `MAX_THINKING_TOKENS`(1024)는 켜졌을 때의 상한선으로만
+남겼다. `outputStyle`은 이미 기본값(Default)이 가장 간결한 옵션이라 변경 없음.
+추가로 진행 과정 중계형 서술(무엇을 확인·읽었다)을 줄이고 끝에 요약만 남기라는 요청을
+CLAUDE.md에 반영. 앱 코드 변경 없음 — `npm test`/`scripts/verify.cjs` 대상 아님.
 
 이전(2026-07-30(9)): **햄버거 버튼 위치 조정 + 화면별 홈 버튼을 메뉴로 흡수**(D-57). 실기기
 스크린샷 피드백 — 햄버거가 `#app` 예약 여백(D-56에서 확보한 56px) 안, 로고 행보다 위쪽
