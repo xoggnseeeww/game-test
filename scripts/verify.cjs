@@ -211,11 +211,12 @@ async function playNumpathRun(page) {
 
   const errors = [];
   page.on("pageerror", (e) => errors.push(String(e)));
-  // 샌드박스는 아웃바운드가 프록시로 막혀 외부 자원(CDN 폰트 · AdFit 로더)이 항상 실패한다.
-  // 앱 버그가 아니므로 제외한다. 다만 "Failed to load resource: ... 403" 같은 메시지는 본문에
-  // 주소가 없어서 m.text()만 보면 걸러지지 않는다 — m.location().url까지 같이 본다.
-  // (AdFit 스크립트가 슬롯마다 붙었는지는 아래 "광고 슬롯" 검사가 DOM으로 따로 확인한다)
-  const EXTERNAL_NOISE = /ERR_TUNNEL_CONNECTION_FAILED|jsdelivr|pretendard|daumcdn|AdFit/i;
+  // 샌드박스는 아웃바운드가 프록시로 막혀 외부 자원(CDN 폰트 · AdFit 로더 · 클라우드 로그인용
+  // Supabase JS — 우상단 관리자 로그인이 쓴다)이 항상 실패한다. 앱 버그가 아니므로 제외한다.
+  // 다만 "Failed to load resource: ... 403" 같은 메시지는 본문에 주소가 없어서 m.text()만
+  // 보면 걸러지지 않는다 — m.location().url까지 같이 본다. (AdFit 스크립트가 슬롯마다
+  // 붙었는지는 아래 "광고 슬롯" 검사가 DOM으로 따로 확인한다)
+  const EXTERNAL_NOISE = /ERR_TUNNEL_CONNECTION_FAILED|jsdelivr|pretendard|daumcdn|AdFit|esm\.sh|불러오지 못했습니다/i;
   page.on("console", (m) => {
     if (m.type() !== "error") return;
     const t = m.text();
@@ -302,6 +303,56 @@ async function playNumpathRun(page) {
   check("ADHD 뒤로가기 → 직전 문항으로 정확히 한 단계만 복귀", backText === q1Text, `"${backText}" vs "${q1Text}"`);
   await page.click("#q-back"); // 첫 문항에서 뒤로가기 → 인트로
   check("ADHD 첫 문항에서 뒤로가기 → 인트로", page.url().endsWith("/test/adhd"), page.url());
+
+  // === 전역 햄버거 메뉴의 "홈으로 가기"(goHome(), D-57) — 화면마다 있던 홈 버튼(옛
+  // .exit-btn)을 여기로 흡수했다. 진행 상황이 없으면 곧장 이동, router.js의
+  // setExitGuard()로 등록된 게 있으면(문항 풀이 중 등) 확인 모달을 거친다 ===
+  await page.click(".hamburger-btn");
+  await page.click(".hamburger-home");
+  check(
+    "진행 상황 없는 화면(인트로)에서 햄버거 '홈으로' → 곧장 홈",
+    page.url().endsWith("/") || new URL(page.url()).pathname === "/",
+    page.url()
+  );
+
+  await goto("/test/adhd");
+  await page.click(".cta-btn");
+  await page.click(".modal-btn-primary").catch(() => {});
+  await page.waitForSelector(".option-btn");
+  const guardQ1Text = await page.textContent("#q-text");
+  await page.click(".options .option-btn:nth-child(1)"); // Q1 답변 → 진행 상황 생김(exitGuard 등록)
+
+  await page.click(".hamburger-btn");
+  await page.click(".hamburger-home");
+  await page.waitForSelector(".modal-overlay", { timeout: 3000 });
+  check(
+    "진행 중(문항)에 햄버거 '홈으로' → 확인 모달",
+    (await page.textContent(".modal-title")) === "테스트를 그만둘까요?"
+  );
+  await page.click("#modal-cancel");
+  check("확인 모달 취소 → 진행 화면에 그대로 남음(나가지 않음)", page.url().endsWith("/test/adhd/play"), page.url());
+
+  await page.click(".hamburger-btn");
+  await page.click(".hamburger-home");
+  await page.waitForSelector(".modal-overlay", { timeout: 3000 });
+  await page.click("#modal-confirm");
+  check(
+    "확인 모달에서 확인 → 홈으로 이동",
+    page.url().endsWith("/") || new URL(page.url()).pathname === "/",
+    page.url()
+  );
+
+  await goto("/test/adhd");
+  await page.click(".cta-btn");
+  await page.click(".modal-btn-primary").catch(() => {});
+  await page.waitForSelector(".option-btn");
+  const afterExitQ1Text = await page.textContent("#q-text");
+  check(
+    "확인 후 나가기가 진행 상황을 실제로 초기화함(재시작하면 Q1부터)",
+    afterExitQ1Text === guardQ1Text,
+    `"${afterExitQ1Text}" vs "${guardQ1Text}"`
+  );
+  await goto("/test/adhd"); // 아래 "다시 시작"부터는 인트로(.cta-btn)에서 이어진다
 
   // 다시 시작 (state.answers는 #start-btn 핸들러가 리셋한다)
   await page.click(".cta-btn");
@@ -671,6 +722,41 @@ async function playNumpathRun(page) {
   // 다시 시작 → 인트로로 (자동으로 새 런을 시작하지 않는다 — ADHD "테스트 다시하기"와 같은 패턴)
   await page.click("#retry-btn");
   check("NumPath 다시하기 → 인트로로(자동 재시작 아님)", page.url().endsWith("/game/numpath"), page.url());
+
+  // === 관리자 전용 게이트: 부부 체크는 아직 출시 전이라 관리자(js/core/auth.js의
+  // ADMIN_EMAIL)만 들어갈 수 있어야 한다. 로그인은 NumPath 마을과 같은 Supabase Auth를
+  // 공유해서 쓴다(D-56) — 아래는 로그인 전(비관리자) 상태로 확인한다 ===
+  await goto("/test");
+  check("부부 체크 카드에 '출시 예정' 배지 (비관리자)", await page.isVisible(".coming-soon-badge"));
+  await page.click('[data-nav="couple-intro"]');
+  check(
+    "비관리자가 카드를 클릭해도 목록에 그대로 남는다",
+    page.url().endsWith("/test"),
+    page.url()
+  );
+  check(
+    "비관리자 접근 시 '곧 출시됩니다' 모달이 뜬다",
+    (await page.textContent(".modal-title").catch(() => "")) === "곧 출시됩니다"
+  );
+  await page.click("#modal-confirm").catch(() => {});
+  await goto("/test/couple/result");
+  check(
+    "비관리자가 하위 화면 주소로 직접 접속해도 목록으로 돌아온다",
+    page.url().endsWith("/test"),
+    page.url()
+  );
+  await page.click("#modal-confirm").catch(() => {});
+
+  // 이후 부부 체크 회귀는 관리자 권한으로 진행한다 — 관리자 전용 기능이라 다른 방법이 없다.
+  // 실제 Google 로그인(Supabase OAuth 리다이렉트)은 헤드리스에서 재현할 수 없어, localStorage를
+  // js/core/auth.js와 같은 형식으로 직접 채워 "이미 로그인된" 상태를 흉내낸다 — 이 캐시는
+  // 원래 Supabase 세션이 확인될 때 auth.js가 채워주는 값이라, CDN이 막힌 이 샌드박스에서도
+  // NumPath 마을의 localStorage 폴백(D-52)과 같은 방식으로 유효하다.
+  await page.evaluate(() => localStorage.setItem("gt_admin_email", "xogns022@gmail.com"));
+  check(
+    "관리자 로그인 후 배지가 사라진다",
+    !(await goto("/test").then(() => page.isVisible(".coming-soon-badge")))
+  );
 
   // === 부부 관계 성향 체크: 3축 선택 → 46문항 → 결과 → 배우자 코드 왕복 ===
   await goto("/test/couple");

@@ -1,8 +1,8 @@
 // NumPath 플레이 화면. DISC/ADHD의 in-place 렌더 패턴(D-26)을 따른다 — 스테이지가 바뀔 때마다
 // go()로 화면 전체를 다시 그리면 광고 슬롯도 매번 새로 만들어져 refreshAds()가 스테이지마다
 // 실행된다. 여기서는 화면을 한 번만 그리고, 스테이지 전환 때는 HUD·보드만 갈아끼운다.
-import { app, go, onLeave } from "../../core/router.js";
-import { el, bindNav, bindExit } from "../../core/dom.js";
+import { app, go, onLeave, setExitGuard } from "../../core/router.js";
+import { el, bindNav } from "../../core/dom.js";
 import { adSlotMarkup } from "../../core/ads.js";
 import { state } from "../../core/state.js";
 import { generatePuzzle } from "./generate.js";
@@ -28,7 +28,6 @@ export function renderNumpathPlay() {
       <div class="back-row">
         <button class="back-btn" data-nav="numpath-intro">‹</button>
         <div class="back-title">NumPath</div>
-        <button class="exit-btn" aria-label="홈으로 가기">🏠</button>
       </div>
       ${adSlotMarkup("bannerTop", "margin-top:10px; margin-bottom:4px;")}
       <div class="np-goal">
@@ -63,7 +62,7 @@ export function renderNumpathPlay() {
     </div>
   `));
   bindNav(app);
-  bindExit(app, () => {
+  setExitGuard(() => {
     state.numpath.run = null;
   });
 

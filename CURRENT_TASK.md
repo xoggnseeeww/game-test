@@ -6,15 +6,98 @@
 2026-07-30: **NumPath 마을(코인·건설·클라우드 동기화, D-54/D-55) 되돌림.** 사용자 판단 —
 "채울 공간이랄 게 없어서 메리트가 크지 않다, 나중에 더 큰 그림 그린 다음 다시." 코인 지급·
 마을 화면(`/game/numpath/village`)·클라우드 로그인 코드를 전부 제거하고 게임(난이도·리플레이성)만
-남겼다. 삭제: `village.js`·`cloud.js`·`cloud-loader.js`·`test/numpath.village.test.js`,
+남겼다. 삭제: `village.js`·`cloud.js`(NumPath 전용판)·`cloud-loader.js`·`test/numpath.village.test.js`,
 `DIFFICULTIES`의 `coinsPerStar` 필드, `screens.js`/`play.js`/`index.js`/`data.js`/`state.js`의
 관련 코드, `styles.css`의 `.np-village-*`/`.np-cloud-*`/`.np-scene-*`/`.np-shop-*`/`.np-progress`/
-`.np-wallet`/`.np-build-btn` 블록, `verify.cjs`의 관련 검사. Supabase `numpath_village` 테이블은
-남겨둠(비용 없음, 나중에 재사용 가능) — 관련 결정은 `docs/decisions/2027-h1.md` D-54/D-55에
-그대로 두고 되돌림만 여기 기록(반복 제안 방지, `docs/DECISIONS.md`의 "되돌린 접근" 관례).
-`npm test` 134/134, `scripts/verify.cjs` 154/154(`serve.py`) 통과.
+`.np-wallet`/`.np-build-btn` 블록, `verify.cjs`의 관련 검사. 우상단 관리자 로그인(D-56~D-58,
+아래 참고)은 이미 자기 전용 `js/core/cloud-auth.js`를 따로 갖고 있어 이번 삭제와 무관 — 그대로
+동작한다. Supabase `numpath_village` 테이블은 남겨둠(비용 없음, 나중에 재사용 가능) — 관련
+결정은 `docs/decisions/2027-h1.md` D-54/D-55에 그대로 두고 되돌림만 여기 기록(반복 제안 방지,
+`docs/DECISIONS.md`의 "되돌린 접근" 관례).
+병합 후(관리자 로그인 D-56~58 포함) `npm test` 134/134, `scripts/verify.cjs` 164/164(`serve.py`) 통과.
 
-이전(2026-07-30, 4차 main 머지): NumPath 난이도·리플레이성·보상 체계(D-54) + 마을
+이전(2026-07-30(10)): **관리자 로그인 버튼 무반응 버그 수정**(D-58). 사용자가 "로그인 안 되네?" —
+버튼을 눌러도 아무 반응 없음(구글 계정 선택 화면까지도 안 감)이라고 구체화. 코드 리뷰로
+실제 원인 둘을 찾았다: ① `core/header.js`의 `initAuth()`가 로그인 상태를 비동기로 확인하며
+`sync()`를 여러 번 부르는데, 그때마다 `renderPanel()`이 상태 변화 여부와 무관하게 로그인
+버튼을 통째로 지우고 새로 그렸다 — 페이지 열자마자 햄버거를 누르는 흔한 패턴에서, 사용자가
+누른 버튼이 그 사이 교체돼 클릭이 허공에 뜰 수 있었다(관찰된 증상과 정확히 일치). `lastRenderedEmail`
+캐시로 상태가 실제로 바뀔 때만 다시 그리도록 고쳤다. ② `signInWithProvider()`가 실패해도
+보통 reject 없이 `{ error }`로 resolve하는데, 기존 코드는 `.catch()`만 걸어둬서 실패가
+콘솔에도 화면에도 전혀 안 남았다(`CLAUDE.md`의 "에러 삼킴 금지" 위반). `then(({error})=>...)`로
+명시 확인해 버튼 라벨에 실패 사유를 노출하도록 고쳤다.
+`npm test` 146/146(불변), `scripts/verify.cjs` 전체 재통과(`serve.py`) — 실제 OAuth 클릭
+흐름 자체는 이 샌드박스가 Supabase CDN을 막아둬서 헤드리스로 재현 못함(D-55와 같은 한계).
+**미해결**: 이번 수정으로도 안 되면 이제 버튼에 실패 사유가 그대로 뜨니 그걸로 원인을 좁힐
+것 — Supabase 대시보드의 Google provider·리다이렉트 URL 허용 목록 쪽 문제일 가능성은 배제
+안 했다(코드로 확인 가능한 범위 밖).
+
+이전(2026-08-01): **세션 토큰 소모량 점검 — `ponytail` 플러그인 제거**. "요청마다 과정이 과한 것 같다"는
+사용자 피드백으로 조사. 계정 전역에 설치돼 있던 `ponytail` 플러그인(`.claude/hooks/session-start.sh`가
+원격 세션이 새로 뜰 때마다 재설치하던 것)이 세션 시작·서브에이전트 실행마다 ~90줄 지침을 컨텍스트에
+재주입하고 있었다 — `claude plugin details`로 실측하니 세션당 always-on ~983 tok, 서브에이전트를
+띄울 때마다 추가 재주입. `claude plugin uninstall`로 제거하고 `session-start.sh`의 재설치 블록도
+삭제(graphify는 텍스트 주입 없는 순수 CLI라 별개로 유지). 재발 방지로 CLAUDE.md에 "새 플러그인
+추가 전 `claude plugin details`로 always-on 토큰 비용 확인" 가드레일 한 줄 추가.
+이어서 "자동화 대신 필요할 때 직접 정리하겠다"는 사용자 결정에 따라, 출력·추론 토큰 절감
+설정만 우선 적용: `.claude/settings.json`에 `alwaysThinkingEnabled: false` +
+`env.MAX_THINKING_TOKENS: "1024"` 추가.
+**정정(같은 세션)**: 처음엔 `alwaysThinkingEnabled: false`로 확장 사고를 완전히 꺼뒀는데,
+사용자가 "필요한 문제인지 파악해서 자동 적용"을 요청 — `false`는 쉬운/어려운 요청 구분 없이
+사고를 막아버리는 것이라 요청과 반대였다. `alwaysThinkingEnabled` 키 자체를 지워 기본값(모델이
+난이도 보고 자동 판단)으로 되돌리고, `MAX_THINKING_TOKENS`(1024)는 켜졌을 때의 상한선으로만
+남겼다. `outputStyle`은 이미 기본값(Default)이 가장 간결한 옵션이라 변경 없음.
+추가로 진행 과정 중계형 서술(무엇을 확인·읽었다)을 줄이고 끝에 요약만 남기라는 요청을
+CLAUDE.md에 반영. 앱 코드 변경 없음 — `npm test`/`scripts/verify.cjs` 대상 아님.
+
+이전(2026-07-30(9)): **햄버거 버튼 위치 조정 + 화면별 홈 버튼을 메뉴로 흡수**(D-57). 실기기
+스크린샷 피드백 — 햄버거가 `#app` 예약 여백(D-56에서 확보한 56px) 안, 로고 행보다 위쪽
+빈 공간에 붕 떠 보였다. `#app` 여백을 없애고 햄버거를 각 화면 `.header`/`.back-row`
+우상단에 겹쳐 그리는 방식으로 바꿨다. 동시에 화면마다 있던 홈 버튼(`.exit-btn`, 🏠) 34곳을
+전부 제거하고 햄버거 메뉴의 "홈으로 가기" 항목 하나로 합쳤다 — `core/router.js`에
+`setExitGuard()`/`getExitGuard()`(onLeave와 같은 생명주기)를 추가하고, `core/dom.js`의
+새 `goHome()`이 진행 중인 화면(문항 풀이 등)이면 기존과 같은 "그만둘까요?" 확인 모달을
+거치고, 아니면 곧장 이동한다. 확인 모달은 사용자 확인 하에 그대로 유지했다(응답 유실
+방지).
+`npm test` 146/146(불변), `scripts/verify.cjs`에 새 검사 5개 추가(진행 무/유에 따른
+동작·취소·확인·재시작 시 실제 초기화 확인) 후 `serve.py`로 통과 확인.
+**미해결**: 햄버거 `top` 위치는 계산 근사치라 실기기(`.header`/`.back-row` 양쪽) 확인 필요.
+
+**main 머지 완료(2026-07-30, 6차)** — 위 D-57 커밋이 충돌 없이 main에 머지됨
+(`3a8bff2` → `654d78e`). main이 그 사이 더 앞서가지 않아 CURRENT_TASK.md 한 곳만
+자동 병합, 코드는 순수 병합. 머지 전 `npm test` 146/146 재확인 후 push.
+
+이전(2026-07-30(8)): **우상단 햄버거 메뉴 + 관리자 로그인을 main에 합치며 중복 정리**(D-56).
+main을 먼저 merge해보니 main이 이미 NumPath 마을 동기화용 Supabase Auth(Google·카카오
+OAuth, D-55)를 실제로 배포까지 끝낸 상태였다 — 내 쪽은 Google Identity Services(GIS)를
+새로 붙였는데 `GOOGLE_CLIENT_ID`가 자리표시자라 동작하지 않는 상태였다. 사용자가 "로그인
+관련 중복 정리해서 main에 남겨달라"고 요청해, GIS를 통째로 걷어내고 이미 동작하는 Supabase
+Auth를 재사용하도록 다시 만들었다. `js/games/numpath/cloud.js`에 있던 Supabase 클라이언트
+생성·자격증명을 `js/core/cloud-auth.js`(+`cloud-auth-loader.js`)로 빼서 NumPath 마을과
+관리자 로그인이 같은 클라이언트 하나를 공유하게 했다(자격증명 중복 제거) — 마을 쪽의
+로그인 시 병합(merge) 타이밍이 중요한 로직은 그대로 두고, 공용 클라이언트·`getCachedUser`·
+`signInWithProvider`·`signOut`만 core로 옮겼다. `js/core/auth.js`는 이제 GIS 없이 이
+공유 클라이언트의 세션을 확인해 이메일이 관리자(`xogns022@gmail.com`)와 같을 때만
+`localStorage["gt_admin_email"]`에 남긴다(village.js와 같은 "로컬 캐시 우선 + 연결되면
+교정" 패턴이라 CDN 차단·오프라인에서도 직전 로그인 상태가 유지된다). `index.html`의 GIS
+`<script>` 태그도 제거.
+상세는 `docs/decisions/2027-h1.md` D-56 참고.
+`npm test` 146/146, `scripts/verify.cjs` 169/169(`serve.py`) 통과 확인.
+
+**main 머지 완료(2026-07-30, 5차)** — 위 D-56 정리 커밋이 충돌 없이 main에 머지됨
+(`a527010` → `684daf6`). main이 그 사이 더 앞서가지 않아 이 브랜치에서 이미 해결해 둔
+문서·결정 번호 충돌만 반영됐고, 코드 쪽은 순수 병합. 머지 전 최종 확인으로 `npm test`
+146/146 재확인 후 push.
+
+이전(2026-07-30(7), 이 브랜치): 우상단 햄버거 메뉴 + 관리자 로그인 최초 구현(GIS 기반,
+위 항목에서 Supabase Auth로 교체됨) — 부부 체크를 "출시 예정"으로 전환. 라우터의 기존
+`guard()` 메커니즘을 그대로 써서(`comingSoonGuard()`), 관리자가 아니면 "곧 출시됩니다"
+모달 후 `psych-list`로 돌려보낸다 — 목록 카드 클릭·주소 직접 접속·공유 링크 전부 이 한
+지점을 거친다. `showModal()`은 `cancelLabel: null`이면 취소 버튼을 생략하도록 확장(새
+모달 함수 안 만듦). 이 설계(게이트 위치·모달 확장·범위를 부부 체크 하나로 한정)는 이번
+정리에서도 그대로 유지했다 — 바뀐 건 로그인 수단뿐이다.
+
+이전(**main 머지 완료(2026-07-30, 4차)**) — NumPath 난이도·리플레이성·보상 체계(D-54) + 마을
 클라우드 동기화(D-55) 브랜치를 main에 병합. 첫 push 시도가 "fetch first"로 거부돼(그 사이
 병렬 세션이 부부 체크 D-51~53을 먼저 main에 합침) 다시 fetch 후 origin/main을 로컬 main에
 merge — **코드 파일은 전부 자동 병합**, 문서 3개(CURRENT_TASK.md·docs/DECISIONS.md·
@@ -168,6 +251,18 @@ KV에 들어간다. 인트로·결과 화면에 "부부 결과 매칭" 버튼 �
 ## 배포 후 확인 필요
 > 샌드박스는 아웃바운드가 프록시로 막혀 아래를 **확인하지 못했다.** "확인됨"으로 간주하지 말 것.
 
+- **우상단 햄버거 버튼 실기기 확인 필요(D-57 갱신)** — `#app` 예약 여백을 없애고 각 화면
+  `.header`/`.back-row` 우상단에 겹쳐 그리는 방식으로 바꿨다. `top` 값은 두 행의 높이가
+  달라 계산으로 잡은 근사치다 — 실제 다양한 모바일 기기·가로 모드에서 두 행 모두 로고/뒤로가기
+  텍스트와 자연스럽게 어울리는지, 색이 진한 결과 카드(`.result-card`) 위에 겹칠 때 버튼이
+  잘 보이는지 확인 필요
+- **관리자 로그인(Supabase OAuth) 실기기 동작** — 헤드리스 검증은 OAuth 리다이렉트를 재현할
+  수 없어 `localStorage`에 관리자 이메일을 직접 심어 관리자 상태만 확인했다(NumPath 마을의
+  기존 검증 한계와 동일, D-55). 실제 햄버거 메뉴의 Google 로그인 버튼 클릭 → 계정 선택 →
+  관리자 이메일로 로그인 → 배지가 사라지는 전체 흐름은 실기기에서 확인 필요. `redirectTo`는
+  NumPath 마을처럼 아무 화면에서나 눌러도 되게 동적 경로로 두지 않고 홈(`/`)으로 고정했다
+  (D-55가 이미 등록해 둔 Supabase "Site URL"과 같은 값이라 대시보드를 새로 안 건드려도 될
+  가능성이 높지만, 실제 리다이렉트 허용 목록에 걸리지 않는지는 배포 후 확인 필요)
 - **결과 카드 폰트** — CDN 차단으로 결과 카드가 sans-serif 폴백으로만 그려졌다
 - **`navigator.share` 공유시트** — 헤드리스엔 API가 없어 클립보드 폴백 경로만 확인됨. 실기기 확인 필요
 - **`_redirects` 실동작** — 로컬은 `serve.py`로 흉내 낸 것. 배포본에서 `/test/disc/result/lion` 직접 접속이 200인지 확인

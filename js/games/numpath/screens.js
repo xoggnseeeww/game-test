@@ -25,7 +25,6 @@ export function renderNumpathIntro() {
       <div class="back-row">
         <button class="back-btn" data-nav="game-list">‹</button>
         <div class="back-title">미니게임</div>
-        <button class="exit-btn" data-nav="home" aria-label="홈으로 가기">🏠</button>
       </div>
       ${adSlotMarkup("bannerTop", "margin-top:10px; margin-bottom:4px;")}
       <div class="cover">
@@ -104,7 +103,6 @@ export function renderNumpathAd() {
     <div>
       <div class="back-row">
         <div class="back-title">결과 준비 중</div>
-        <button class="exit-btn" data-nav="home" aria-label="홈으로 가기">🏠</button>
       </div>
       ${adGateMarkup("런 완료! 결과 보러 가기 전에\n광고 하나만 보고 갈게요 🙏")}
     </div>
@@ -186,9 +184,6 @@ export function renderNumpathResult() {
 
   app.appendChild(el(`
     <div>
-      <div class="back-row">
-        <button class="exit-btn" data-nav="home" aria-label="홈으로 가기">🏠</button>
-      </div>
       <div class="result-card">
         <div class="eyebrow">${diff.emoji} ${diff.name} 난이도 런 결과</div>
         <div class="emoji">🧮</div>

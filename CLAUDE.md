@@ -16,19 +16,45 @@
 | 브라우저 회귀 | `mkdir -p /tmp/pw && cd /tmp/pw && npm i playwright` → `NODE_PATH=/tmp/pw/node_modules node scripts/verify.cjs` (서버 먼저). `VERIFY_BASE=http://localhost:8788`로 wrangler dev를 가리키면 짧은 코드 발급·조회까지 실제로 검증된다 — 안 하면 그 부분만 폴백 경로로 대체 확인된다 |
 | 배포 | `main` push → Cloudflare Pages 자동 배포 (Functions·KV 바인딩도 `wrangler.jsonc`에서 같이 배포됨) |
 
+## Claude Code 세션 (`.claude/`)
+`.claude/hooks/session-start.sh`는 원격(Claude Code on the web) 세션에서 컨테이너가 새로 뜰 때마다
+`/root/.claude`가 초기화되는 걸 메우는 재설치 훅이다. **여기 새 플러그인/마켓플레이스를 추가하기 전에
+`claude plugin details <name>`으로 always-on 토큰 비용을 반드시 확인할 것** — 세션마다, 그리고
+서브에이전트를 띄울 때마다 매번 다시 주입되는 항목은 여기 넣지 않는다(2026-08-01 제거된 `ponytail`이
+세션당 ~983 tok + 서브에이전트마다 재주입되던 사례). 필요한 도구는 텍스트를 매번 컨텍스트에 주입하지
+않는 순수 CLI(예: graphify)로만 추가한다.
+
+`.claude/settings.json`의 `env.MAX_THINKING_TOKENS`(1024)는 확장 사고(extended thinking)가
+켜지는 경우의 상한선이다(2026-08-01). `alwaysThinkingEnabled`는 **일부러 설정하지 않고
+기본값(자동 판단)으로 둔다** — 이 값이 없거나 `true`면 모델이 요청 난이도를 보고 사고 과정을
+쓸지 스스로 판단하고, `false`로 박아두면 쉬운 요청까지 사고를 완전히 못 쓰게 막아버려서 오히려
+어려운 문제에서 품질이 떨어진다(처음엔 `false`로 뒀다가 "필요한지 아닌지 파악해서 자동 적용"
+요청으로 되돌림). 정말 복잡한 문제는 프롬프트에 "ultrathink"를 넣으면 그 턴만 확실히 켤 수 있다.
+
+작업 중 사용자에게 보내는 텍스트도 출력 토큰이다 — 중간 과정(무엇을 확인했다, 무엇을 읽었다)을
+전부 나열하지 말고, 꼭 필요한 방향 전환·발견만 한 줄로 알리고 **끝에 결과 요약만** 남긴다
+(2026-08-01, 과다 서술 지적으로 추가).
+
 ## 식별자
 - 도메인 `https://fun.data-pantry.com` / 저장소 `xoggnseeeww/game-test`
 - 호스팅: Cloudflare Pages — 빌드 명령 없음, 출력 디렉터리 = 레포 루트
 - SPA 폴백: `_redirects` (`/*  /index.html  200`, 항상 마지막 줄) — 없으면 하위 경로 직접 접속이 404.
   그 위에 페이지별 OG 셸로 보내는 rewrite 규칙 3개가 더 있다(D-47) — `_redirects`는 첫 매치 우선이라
   더 구체적인 규칙이 항상 와일드카드보다 **위**에 있어야 한다. `test/og-shells.test.js`가 순서를 검사한다
-- 영속 데이터: 기본적으로 **없음** (예전엔 `localStorage["gt_reaction_best"]`로 반응속도 최고기록을
-  저장했으나 D-20에서 제거). **예외 하나**: 부부 체크의 짧은 매칭 코드(Cloudflare KV, `COUPLE_CODES`
-  바인딩, 7일 TTL 자동 만료) — 식별자 없는 익명 점수 덩어리만 저장되고, 만료 외에 수동 삭제 경로는
-  없다(D-45). 백엔드는 이 기능에만 있다 — Cloudflare Pages Functions(`functions/api/couple-code/`) +
-  KV, `wrangler.jsonc`로 바인딩. 이 예외가 생기면서 개인정보처리방침(`/privacy`, 홈 하단 링크)을
-  신설했다 — 실제로 저장·처리하는 것만 적는다. 아직 안 하는 걸 미리 적어두면 나중에 그 기능이
-  생겼을 때 방침이 먼저 거짓말이 된다.
+- 영속 데이터: 예전엔 기본적으로 없었다(`localStorage["gt_reaction_best"]`로 반응속도 최고기록을
+  저장했으나 D-20에서 제거). 지금은 예외가 둘이다.
+  **① 부부 체크의 짧은 매칭 코드**(Cloudflare KV, `COUPLE_CODES` 바인딩, 7일 TTL 자동 만료) — 식별자
+  없는 익명 점수 덩어리만 저장되고, 만료 외에 수동 삭제 경로는 없다(D-45). 백엔드는 이 기능에만
+  있다 — Cloudflare Pages Functions(`functions/api/couple-code/`) + KV, `wrangler.jsonc`로 바인딩.
+  이 예외가 생기면서 개인정보처리방침(`/privacy`, 홈 하단 링크)을 신설했다 — 실제로 저장·처리하는
+  것만 적는다. 아직 안 하는 걸 미리 적어두면 나중에 그 기능이 생겼을 때 방침이 먼저 거짓말이 된다.
+  **② 관리자 로그인 이메일**(`localStorage["gt_admin_email"]`, `js/core/auth.js`) — 출시 전
+  도구(부부 체크)를 관리자에게만 보여주는 게이트용(D-56). 이 레포 자체엔 백엔드가 없고,
+  `js/core/cloud-auth.js`가 data-pantry.com과 같은 Supabase Auth(Google·카카오 OAuth) 세션을
+  재사용할 뿐이다. 이메일이 관리자 계정과 같을 때만 로컬 캐시에 남고, 로그아웃하면 지워진다.
+  반응속도 최고기록(`gt_reaction_best`)은 D-20에서 제거됐고 **되살리지 말 것** — D-20의 금지는
+  "검사에서 빠름을 성취로 프레이밍"하는 것이지 게임 진행 저장이 아니다.
+  시크릿·환경변수 **없음**은 그대로 유지(Supabase anon key는 공개 키라 시크릿이 아니다 — D-56).
   (NumPath 마을·코인·클라우드 동기화는 D-54/D-55로 만들었다가 메리트 부족 판단으로 되돌렸다 —
   게임만 남기고 보상 체계는 나중에 더 큰 그림에서 다시 볼 것. 되돌린 접근이니 다시 제안하지 말 것)
 - 방문 분석: Cloudflare Web Analytics — `data-pantry.com` 존에 automatic setup으로 이미 등록돼 있고,
@@ -38,9 +64,12 @@
   → Manage site에서 경로별로 필터링해서 본다.
 
 ## 기술 스택
-빌드 없는 정적 SPA. 브라우저 네이티브 ES 모듈(`<script type="module">`), 런타임 의존성 0.
-외부 의존은 CDN 폰트 하나. 라우팅은 History API 직접 구현 + **레지스트리 방식 라우터**.
-상태는 메모리 내 단일 `state` 객체(새로고침하면 날아감).
+빌드 없는 정적 SPA. 브라우저 네이티브 ES 모듈(`<script type="module">`), 런타임 의존성 0(npm 설치
+기준 — 브라우저가 직접 불러오는 CDN 모듈은 있다). 외부 CDN 의존: 폰트 하나 + 우상단 관리자
+로그인용 Supabase JS(`js/core/cloud-auth.js`, D-56). **동적 import로만** 연결돼 있어 CDN이
+막혀도 로그인 관련 기능만 빠지고 나머지 앱은 정상 동작한다(`cloud-auth-loader.js` 참고). 라우팅은
+History API 직접 구현 + **레지스트리 방식 라우터**. 상태는 메모리 내 단일 `state` 객체(새로고침하면
+날아감) — 로그인 이메일만 예외로 `localStorage`에 남는다(위 항목 참고).
 
 ## 구조 개요
 ```
@@ -49,8 +78,10 @@ og-shells/             테스트·게임 진입 화면 3곳의 정적 OG 셸(og-
                       _redirects가 해당 경로만 이 파일로 rewrite한다 — index.html과 내용은
                       거의 같고 <title>·og:*만 페이지별이다(D-47)
 assets/                favicon(svg) · apple-touch-icon(png) · og-image*.png(1200×630, 홈+테스트/게임별)
-js/main.js            부팅: 화면·테스트·게임을 라우터에 등록
-js/core/              router(레지스트리·guard·teardown·게임 레지스트리) · state · dom · share · util · ads
+js/main.js            부팅: 화면·테스트·게임을 라우터에 등록 + initHeader()
+js/core/              router(레지스트리·guard·teardown·게임 레지스트리) · state · dom · share · util · ads ·
+                      cloud-auth(관리자 로그인용 Supabase Auth 클라이언트, D-56 — cloud-auth-loader로만
+                      동적 import) · auth(관리자 이메일 판별, cloud-auth 재사용) · header(우상단 햄버거 메뉴)
 js/screens/home.js    홈 · 심리테스트 목록(등록된 테스트에서 자동 생성) · 미니게임 목록(등록된 게임에서 자동 생성) · 개인정보처리방침
 js/tests/<id>/        테스트 1개 = 폴더 1개: data · score · screens · index(디스크립터)
                       현재 adhd(+반응속도 게임), disc(+딜레마 게임),
@@ -127,6 +158,12 @@ docs/design-draft.html  최초 디자인 목업. 배포·동작과 무관 (.clau
   `functions/api/couple-code/index.js`·`[code].js`·`wrangler.jsonc` 셋 다 같이 고친다.
   바인딩 이름(`COUPLE_CODES`)은 세 곳 모두 문자 그대로 일치해야 한다 — 하나만 바꾸면
   로컬(`wrangler pages dev`)에서만 조용히 깨진다(배포본은 대시보드 바인딩이 남아있어 더 늦게 발견됨)
+- 다른 테스트/게임도 출시 전 관리자 전용으로 두려면 → `js/tests/couple/index.js`의
+  `comingSoonGuard()` 패턴을 그대로 복사해 모든 화면 `guard`에 씌우고, `card.comingSoon = true`
+  추가(D-56). 관리자 이메일은 `js/core/auth.js`의 `ADMIN_EMAIL` 하나뿐이라 공용 유틸리티로
+  뽑지 않았다 — 두 번째로 필요해지면 그때 뽑는다
+- `js/core/cloud-auth.js`의 Supabase 프로젝트·anon key 변경 → 관리자 로그인(`js/core/auth.js`)이
+  이 클라이언트를 쓰므로 함께 영향받는다. `scripts/verify.cjs`로 재확인할 것
 - 구조 변경(모듈 추가·이동·삭제) → **같은 커밋에** `docs/architecture.md` 모듈맵과 위 구조 개요 트리 갱신
 - `styles.css` 클래스명 변경 → 템플릿 문자열은 타입 체크가 없다. `grep -rn '<클래스명>' js/ styles.css`로 양쪽 확인
 - 새 테스트/게임에 OG 미리보기 추가 → `og-shells/<이름>.html` 작성 + `_redirects`에 규칙 추가(**와일드카드 위**) + `assets/og-<이름>.png` + `test/og-shells.test.js`의 `SHELLS` 배열에 항목 추가. 카드(`card.name`/`card.desc`) 문구 변경 시 셸의 `<title>`·`og:title`·`og:description`도 같이 고친다 — 자동 반영 안 됨(D-47), `og-shells.test.js`가 불일치를 잡아준다

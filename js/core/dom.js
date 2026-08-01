@@ -1,5 +1,5 @@
 // DOM 생성·이벤트 바인딩·모달 같은 화면 공통 부품.
-import { go, onLeave } from "./router.js";
+import { go, onLeave, getExitGuard } from "./router.js";
 
 export function el(html) {
   const t = document.createElement("template");
@@ -13,29 +13,31 @@ export function bindNav(root) {
   });
 }
 
-// 진행 중인 테스트·게임 화면의 .exit-btn(있으면)을 홈으로 나가는 확인 모달에 연결한다.
-// 뒤로가기를 문항 수만큼 눌러야 홈에 갈 수 있던 것의 대안 — 한 번에 나간다.
-// onExit은 화면별로 어떤 state를 비울지 다르므로 호출부가 넘긴다.
-export function bindExit(root, onExit) {
-  const btn = root.querySelector(".exit-btn");
-  if (!btn) return;
-  btn.addEventListener("click", () => {
-    showModal({
-      title: "테스트를 그만둘까요?",
-      body: "지금까지 답한 내용은 저장되지 않고 사라져요.",
-      confirmLabel: "홈으로 나가기",
-      cancelLabel: "계속 진행",
-      onConfirm: () => {
-        onExit();
-        go("home");
-      },
-    });
+// 전역 햄버거 메뉴(core/header.js)의 "홈으로 가기"가 부른다. 진행 중인 테스트·게임 화면이
+// router.js의 setExitGuard()로 등록해둔 게 있으면 "그만둘까요?" 확인 모달을 먼저 거친다 —
+// onExit은 화면별로 어떤 state를 비울지 다르므로 호출부가 setExitGuard에 넘겨둔 것이다.
+// 등록된 게 없으면(인트로·결과처럼 잃을 진행 상황이 없는 화면) 곧장 이동한다.
+export function goHome() {
+  const onExit = getExitGuard();
+  if (!onExit) {
+    go("home");
+    return;
+  }
+  showModal({
+    title: "테스트를 그만둘까요?",
+    body: "지금까지 답한 내용은 저장되지 않고 사라져요.",
+    confirmLabel: "홈으로 나가기",
+    cancelLabel: "계속 진행",
+    onConfirm: () => {
+      onExit();
+      go("home");
+    },
   });
 }
 
 // core/ads.js의 adGateMarkup()이 그린 광고 게이트 화면을 동작시킨다. 3초 카운트다운 뒤
 // "결과 보러 가기" 버튼을 활성화한다 — 강제로 가두는 게 목적이 아니라 광고를 잠깐이라도
-// 보게 하는 정도라, 카운트다운 중에도 .exit-btn(홈)은 별개로 항상 즉시 동작해야 한다.
+// 보게 하는 정도라, 카운트다운 중에도 햄버거 메뉴의 "홈으로 가기"는 별개로 항상 즉시 동작해야 한다.
 export function bindAdGate(root, onContinue) {
   const btn = root.querySelector("#ad-gate-continue");
   const countEl = root.querySelector("#ad-gate-count");
@@ -54,7 +56,7 @@ export function bindAdGate(root, onContinue) {
   btn.addEventListener("click", onContinue);
 }
 
-export function showModal({ title, body, confirmLabel = "확인", cancelLabel = "취소", onConfirm }) {
+export function showModal({ title, body, confirmLabel = "확인", cancelLabel = "취소", onConfirm = () => {} }) {
   const overlay = el(`
     <div class="modal-overlay">
       <div class="modal-box">
@@ -62,7 +64,7 @@ export function showModal({ title, body, confirmLabel = "확인", cancelLabel = 
         <p class="modal-body">${body}</p>
         <div class="modal-actions">
           <button class="modal-btn-primary" id="modal-confirm">${confirmLabel}</button>
-          <button class="modal-btn-secondary" id="modal-cancel">${cancelLabel}</button>
+          ${cancelLabel ? `<button class="modal-btn-secondary" id="modal-cancel">${cancelLabel}</button>` : ""}
         </div>
       </div>
     </div>
@@ -72,7 +74,8 @@ export function showModal({ title, body, confirmLabel = "확인", cancelLabel = 
   overlay.addEventListener("click", (e) => {
     if (e.target === overlay) close();
   });
-  overlay.querySelector("#modal-cancel").addEventListener("click", close);
+  const cancelBtn = overlay.querySelector("#modal-cancel");
+  if (cancelBtn) cancelBtn.addEventListener("click", close);
   overlay.querySelector("#modal-confirm").addEventListener("click", () => {
     close();
     onConfirm();

@@ -89,7 +89,22 @@ export function onLeave(fn) {
   teardowns.push(fn);
 }
 
+// 진행 중인 화면(문항·게임 풀이 등)이 "지금 나가면 답이 사라진다"는 걸 알릴 때 등록한다.
+// 전역 햄버거 메뉴의 "홈으로 가기"(core/dom.js의 goHome())가 이걸 보고 확인 모달을 거칠지
+// 정한다. onLeave()와 같은 생명주기로 매 화면 전환마다 자동으로 비워진다 — 화면이 직접
+// null로 되돌릴 필요가 없다.
+let exitGuard = null;
+
+export function setExitGuard(onExit) {
+  exitGuard = onExit;
+}
+
+export function getExitGuard() {
+  return exitGuard;
+}
+
 function runTeardowns() {
+  exitGuard = null;
   const fns = teardowns;
   teardowns = [];
   for (const fn of fns) {

@@ -64,3 +64,6 @@
 - AN3·burdenOverlap 문구 순화 + 개인 성향 설명(ATTACH_TYPES·CONFLICT_STYLES) 확장 → [D-53](decisions/2027-h1.md#d-53-an3burdenoverlap-문구-순화--개인-성향-설명attach_typesconflict_styles-확장)
 - NumPath 난이도 3종·스테이지별 시드·마을 보상(localStorage 재도입, D-20과의 경계 포함) → [D-54](decisions/2027-h1.md#d-54-numpath-난이도-3종스테이지별-시드마을-보상localstorage-재도입)
 - NumPath 마을을 data-pantry.com 계정(Supabase)에 선택적으로 동기화 → [D-55](decisions/2027-h1.md#d-55-numpath-마을을-data-pantrycom-계정에-선택적으로-동기화)
+- 우상단 햄버거 메뉴 + 관리자 로그인 — 출시 전 도구를 관리자만 보게 게이트(부부 체크 첫 적용), NumPath의 기존 Supabase Auth를 재사용 → [D-56](decisions/2027-h1.md#d-56-우상단-햄버거-메뉴--관리자-로그인--출시-전-도구를-관리자만-보게-게이트)
+- 화면마다 있던 홈 버튼(.exit-btn)을 전역 햄버거 메뉴로 흡수 + 메뉴 위치 조정 → [D-57](decisions/2027-h1.md#d-57-화면마다-있던-홈-버튼exit-btn을-전역-햄버거-메뉴로-흡수--메뉴-위치-조정)
+- 관리자 로그인 버튼 무반응 버그 수정 — 재렌더 경쟁 상태 + 조용히 삼켜진 에러 → [D-58](decisions/2027-h1.md#d-58-관리자-로그인-버튼-무반응-버그-수정--재렌더-경쟁-상태--조용히-삼켜진-에러)

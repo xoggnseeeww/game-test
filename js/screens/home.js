@@ -2,6 +2,7 @@
 import { app, listTests, listGames } from "../core/router.js";
 import { el, bindNav } from "../core/dom.js";
 import { adSlotMarkup } from "../core/ads.js";
+import { isAdmin } from "../core/auth.js";
 
 // 하단 배너(bannerBottom)는 폰 화면에서 뷰포트 맨 아래에 고정된다(.home-ad-dock,
 // styles.css) — 모바일 앱의 "하단 고정 배너"처럼 스크롤과 무관하게 항상 보이는
@@ -58,7 +59,7 @@ export function renderPsychList() {
           <button class="test-card" data-nav="${t.card.screen}">
             <div class="icon" style="background:${t.card.color};">${t.card.emoji}</div>
             <div class="body">
-              <div class="name">${t.card.name}</div>
+              <div class="name">${t.card.name}${t.card.comingSoon && !isAdmin() ? ` <span class="coming-soon-badge">출시 예정</span>` : ""}</div>
               <div class="desc">${t.card.desc}</div>
             </div>
             <div class="chevron">›</div>
@@ -124,9 +125,15 @@ export function renderPrivacy() {
       <div class="legal-block">
         <p class="legal-updated">시행일자: 2026년 7월 30일</p>
 
-        <h3>회원가입이 없습니다</h3>
-        <p>과몰입구역은 로그인·회원가입이 없는 서비스입니다. 이름, 이메일, 전화번호 등
+        <h3>일반 이용자는 회원가입이 없습니다</h3>
+        <p>과몰입구역의 테스트·게임 이용에는 로그인·회원가입이 필요 없습니다. 이름, 전화번호 등
         개인을 식별하는 정보를 별도로 수집하지 않습니다.</p>
+
+        <h3>우측 상단 Google 로그인 (운영자 확인용)</h3>
+        <p>우측 상단 메뉴의 Google 로그인은 출시 전 도구를 운영자가 미리 확인하기 위한
+        기능입니다. 로그인하면 Google이 전달하는 이메일 주소가 이용 중인 기기의 브라우저
+        저장소(로컬 스토리지)에만 남고, 로그아웃하면 즉시 지워집니다. 이 이메일은 과몰입구역의
+        서버로 전송되거나 별도로 저장되지 않습니다.</p>
 
         <h3>부부 관계 성향 체크의 짧은 매칭 코드 (유일한 예외)</h3>
         <p>부부 관계 성향 체크에서 검사를 마치면, 응답에서 계산된 점수 요약값이 이름 등
@@ -138,7 +145,7 @@ export function renderPrivacy() {
 
         <h3>그 외 저장하는 것</h3>
         <p>없습니다. 진행 중인 답변은 브라우저 메모리에만 있어서, 새로고침하면 함께
-        사라집니다. 기기에 남는 저장값(로컬 스토리지)도 쓰지 않습니다.</p>
+        사라집니다. 기기에 남는 저장값(로컬 스토리지)은 위 Google 로그인 이메일 하나뿐입니다.</p>
 
         <h3>광고</h3>
         <p>이 사이트는 카카오(다음) AdFit을 통해 광고를 게재합니다. 광고가 표시되는
