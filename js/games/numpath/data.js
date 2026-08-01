@@ -56,3 +56,11 @@ export function starsFor({ movesUsed, moveLimit, minMoves }) {
   if (movesUsed <= twoStarThreshold) return 2;
   return 1;
 }
+
+// 런 타이머 표시용. m:ss(초는 항상 2자리) — 퍼즐 게임 런 하나가 시간 단위로 갈 일은 없다.
+export function formatTime(ms) {
+  const totalSeconds = Math.floor(ms / 1000);
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}

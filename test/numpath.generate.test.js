@@ -4,7 +4,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { generatePuzzle, mulberry32, stageSeed } from "../js/games/numpath/generate.js";
 import { solve } from "../js/games/numpath/solve.js";
-import { LEVELS, DIFFICULTIES, DEFAULT_DIFFICULTY, starsFor, levelFor, difficultyById, stageCountFor } from "../js/games/numpath/data.js";
+import { LEVELS, DIFFICULTIES, DEFAULT_DIFFICULTY, starsFor, levelFor, difficultyById, stageCountFor, formatTime } from "../js/games/numpath/data.js";
 
 test("mulberry32는 같은 시드에서 같은 수열을 낸다", () => {
   const a = mulberry32(12345);
@@ -151,3 +151,10 @@ for (let levelIndex = 0; levelIndex < LEVELS.length; levelIndex++) {
     assert.deepEqual([...achieved].sort(), [1, 2, 3], `나온 등급: ${[...achieved].sort().join(",")}`);
   });
 }
+
+test("formatTime: m:ss로 표시하고 초는 항상 2자리", () => {
+  assert.equal(formatTime(0), "0:00");
+  assert.equal(formatTime(5000), "0:05");
+  assert.equal(formatTime(65000), "1:05");
+  assert.equal(formatTime(600000), "10:00");
+});

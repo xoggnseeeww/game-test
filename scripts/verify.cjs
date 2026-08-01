@@ -609,6 +609,14 @@ async function playNumpathRun(page) {
     `HUD=${npStageTotal}, 카드=${easyStageCount}`
   );
   check("HUD에 선택한 난이도 표시", (await page.textContent("#np-diff")).trim().length > 0);
+  check("NumPath HUD 타이머가 m:ss 형식으로 표시됨", /^\d+:\d{2}$/.test((await page.textContent("#np-timer")).trim()), await page.textContent("#np-timer"));
+  {
+    // 타이머가 실제로 흐르는지 — 1.5초 대기 후 표시값이 바뀌었는지 확인(1초 tick).
+    const before = await page.textContent("#np-timer");
+    await page.waitForTimeout(1500);
+    const after = await page.textContent("#np-timer");
+    check("NumPath 타이머가 실제로 흐른다", before !== after, `${before} → ${after}`);
+  }
 
   // Undo/Reset: 한 칸 이동 → Undo로 되돌리고 → 다시 이동 → Reset으로 처음 상태까지 되돌린다.
   {
@@ -717,6 +725,32 @@ async function playNumpathRun(page) {
     "NumPath 결과에 별 기록 표시",
     (await page.textContent(".result-card")).includes("⭐"),
     (await page.textContent(".result-card")).replace(/\s+/g, " ").trim().slice(0, 80)
+  );
+  check(
+    "NumPath 결과에 소요 시간(m:ss) 표시",
+    /\d+:\d{2}/.test(await page.textContent(".result-subtitle")),
+    await page.textContent(".result-subtitle")
+  );
+  check(
+    "이 난이도 첫 완주라 개인 신기록 배지가 뜬다",
+    await page.isVisible(".np-best-badge"),
+    (await page.textContent(".result-card")).replace(/\s+/g, " ").trim().slice(0, 120)
+  );
+
+  // 같은 난이도로 한 번 더 완주하면(방금 세운 기록이 있으니) 신기록이 아니라 "최고 기록" 비교로 바뀐다.
+  await page.click("#retry-btn");
+  await page.click("#start-btn");
+  await page.click(".modal-btn-primary").catch(() => {});
+  await page.waitForSelector(".np-board .np-tile", { timeout: 5000 });
+  await playNumpathRun(page);
+  await page.waitForSelector("#ad-gate-continue", { timeout: 5000 });
+  await page.waitForFunction(() => !document.querySelector("#ad-gate-continue").disabled, { timeout: 6000 });
+  await page.click("#ad-gate-continue");
+  await page.waitForSelector(".result-card", { timeout: 5000 });
+  check(
+    "두 번째 완주부터는 신기록 배지 대신 최고 기록 비교가 뜬다(둘 다는 아님)",
+    (await page.isVisible(".np-best-hint")) !== (await page.isVisible(".np-best-badge")),
+    `hint=${await page.isVisible(".np-best-hint")} badge=${await page.isVisible(".np-best-badge")}`
   );
 
   // 다시 시작 → 인트로로 (자동으로 새 런을 시작하지 않는다 — ADHD "테스트 다시하기"와 같은 패턴)

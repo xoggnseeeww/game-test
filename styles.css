@@ -757,6 +757,22 @@ button.meta-chip {
   margin-bottom: 12px;
 }
 
+/* NumPath 결과 카드의 개인 기록 표시 — .result-card가 어두운 그라디언트라 .disclaimer(어두운
+   텍스트)를 못 쓴다. 신기록은 눈에 띄게, 그냥 기록 비교는 은은하게. */
+.np-best-badge {
+  font-size: 13px;
+  font-weight: 800;
+  color: #FFE9A8;
+  margin: 0 0 4px;
+}
+
+.np-best-hint {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--on-cover-body);
+  margin: 0 0 4px;
+}
+
 .result-tags {
   display: flex;
   flex-wrap: wrap;

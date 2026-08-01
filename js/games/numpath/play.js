@@ -7,7 +7,7 @@ import { adSlotMarkup } from "../../core/ads.js";
 import { state } from "../../core/state.js";
 import { generatePuzzle } from "./generate.js";
 import { initState, applyMove, undo, canEnter, availableMoves, isCleared, isStuck, isOutOfMoves, posKey } from "./engine.js";
-import { stageCountFor, difficultyById, starsFor } from "./data.js";
+import { stageCountFor, difficultyById, starsFor, formatTime } from "./data.js";
 import { playMoveTone, playClearChord, playBlockedTone } from "./audio.js";
 
 const OP_LABEL = { "+": "+", "-": "−", "*": "×", "/": "÷" };
@@ -49,6 +49,7 @@ export function renderNumpathPlay() {
           <div class="np-hud-item"><span class="np-hud-label">난이도</span><span class="np-hud-value" id="np-diff"></span></div>
           <div class="np-hud-item"><span class="np-hud-label">스테이지</span><span class="np-hud-value" id="np-stage"></span></div>
           <div class="np-hud-item"><span class="np-hud-label">이동 횟수</span><span class="np-hud-value" id="np-moves"></span></div>
+          <div class="np-hud-item"><span class="np-hud-label">시간</span><span class="np-hud-value" id="np-timer"></span></div>
         </div>
       </div>
       <div class="np-board" id="np-board"></div>
@@ -71,6 +72,7 @@ export function renderNumpathPlay() {
   const targetEl = app.querySelector("#np-target");
   const currentEl = app.querySelector("#np-current");
   const movesEl = app.querySelector("#np-moves");
+  const timerEl = app.querySelector("#np-timer");
   const boardEl = app.querySelector("#np-board");
   const msgEl = app.querySelector("#np-msg");
   const undoBtn = app.querySelector("#np-undo");
@@ -85,6 +87,16 @@ export function renderNumpathPlay() {
     aborted = true;
     clearTimeout(advanceTimer);
   });
+
+  // 런 전체 타이머 — 스테이지 사이 지연에도 쭉 흐른다(결과 화면의 개인 기록·최고 기록 비교용).
+  // Date.now() - startedAt으로 매번 다시 계산해서 tick 누적 오차가 없다.
+  const timerInterval = setInterval(updateTimer, 1000);
+  onLeave(() => clearInterval(timerInterval));
+
+  function updateTimer() {
+    const run = state.numpath.run;
+    timerEl.textContent = formatTime((run.finishedAt || Date.now()) - run.startedAt);
+  }
 
   let puzzle = null;
   let minMoves = null;
@@ -189,6 +201,10 @@ export function renderNumpathPlay() {
       resetBtn.disabled = true;
 
       const isLastStage = run.stageIndex + 1 >= stageCountFor(run.difficulty);
+      if (isLastStage) {
+        run.finishedAt = Date.now();
+        updateTimer();
+      }
       advanceTimer = setTimeout(() => {
         if (aborted) return;
         if (isLastStage) {
@@ -224,5 +240,6 @@ export function renderNumpathPlay() {
   });
 
   renderMuteButton();
+  updateTimer();
   loadStage();
 }

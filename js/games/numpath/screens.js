@@ -6,7 +6,7 @@ import { adSlotMarkup, adGateMarkup } from "../../core/ads.js";
 import { shareBlockMarkup, wireShare } from "../../core/share.js";
 import { roundRect } from "../../core/util.js";
 import { state } from "../../core/state.js";
-import { DIFFICULTIES, difficultyById, stageCountFor, MAX_STARS } from "./data.js";
+import { DIFFICULTIES, difficultyById, stageCountFor, MAX_STARS, formatTime } from "./data.js";
 
 function startRun() {
   state.numpath.run = {
@@ -14,8 +14,33 @@ function startRun() {
     difficulty: state.numpath.difficulty,
     stageIndex: 0,
     stars: [],
+    startedAt: Date.now(),
+    finishedAt: null,
   };
   go("numpath-play");
+}
+
+// 개인 최고 기록(난이도별, 로컬 전용) — 여러 사용자를 비교하는 랭킹은 백엔드가 필요해서
+// 하지 않기로 했다(D-54/D-55 되돌림과 같은 이유). localStorage 접근은 여기 두 함수에만 가둔다.
+function bestTimeKey(difficultyId) {
+  return `gt_numpath_best_${difficultyId}`;
+}
+
+function loadBestTime(difficultyId) {
+  try {
+    const raw = localStorage.getItem(bestTimeKey(difficultyId));
+    return raw ? Number(raw) : null;
+  } catch {
+    return null; // 프라이버시 모드 등 — 의도된 방어, 기록 없이도 게임은 계속된다
+  }
+}
+
+function saveBestTime(difficultyId, ms) {
+  try {
+    localStorage.setItem(bestTimeKey(difficultyId), String(ms));
+  } catch {
+    // 위와 같은 이유의 의도된 방어
+  }
 }
 
 export function renderNumpathIntro() {
@@ -39,17 +64,18 @@ export function renderNumpathIntro() {
       </div>
       <div class="section-title" style="padding:16px 20px 8px;">🎚️ 난이도 선택</div>
       <div class="np-diff-list">
-        ${DIFFICULTIES.map(
-          (d) => `
+        ${DIFFICULTIES.map((d) => {
+          const best = loadBestTime(d.id);
+          return `
           <button class="np-diff${d.id === selected.id ? " np-diff--selected" : ""}" data-diff="${d.id}">
             <span class="np-diff-emoji">${d.emoji}</span>
             <span class="np-diff-main">
               <span class="np-diff-name">${d.name}</span>
               <span class="np-diff-desc">${d.desc}</span>
             </span>
-            <span class="np-diff-stat">${d.stages.length}스테이지</span>
-          </button>`
-        ).join("")}
+            <span class="np-diff-stat">${d.stages.length}스테이지${best !== null ? `<br/>🏆 ${formatTime(best)}` : ""}</span>
+          </button>`;
+        }).join("")}
       </div>
       <div class="section-title" style="padding:16px 20px 8px;">🗺️ 칸 종류</div>
       <div class="np-legend">
@@ -182,13 +208,19 @@ export function renderNumpathResult() {
   const totalStars = run.stars.reduce((a, b) => a + b, 0);
   const maxStars = stageCountFor(run.difficulty) * MAX_STARS;
 
+  const elapsedMs = run.finishedAt - run.startedAt;
+  const prevBest = loadBestTime(run.difficulty);
+  const isNewBest = prevBest === null || elapsedMs < prevBest;
+  if (isNewBest) saveBestTime(run.difficulty, elapsedMs);
+
   app.appendChild(el(`
     <div>
       <div class="result-card">
         <div class="eyebrow">${diff.emoji} ${diff.name} 난이도 런 결과</div>
         <div class="emoji">🧮</div>
         <h2>NumPath 클리어!</h2>
-        <div class="result-subtitle">${totalStars} / ${maxStars} ⭐</div>
+        <div class="result-subtitle">${totalStars} / ${maxStars} ⭐ · ⏱️ ${formatTime(elapsedMs)}</div>
+        <p class="${isNewBest ? "np-best-badge" : "np-best-hint"}">${isNewBest ? "🎉 이 난이도 개인 신기록!" : `이 난이도 최고 기록 ⏱️ ${formatTime(prevBest)}`}</p>
         <div class="np-stage-stars">
           ${run.stars
             .map(
