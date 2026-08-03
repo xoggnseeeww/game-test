@@ -78,11 +78,12 @@ og-shells/             테스트·게임 진입 화면 3곳의 정적 OG 셸(og-
                       _redirects가 해당 경로만 이 파일로 rewrite한다 — index.html과 내용은
                       거의 같고 <title>·og:*만 페이지별이다(D-47)
 assets/                favicon(svg) · apple-touch-icon(png) · og-image*.png(1200×630, 홈+테스트/게임별)
-js/main.js            부팅: 화면·테스트·게임을 라우터에 등록 + initHeader()
+js/main.js            부팅: 화면·테스트·게임·학습 콘텐츠를 라우터에 등록 + initHeader()
 js/core/              router(레지스트리·guard·teardown·게임 레지스트리) · state · dom · share · util · ads ·
                       cloud-auth(관리자 로그인용 Supabase Auth 클라이언트, D-56 — cloud-auth-loader로만
                       동적 import) · auth(관리자 이메일 판별, cloud-auth 재사용) · header(우상단 햄버거 메뉴)
-js/screens/home.js    홈 · 심리테스트 목록(등록된 테스트에서 자동 생성) · 미니게임 목록(등록된 게임에서 자동 생성) · 개인정보처리방침
+js/screens/home.js    홈 · 심리테스트 목록(등록된 테스트에서 자동 생성) · 미니게임 목록(등록된 게임에서 자동 생성) ·
+                      학습 목록(등록된 학습 콘텐츠에서 자동 생성) · 개인정보처리방침
 js/tests/<id>/        테스트 1개 = 폴더 1개: data · score · screens · index(디스크립터)
                       현재 adhd(+반응속도 게임), disc(+딜레마 게임),
                       couple(+assemble · match — 문항지 조립과 부부 매칭이 따로 검증돼야 해서 분리).
@@ -91,6 +92,9 @@ js/tests/<id>/        테스트 1개 = 폴더 1개: data · score · screens · 
                       의존 방향은 screens-match.js → screens.js 한쪽뿐(반대는 없음).
                       두 화면 파일이 같이 쓰는 카드 캔버스는 card.js로 뺐다
 js/games/<id>/        테스트에 속하지 않는 독립 미니게임 1개 = 폴더 1개. 현재 numpath
+js/learning/<id>/     테스트에 속하지 않는 학습 콘텐츠 1개 = 폴더 1개(게임과 같은 레지스트리
+                      방식, D-60). 현재 greeting(어린이 모드 파일럿, 인사/기분 표현) 하나뿐 —
+                      브라우저 내장 TTS/STT만 쓰고 서버 API·로그인·영속 저장 없음
 functions/api/couple-code/  부부 체크 짧은 코드 발급(index.js)·조회([code].js). 유일한 백엔드 —
                       Cloudflare Pages Function + KV(COUPLE_CODES). js/tests/couple/shortcode.js를
                       그대로 가져다 쓴다(발급·조회·브라우저 검증이 같은 알파벳을 봐야 한다)
@@ -113,6 +117,7 @@ docs/design-draft.html  최초 디자인 목업. 배포·동작과 무관 (.clau
 | `docs/disc-architecture.md` | DISC 흐름 · 채점 파이프라인 |
 | `docs/couple-architecture.md` | 부부 관계 성향 체크 흐름 · 문항지 조립 · 채점 · 부부 매칭 · 배우자 코드 · 안전 장치 |
 | `docs/numpath-architecture.md` | NumPath 흐름 · 게임 로직(타일 모델 · 생성기 · 솔버 · 별 판정) 개요 |
+| `docs/learning-architecture.md` | 학습 카테고리 범위(D-60) · 지금 자른 것(로그인·SRS·결제·어댑터 패턴·어르신 모드)을 나중에 어떻게 붙일지 |
 | `docs/ERRORS.md` | 오류 패턴 (같은 증상이 재발할 때) |
 | `docs/DECISIONS.md` | 설계 결정 · 기각안 · 되돌림 |
 
@@ -142,6 +147,7 @@ docs/design-draft.html  최초 디자인 목업. 배포·동작과 무관 (.clau
 
 - 새 테스트 추가 → `js/main.js`에 `registerTest` + `registerScreens` **둘 다**. 하나만 하면 목록 카드나 공유 URL 한쪽이 조용히 빠진다
 - 새 독립 미니게임 추가(테스트에 속하지 않는 경우) → `js/main.js`에 `registerGame` + `registerScreens` **둘 다**, `test/modules.test.js`의 화면 목록에도 새 `<id>Screens` 추가. 반응속도·딜레마처럼 테스트 하위 단계인 게임은 여기 해당 안 됨(D-4)
+- 새 학습 콘텐츠 추가(`js/learning/<id>/`) → `js/main.js`에 `registerLearning` + `registerScreens` **둘 다**, `test/modules.test.js`의 화면 목록에도 새 `<id>Screens` 추가. 미니게임 레지스트리와 완전히 같은 절차다(D-60)
 - 결과 유형 추가/삭제 → 같은 `data.js`의 슬러그 맵도 갱신 (없으면 공유 URL이 조용히 홈으로 폴백) — DISC는 `slug` 필드가 단일 소스라 자동
 - 문항 수 변경 → 해당 `score.js`의 만점 분모가 문항 수에서 파생되는지 확인 (ADHD `toPct` 분모 `16` = 축당 4문항 × 4점)
 - `AXIS_HIGH_THRESHOLD` 변경 → `axisIntensityText()`의 구간 경계(`60`)도 같이 조정

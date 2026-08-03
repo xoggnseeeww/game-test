@@ -53,6 +53,18 @@ body.theme-couple {
   --on-cover-body: #FFE5EC;
 }
 
+/* 학습(외국어 연습) 카테고리. 기존 보라·초록·코랄·로즈와 구분되는 노랑-오렌지 계열. */
+body.theme-learning {
+  --accent: #FF9F45;
+  --accent-shadow: rgba(255,159,69,.32);
+  --accent-soft: #FFF3E4;
+  --accent-ink: #B85E10;
+  --accent-dim: #FFCA92;
+  --cover-grad: linear-gradient(160deg,#C97A2E,#8F4E15);
+  --on-cover: #FFE3C2;
+  --on-cover-body: #FFEBD4;
+}
+
 * { box-sizing: border-box; }
 
 body {
@@ -2051,3 +2063,45 @@ button.meta-chip {
 }
 
 .cp-chip-contrast { background: var(--accent-soft); color: var(--accent-ink); }
+
+/* 학습 카테고리: 듣기 버튼 두 개(기본/천천히)를 나란히 놓는 행. .cta-btn은 width:100%라
+   flex 안에서는 flex:1로 눌러줘야 나란히 앉는다. */
+.learning-listen {
+  display: flex;
+  gap: 10px;
+  padding: 0 20px;
+  margin-top: 14px;
+}
+.learning-listen .cta-btn { flex: 1; width: auto; }
+
+.btn-mic {
+  display: block;
+  margin: 18px auto 0;
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-size: 30px;
+  box-shadow: 0 8px 20px var(--accent-shadow);
+}
+.btn-mic[disabled] { opacity: .55; }
+
+.learning-mic-status {
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent-ink);
+  margin-top: 8px;
+  min-height: 18px;
+}
+
+.learning-result { padding: 0 20px; margin-top: 10px; }
+.learning-heard { text-align: center; font-size: 13px; color: #6B6875; margin: 0 0 4px; }
+.learning-feedback { text-align: center; font-size: 18px; font-weight: 800; margin: 0 0 14px; }
+.learning-feedback.tier-perfect { color: #1FAE6A; }
+.learning-feedback.tier-good { color: var(--accent-ink); }
+.learning-feedback.tier-retry { color: #8A8794; }
+
+.learning-warn { text-align: center; font-size: 13px; color: #8A8794; padding: 0 20px; }

@@ -46,6 +46,19 @@ export function listGames() {
   return [...games.values()];
 }
 
+// 학습(외국어 연습) 콘텐츠 하나의 메타데이터: { id, card }. 게임과 같은 모양이다 —
+// 테스트 점수에 반영되는 하위 단계가 아니라 그 자체로 콘텐츠라는 점이 게임과 같아서
+// registerGame을 그대로 복사했다. 다르게 다룰 이유가 생기면 그때 갈라진다.
+const learningUnits = new Map();
+
+export function registerLearning(descriptor) {
+  learningUnits.set(descriptor.id, descriptor);
+}
+
+export function listLearning() {
+  return [...learningUnits.values()];
+}
+
 // 예전 SCREEN_TO_PATH는 ROUTES를 그냥 뒤집는 방식이라, 두 주소가 같은 화면을 가리키면
 // 뒤에 온 쪽이 조용히 이겼다. 테스트가 둘이 되면 실수하기 딱 좋은 지점이라 소리 나게 바꿨다.
 function paths() {
@@ -137,7 +150,7 @@ function resolveScreen(screen) {
   return "home";
 }
 
-const THEME_CLASSES = ["theme-adhd", "theme-game", "theme-disc", "theme-couple"];
+const THEME_CLASSES = ["theme-adhd", "theme-game", "theme-disc", "theme-couple", "theme-learning"];
 
 export function setScreen(screen, { push = false, replace = false } = {}) {
   runTeardowns();
