@@ -7,7 +7,7 @@
 ## 흐름
 
 `numpath-intro`에서 난이도(쉬움/보통/어려움)를 고르고 "런 시작하기"를 누르면
-`state.numpath.run`(시드·난이도·스테이지·별점·이번 런 코인)을 만들고 `numpath-play`로
+`state.numpath.run`(시드·난이도·스테이지·별점·시작/종료 시각)을 만들고 `numpath-play`로
 이동한다. `numpath-play`는 스테이지가 바뀔 때마다 `go()`로 화면을 다시 그리지 않고 HUD·보드만
 갈아끼운다(ADHD `test-question`/반응속도 게임과 같은 in-place 렌더 패턴 — 안 그러면 광고 슬롯이
 스테이지마다 새로 만들어져 `refreshAds()`가 반복 실행된다). 마지막 스테이지를 클리어하면
@@ -23,7 +23,7 @@
 않았다. 공유 URL은 심리테스트와 달리 슬러그 없는 게임 주소 `${origin}/game/numpath` 그대로다
 (`docs/architecture.md` §7 참고, `docs/decisions/2027-h1.md` D-29).
 
-## 난이도 (D-51)
+## 난이도 (D-54)
 
 `data.js`의 `DIFFICULTIES` — 난이도 하나는 `LEVELS` 인덱스 배열(`stages`)로 자기 커브와
 스테이지 수를 함께 정의한다(쉬움 5 · 보통 7 · 어려움 9). 레벨 파라미터 튜닝은 `LEVELS` 표
@@ -31,51 +31,42 @@
 레벨을 이어 쓰는 안전망(`levelFor`)이 있다. 인트로에서 고른 난이도는 `state.numpath.difficulty`
 (세션 한정)에 남아 다음 런의 기본값이 된다.
 
-## 보상 — 넘버 마을 (D-51)
+## 런 타이머 + 개인 최고 기록 (D-59)
 
-스테이지를 클리어하면 그 자리에서 코인(받은 별 × 난이도의 `coinsPerStar`)을 지급하고
-`localStorage["gt_numpath_village"]` 지갑에 적립한다 — 런을 끝까지 못 가도 클리어한 만큼은 남는다.
-코인으로 `numpath-village` 화면(`/game/numpath/village`, 런과 무관하니 guard 없음)에서 건물을
-하나씩 지어 마을을 완성해 나간다. 판정·계산(`coinsFor`/`buildItem`/`canBuild` 등)은
-`village.js`의 순수 함수고, localStorage 접근은 `loadVillage`/`saveVillage` 두 곳에만 격리돼
-있다(프라이버시 모드에서 throw해도 빈 마을로 폴백). 이 저장이 D-20(반응속도 최고기록 제거)과
-어떻게 다른지는 D-51 참고 — **반응속도 기록을 되살리는 근거로 쓰지 말 것**.
+플레이 HUD에 실시간 타이머(m:ss, `formatTime()`)가 흐르고, 결과 화면에 이번 런 소요 시간과
+난이도별 개인 최고 기록(신기록 배지 또는 기존 기록과 비교)을 보여준다. `run.startedAt`은
+런 시작 시각, `run.finishedAt`은 마지막 스테이지를 클리어한 시각(광고 게이트를 거치는 동안
+표시 시간이 안 흔들리도록 그 순간 고정) — 둘 다 `Date.now()`. 타이머 표시는 매 tick마다
+`Date.now() - startedAt`을 다시 계산해서 드리프트가 없다.
 
-## 클라우드 동기화 (D-52)
+최고 기록은 `localStorage["gt_numpath_best_<난이도>"]`에 저장한다(`screens.js`의
+`loadBestTime`/`saveBestTime` 두 곳에만 접근 격리). **로그인·멀티유저 랭킹이 아니라 이 기기
+로컬 기록이다** — 여러 사용자를 비교하려면 아래 "되돌린 보상 체계"에서 지운 Supabase 백엔드를
+다시 켜야 해서, 요청("사용자 랭킹")의 범위를 사용자 확인 하에 로컬 기록으로 좁혔다.
 
-마을 화면에 "☁️ 다른 기기와 이어하기" 패널이 있다. data-pantry.com과 같은 Supabase
-프로젝트(`duvpvwolgqurhgnhqezj`)의 `numpath_village` 테이블(RLS로 본인 행만 접근)에 로그인 시
-선택적으로 백업·동기화한다 — 완전히 새 계정 체계를 만들지 않고 기존 것을 재사용했다.
+## 되돌린 보상 체계 — 넘버 마을·클라우드 동기화 (D-54/D-55, 되돌림)
 
-**절대 static import하지 않는다**: `cloud.js`는 최상단에서 Supabase JS를 CDN(esm.sh)에서
-가져오는데, ES 모듈은 import 하나가 실패하면 그 모듈을 static import한 쪽까지 그래프 전체가
-깨진다. CDN이 막히면(오프라인·광고 차단 확장 등) 인트로·플레이·결과까지 전부 못 뜨는 사고가 될
-수 있다는 뜻이다. 그래서 `screens.js`/`play.js`는 `cloud-loader.js`의 `loadCloud()`(동적
-import + 실패 캐시)만 static import하고, 실제 `cloud.js`는 거기서만 불린다. CDN이 막히면
-마을 화면의 클라우드 패널만 "지금은 이 기능을 쓸 수 없어요"로 착지하고 나머지는 그대로 동작한다
-(`scripts/verify.cjs`가 이 상태로 실제로 착지하는지 확인한다 — 샌드박스 자체가 이 조건이다).
-
-로그인(구글·카카오 OAuth, `signInWithProvider`)이 감지되면(`supabase.auth.onAuthStateChange`)
-`mergeVillages()`로 로컬과 클라우드를 한 번 합치고 양쪽에 그 결과를 반영한다 — coins는 max,
-built는 합집합이라 **멱등**이다(재로그인·재동기화가 여러 번 일어나도 코인이 중복 적립되지 않는다).
-이후 코인 획득·건설 때마다 로그인 상태면 `pushIfLoggedIn()`으로 클라우드에도 반영한다
-(fire-and-forget — 실패해도 게임 진행을 막지 않고 `console.error`만 남긴다).
+한때 스테이지 클리어마다 코인을 지급하고(`village.js`) `numpath-village` 화면에서 건물을
+지어 마을을 완성해 나가는 보상 루프가 있었고, 로그인 시 data-pantry.com과 같은 Supabase
+프로젝트에 마을을 동기화하는 기능(`cloud.js`/`cloud-loader.js`)도 있었다. **메리트가 크지
+않다는 판단으로 전부 되돌렸다** — 채울 "공간"이랄 게 딱히 없는 코인 경제였고, 클라우드
+동기화는 백엔드 하나를 유지하는 비용에 비해 얻는 게 적었다. 코드는 삭제됐고, Supabase
+`numpath_village` 테이블만 비용이 없어 남겨뒀다(나중에 재사용 가능). 설계 배경·기각 이유
+전문은 `docs/decisions/2027-h1.md` D-54·D-55에 그대로 남아 있다 — **다시 제안하지 말 것**,
+재검토하려면 "더 큰 그림"이 먼저 나와야 한다는 게 그때 결정이었다.
 
 ## 게임 로직 개요
 
 ```
 js/games/numpath/
-  data.js         레벨 커브(LEVELS) · 난이도(DIFFICULTIES·stageCountFor·levelFor) · MAX_STARS · starsFor()
-  engine.js       순차 연산 · 이동 가능 판정 · 이동/Undo · 클리어/막힘 판정 (DOM 모름)
-  generate.js     역산 생성기: 스테이지별 시드 파생(stageSeed) → 경로 → 수식 배치 → 더미/기믹 채우기 → solve()로 검증 (DOM 모름)
-  solve.js        DFS 솔버: 해 개수(상한까지) · 최적 이동수, 노드 예산으로 종료 보장 (DOM 모름)
-  village.js      보상: 코인 계산 · 건설 판정 · mergeVillages(순수 함수) + localStorage 저장 격리 (DOM 모름)
-  cloud.js        Supabase 로그인·동기화 (네트워크 필요, CDN top-level import — 직접 static import 금지)
-  cloud-loader.js cloud.js를 동적 import + 실패 캐시로 감싸는 안전한 로더 (이것만 static import한다)
-  audio.js        Web Audio 피치 스케일링 SFX (외부 파일 없음)
-  play.js         플레이 화면 (in-place 렌더, screens.js와 분리)
-  screens.js      인트로(난이도 선택) · 광고 게이트 · 결과 · 넘버 마을(클라우드 패널 포함)
-  index.js        디스크립터
+  data.js       레벨 커브(LEVELS) · 난이도(DIFFICULTIES·stageCountFor·levelFor) · MAX_STARS · starsFor() · formatTime()
+  engine.js     순차 연산 · 이동 가능 판정 · 이동/Undo · 클리어/막힘 판정 (DOM 모름)
+  generate.js   역산 생성기: 스테이지별 시드 파생(stageSeed) → 경로 → 수식 배치 → 더미/기믹 채우기 → solve()로 검증 (DOM 모름)
+  solve.js      DFS 솔버: 해 개수(상한까지) · 최적 이동수, 노드 예산으로 종료 보장 (DOM 모름)
+  audio.js      Web Audio 피치 스케일링 SFX (외부 파일 없음)
+  play.js       플레이 화면 — in-place 렌더, 타이머 tick 포함 (screens.js와 분리)
+  screens.js    인트로(난이도 선택) · 광고 게이트 · 결과(타이머·최고 기록) · loadBestTime/saveBestTime
+  index.js      디스크립터
 ```
 
 ### 타일 모델

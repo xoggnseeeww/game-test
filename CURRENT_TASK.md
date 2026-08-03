@@ -3,7 +3,19 @@
 > 이 파일은 1~2k 토큰 이하를 유지한다 — "언젠가 할 일"이 아니라 "지금 유효한 작업"만.
 
 ## 현재 작업
-2026-07-30: **NumPath 마을(코인·건설·클라우드 동기화, D-54/D-55) 되돌림.** 사용자 판단 —
+2026-07-30: **NumPath 런 타이머 + 난이도별 개인 최고 기록**(D-59). 요청("타이머·사용자
+랭킹")에서 랭킹은 `AskUserQuestion`으로 범위를 확인 — 멀티유저 비교는 방금 되돌린 Supabase
+백엔드(D-54/D-55)를 다시 켜야 해서, "내 기록만(로컬)"로 좁혔다. 플레이 HUD에 실시간
+타이머(m:ss), 결과 화면에 소요 시간 + 신기록 배지/최고 기록 비교, 인트로 난이도 카드에도
+🏆 표시. `run.startedAt`/`finishedAt`(Date.now())로 계산, 최고 기록은
+`localStorage["gt_numpath_best_<난이도>"]`(`screens.js`의 `loadBestTime`/`saveBestTime` 두
+곳에만 접근 격리). `data.js`에 순수 함수 `formatTime()` 추가 + 단위 테스트.
+`docs/numpath-architecture.md`가 지난 되돌림(D-54/D-55) 이후 갱신이 안 돼 마을·클라우드
+기준으로 남아 있던 것도 이번에 같이 정리(`docs/architecture.md`의 화면 표·state 모양 스테일
+참조 포함).
+`npm test` 135/135, `scripts/verify.cjs` 169/169(`serve.py`) 통과.
+
+이전(2026-07-30): **NumPath 마을(코인·건설·클라우드 동기화, D-54/D-55) 되돌림.** 사용자 판단 —
 "채울 공간이랄 게 없어서 메리트가 크지 않다, 나중에 더 큰 그림 그린 다음 다시." 코인 지급·
 마을 화면(`/game/numpath/village`)·클라우드 로그인 코드를 전부 제거하고 게임(난이도·리플레이성)만
 남겼다. 삭제: `village.js`·`cloud.js`(NumPath 전용판)·`cloud-loader.js`·`test/numpath.village.test.js`,
