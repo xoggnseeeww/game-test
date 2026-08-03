@@ -2064,6 +2064,9 @@ button.meta-chip {
 
 .cp-chip-contrast { background: var(--accent-soft); color: var(--accent-ink); }
 
+/* 학습 카테고리: .cover 안의 emoji 자리를 대신하는 마스코트 SVG(js/learning/mascot.js). */
+.cover .mascot { width: 110px; height: 110px; display: block; margin: 0 auto; }
+
 /* 학습 카테고리: 듣기 버튼 두 개(기본/천천히)를 나란히 놓는 행. .cta-btn은 width:100%라
    flex 안에서는 flex:1로 눌러줘야 나란히 앉는다. */
 .learning-listen {

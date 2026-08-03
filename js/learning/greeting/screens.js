@@ -7,6 +7,7 @@ import { el, bindNav } from "../../core/dom.js";
 import { state } from "../../core/state.js";
 import { SENTENCES } from "./data.js";
 import { similarity, feedbackTier, TIER_TEXT } from "./score.js";
+import { mascotFor } from "../mascot.js";
 
 const N = SENTENCES.length;
 
@@ -85,7 +86,7 @@ export function renderLearningGreeting() {
     titleEl.textContent = `인사 · 기분 표현 (${st.index + 1}/${N})`;
     cardEl.innerHTML = `
       <div class="cover">
-        <div class="emoji">${card.emoji}</div>
+        ${mascotFor(card.mood)}
         <h2>${card.text}</h2>
         <p>${card.ko}</p>
       </div>
@@ -100,16 +101,24 @@ export function renderLearningGreeting() {
         : `<button class="btn-mic" id="learning-mic">🎤</button>
            <div class="learning-mic-status" id="learning-mic-status"></div>`}
       <div class="learning-result" id="learning-result"></div>
+      <button class="retry-btn" id="learning-skip">✓ 이미 할 수 있어요 · 다음 문장</button>
     `;
 
     cardEl.querySelectorAll(".learning-listen .cta-btn").forEach((btn) => {
       btn.addEventListener("click", () => speak(card.text, Number(btn.dataset.rate)));
     });
 
+    // 이미 아는 문장이면 듣기/말하기 없이 바로 다음으로 — 강제로 3단계를 다 거치게 하지 않는다.
+    cardEl.querySelector("#learning-skip").addEventListener("click", () => {
+      state.learning.greeting.index += 1;
+      showCard();
+    });
+
     const micBtn = cardEl.querySelector("#learning-mic");
     if (!micBtn) return;
     const micStatus = cardEl.querySelector("#learning-mic-status");
     const resultEl = cardEl.querySelector("#learning-result");
+    const skipBtn = cardEl.querySelector("#learning-skip");
 
     micBtn.addEventListener("click", () => {
       micStatus.textContent = "듣고 있어요...";
@@ -118,6 +127,7 @@ export function renderLearningGreeting() {
         (heard) => {
           micBtn.disabled = false;
           micStatus.textContent = "";
+          skipBtn.style.display = "none";
           const pct = similarity(heard, card.text);
           const tier = feedbackTier(pct);
           resultEl.innerHTML = `

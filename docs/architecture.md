@@ -50,10 +50,13 @@ js/games/<id>/          테스트에 속하지 않는 독립 미니게임(예: n
   play.js                플레이 화면 — in-place 렌더 필요해서 screens.js와 분리
   screens.js            인트로 · 광고 게이트 · 결과 화면
   index.js               디스크립터: <id>Game(메타) + <id>Screens(화면 배열)
+js/learning/mascot.js   학습 카테고리 전체가 공유하는 인라인 SVG 마스코트(표정·소품 조합, D-61).
+                        외부 이미지 파일 없음 — mood 문자열 → svg 마크업
 js/learning/<id>/       테스트에 속하지 않는 학습 콘텐츠(예: greeting). games/*와 같은 모양
-  data.js               문장 데이터 (단일 소스)
+  data.js               문장 데이터(각 문장의 mood는 mascot.js의 MASCOTS 키와 일치해야 한다) — 단일 소스
   score.js              발음 유사도 판정 — Levenshtein 기반, DOM을 모른다
-  screens.js            렌더 함수 (브라우저 TTS/STT 직접 연동, 서버 API 없음)
+  screens.js            렌더 함수 (브라우저 TTS/STT 직접 연동, 서버 API 없음). 듣기/말하기를
+                        강제하지 않고 건너뛰기 버튼(#learning-skip)을 항상 같이 보여준다(D-61)
   index.js               디스크립터: <id>(메타) + <id>Screens(화면 배열)
 ```
 
