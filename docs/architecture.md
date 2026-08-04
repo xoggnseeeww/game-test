@@ -28,8 +28,10 @@ js/core/
   state.js              단일 상태 객체 (테스트별·게임별 네임스페이스)
   dom.js                el() · bindNav() · showModal() · bindAdGate()(광고 게이트 카운트다운) ·
                         goHome()(전역 햄버거 메뉴의 "홈으로 가기" — router.js의 exitGuard를 봄)
-  auth.js               관리자 로그인 — Google Identity Services로 받은 이메일이 ADMIN_EMAIL과
-                        같은지만 본다(서버 검증 없음). localStorage에 이메일만 보관, isAdmin()/logout()/
+  auth.js               일반 방문자 로그인(D-68) — cloud-auth.js의 공유 Supabase Auth(Google)를
+                        그대로 쓴다. 로그인한 이메일을 currentEmail로 추적하고, isAdmin()이
+                        ADMIN_EMAIL과 같은지만 별도로 판별한다(서버 검증 없음, "출시 예정" 게이트용).
+                        localStorage(`gt_user_email`)에 이메일만 보관, isAdmin()/logout()/
                         renderSignInButton() 제공
   header.js             #app 밖(body)에 붙는 전역 우상단 햄버거 메뉴 — 로그인 상태 표시·로그인/로그아웃
   share.js              공유 URL · navigator.share · 결과 카드 캔버스
@@ -65,6 +67,11 @@ js/learning/<toolId>/   학습 카테고리 안의 독립 도구 1개 = 폴더 1
                         항상 같이 보여준다(D-61)
   index.js               디스크립터: <tool>(메타: id, card) + <tool>Screens(목차 화면 +
                         CHAPTERS.map()으로 생성한 챕터별 화면)
+js/learning/cloud.js     학습 진행률(state.learning)을 Supabase에 동기화(D-68) — 도구 폴더
+                        밖, 도구가 여럿이어도 공용으로 재사용한다. NumPath 마을(D-55)과 같은
+                        패턴(cloud-auth-loader.js로 CDN 동적 import), 코인/마을 같은 보상
+                        체계는 없다. initLearningSync()는 main.js 부팅 시 1회, saveLearningProgress()는
+                        각 도구의 screens.js가 진행이 바뀔 때마다 호출
 ```
 
 **의존 방향**: `tests/*`·`games/*`·`learning/*` → `core/*`. `core`는 테스트도 게임도 학습 콘텐츠도 모른다.
@@ -178,7 +185,7 @@ js/learning/<toolId>/   학습 카테고리 안의 독립 도구 1개 = 폴더 1
 챕터 하나로 묶는다(D-66) — 처음엔 8개로 더 잘게 나눴다가 통합했다. 챕터 안에는 같은
 문장 틀에 단어만 바꾼 반복(패턴 드릴, 예 "I like ~"·"This is my ~")도 섞여 있다(D-67).
 문장 카드의 한국어 해석 옆에 🔊 버튼이 있어 `speechSynthesis`를 `lang: "ko-KR"`로 다시
-불러 한국어도 읽어준다(D-68) — 한글을 아직 못 읽는 어린이가 뜻을 들을 수 있게. 광고
+불러 한국어도 읽어준다(D-69) — 한글을 아직 못 읽는 어린이가 뜻을 들을 수 있게. 광고
 슬롯은 아직 없다(파일럿 단계라 뺐다). 서버 API
 없이 브라우저 내장
 TTS(`speechSynthesis`)·STT(`SpeechRecognition`)만 쓴다. 상세·범위·향후 확장은

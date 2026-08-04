@@ -758,8 +758,9 @@ async function playNumpathRun(page) {
   check("NumPath 다시하기 → 인트로로(자동 재시작 아님)", page.url().endsWith("/game/numpath"), page.url());
 
   // === 관리자 전용 게이트: 부부 체크는 아직 출시 전이라 관리자(js/core/auth.js의
-  // ADMIN_EMAIL)만 들어갈 수 있어야 한다. 로그인은 NumPath 마을과 같은 Supabase Auth를
-  // 공유해서 쓴다(D-56) — 아래는 로그인 전(비관리자) 상태로 확인한다 ===
+  // ADMIN_EMAIL, isAdmin())만 들어갈 수 있어야 한다 — 로그인 자체는 D-68부터 모든 방문자에게
+  // 열려 있지만, 이 게이트는 로그인 여부가 아니라 isAdmin()만 본다. 로그인은 NumPath 마을과
+  // 같은 Supabase Auth를 공유해서 쓴다(D-56) — 아래는 로그인 전(비관리자) 상태로 확인한다 ===
   await goto("/test");
   check("부부 체크 카드에 '출시 예정' 배지 (비관리자)", await page.isVisible(".coming-soon-badge"));
   await page.click('[data-nav="couple-intro"]');
@@ -785,8 +786,10 @@ async function playNumpathRun(page) {
   // 실제 Google 로그인(Supabase OAuth 리다이렉트)은 헤드리스에서 재현할 수 없어, localStorage를
   // js/core/auth.js와 같은 형식으로 직접 채워 "이미 로그인된" 상태를 흉내낸다 — 이 캐시는
   // 원래 Supabase 세션이 확인될 때 auth.js가 채워주는 값이라, CDN이 막힌 이 샌드박스에서도
-  // NumPath 마을의 localStorage 폴백(D-52)과 같은 방식으로 유효하다.
-  await page.evaluate(() => localStorage.setItem("gt_admin_email", "xogns022@gmail.com"));
+  // NumPath 마을의 localStorage 폴백(D-52)과 같은 방식으로 유효하다. 로그인은 D-68부터 일반
+  // 방문자에게도 열려 있어 키 이름이 gt_admin_email → gt_user_email로 바뀌었다 — 값 자체가
+  // ADMIN_EMAIL과 같아야 isAdmin()이 참이 된다.
+  await page.evaluate(() => localStorage.setItem("gt_user_email", "xogns022@gmail.com"));
   check(
     "관리자 로그인 후 배지가 사라진다",
     !(await goto("/test").then(() => page.isVisible(".coming-soon-badge")))

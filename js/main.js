@@ -1,6 +1,7 @@
 // 진입점: 공통 화면과 테스트별 화면을 라우터에 등록하고 부팅한다.
 import { registerScreens, registerTest, registerGame, registerLearning, start } from "./core/router.js";
 import { initHeader } from "./core/header.js";
+import { initLearningSync } from "./learning/cloud.js";
 import { commonScreens } from "./screens/home.js";
 import { adhdTest, adhdScreens } from "./tests/adhd/index.js";
 import { discTest, discScreens } from "./tests/disc/index.js";
@@ -26,4 +27,5 @@ registerLearning(basicConversation);
 registerScreens(basicConversationScreens);
 
 initHeader();
+initLearningSync();
 start();

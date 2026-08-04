@@ -1,12 +1,12 @@
-// 관리자 로그인: NumPath 마을 동기화(D-55)가 이미 쓰고 있는 공유 Supabase Auth(Google 로그인)를
-// 그대로 재사용한다 — 별도 로그인 수단을 새로 붙이지 않는다(D-56). 로그인한 이메일이
-// ADMIN_EMAIL과 같은지만 본다. 서버 쪽 권한 검증은 없다(이 프로젝트에 관리자용 백엔드가
-// 없다) — "출시 예정" 도구를 가리는 용도로는 충분하고, 실제 민감한 데이터를 지키는
-// 용도라면 그때 서버 검증을 새로 둬야 한다.
+// 일반 방문자 로그인: NumPath 마을 동기화(D-55)가 쓰던 공유 Supabase Auth(Google 로그인)를
+// 모든 방문자에게 연다 — 별도 로그인 수단을 새로 붙이지 않는다. 로그인한 이메일이
+// ADMIN_EMAIL과 같은지는 isAdmin()에서만 별도로 판별한다("출시 예정" 도구 게이트용, D-56).
+// 서버 쪽 권한 검증은 없다 — 관리자 게이트 용도로는 충분하지만, 로그인 자체는 학습 진행률
+// 저장(js/learning/cloud.js) 같은 일반 기능의 전제가 된다(D-68).
 import { loadCloudAuth } from "./cloud-auth-loader.js";
 
 const ADMIN_EMAIL = "xogns022@gmail.com";
-const STORAGE_KEY = "gt_admin_email";
+const STORAGE_KEY = "gt_user_email";
 
 function readStoredEmail() {
   try {
@@ -51,7 +51,7 @@ export function initAuth() {
     if (!cloud) return;
     const sync = () => {
       const user = cloud.getCachedUser();
-      setCurrentEmail(user && user.email === ADMIN_EMAIL ? user.email : null);
+      setCurrentEmail(user ? user.email : null);
       if (onChange) onChange();
     };
     sync();
@@ -84,7 +84,7 @@ export function renderSignInButton(container) {
         .signInWithProvider("google", `${location.origin}/`)
         .then(({ error }) => {
           if (!error) return; // 성공하면 곧 페이지가 이동하므로 여기까지 안 옴
-          console.error("관리자 로그인 실패", error);
+          console.error("로그인 실패", error);
           btn.disabled = false;
           btn.textContent = `로그인 실패: ${error.message || "다시 시도해 주세요"}`;
         })
