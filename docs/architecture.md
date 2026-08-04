@@ -59,9 +59,11 @@ js/learning/<toolId>/   학습 카테고리 안의 독립 도구 1개 = 폴더 1
                         개로 이뤄질 수 있고, index.js가 CHAPTERS 배열에서 챕터별 화면을
                         자동 생성한다
   data.js               챕터 목차(각 챕터 = { id, title, emoji, sentences }) — 단일 소스.
-                        문장은 기초 다음에 심화(`level: "advanced"`)가 이어지는 2단계
-                        구성이다(D-70). 문장 카드 위 마스코트 일러스트는 D-64에서 뺐다
-                        (실물로 보니 별로였다) — 이미지가 필요해지면 그때 별도 에셋으로 다시 넣는다
+                        문장은 기본 → 중급(`level: "intermediate"`) → 심화
+                        (`level: "advanced"`) 3단계로 이어진다(D-70, D-71). 챕터를 누르면
+                        먼저 단계를 고르는 화면이 뜬다. 문장 카드 위 마스코트 일러스트는
+                        D-64에서 뺐다(실물로 보니 별로였다) — 이미지가 필요해지면 그때
+                        별도 에셋으로 다시 넣는다
   score.js              발음 유사도 판정 — Levenshtein 기반, DOM을 모른다. 챕터에 무관하게 공용
   screens.js            렌더 함수: 목차 화면 + 챕터 화면(브라우저 TTS/STT 직접 연동, 서버 API
                         없음). 듣기/말하기를 강제하지 않고 건너뛰기 버튼(#learning-skip)을
@@ -119,11 +121,12 @@ js/learning/cloud.js     학습 진행률(state.learning)을 Supabase에 동기�
 학습 도구 레지스트리(D-63). 학습 카테고리 **안에는** 서로 독립된 도구(기초 영어회화, 나중엔
 다른 과목)가 여러 개 들어갈 수 있어 도구 단위로는 카탈로그가 맞다 — 도구 하나(예:
 `basic-conversation`)를 등록하면 학습 목록(`/learning`)에 카드로 나온다. **도구 안의
-챕터(목차)는 여기 등록하지 않는다** — `registerScreens()`로 화면만 늘어날 뿐, 챕터 자체는
-목차 화면(§3 `learning-basic-conversation`)이 그 도구의 `CHAPTERS` 데이터에서 직접 만든다.
-처음엔(D-60) 챕터 하나(`greeting`)를 도구인 것처럼 최상위에 바로 등록했다가, 사용자가
-"학습 카테고리 안에 다른 공부 도구도 넣을 거다, 지금 건 그 안의 목차 항목 하나여야 한다"고
-바로잡아서(D-63) 지금 모양(도구만 레지스트리, 챕터는 도구 내부)이 됐다.
+챕터(목차)·단계(레벨)는 여기 등록하지 않는다** — `registerScreens()`로 화면만 늘어날 뿐,
+챕터 자체는 목차 화면(§3 `learning-basic-conversation`)이 그 도구의 `CHAPTERS` 데이터에서,
+챕터별 단계 선택·연습 화면은 `CHAPTERS`와 `LEVEL_LABELS`를 곱해(D-71) `index.js`가 직접
+만든다. 처음엔(D-60) 챕터 하나(`greeting`)를 도구인 것처럼 최상위에 바로 등록했다가,
+사용자가 "학습 카테고리 안에 다른 공부 도구도 넣을 거다, 지금 건 그 안의 목차 항목 하나여야
+한다"고 바로잡아서(D-63) 지금 모양(도구만 레지스트리, 챕터는 도구 내부)이 됐다.
 
 ## 3. 화면 표
 
@@ -135,6 +138,7 @@ js/learning/cloud.js     학습 진행률(state.learning)을 Supabase에 동기�
 | `/learning` | `learning-list` | — | — |
 | `/learning/basic-conversation` | `learning-basic-conversation` | learning | — |
 | `/learning/basic-conversation/greeting` | `learning-basic-conversation-greeting` | learning | — |
+| `/learning/basic-conversation/greeting/basic` | `learning-basic-conversation-greeting-basic` | learning | — |
 | `/test/adhd` | `test-intro` | — | — |
 | `/test/adhd/play` | `test-question` | — | 답이 다 차 있으면 마지막 문항으로 되돌림 |
 | `/test/adhd/result` | `test-result` | — | 답 부족 → `test-intro`, 게임 미완료 → `reaction-intro` |
@@ -177,22 +181,22 @@ js/learning/cloud.js     학습 진행률(state.learning)을 Supabase에 동기�
 `docs/disc-architecture.md`로 분리돼 있다. NumPath(테스트에 속하지 않는 독립 게임)의 흐름·게임
 로직 개요는 `docs/numpath-architecture.md` 참고.
 
-**학습은 다른 카테고리처럼 3단 구조지만, 맨 안쪽 단위가 "결과"가 아니라 "챕터"다** — 홈 →
-학습 목록(도구 카드) → 도구의 목차(챕터 카드) → 챕터 하나(문장 연습). 지금은 도구가
-`basic-conversation`(기초 영어회화, 7세 이하 대상) 하나, 그 안 챕터는 4개(총 136문장,
-기초 112 + 심화 24)다 — 인사/기분 표현, 하루 일과(아침+식사+목욕/잠자리 통합), 가족·
-자기소개, 놀이터에서(놀이+날씨 통합). 단어 나열이 아니라 일상대화 위주로 구성했고(어린이
-애니메이션 참고, D-65), 시간순으로 이어지거나 소재가 겹치는 상황은 챕터 하나로 묶는다
-(D-66) — 처음엔 8개로 더 잘게 나눴다가 통합했다. 챕터 안에는 같은 문장 틀에 단어만 바꾼
-반복(패턴 드릴, 예 "I like ~"·"This is my ~")도 섞여 있다(D-67). 챕터마다 기초(입문
-생존 표현) 다음에 심화(원어민 7세 수준의 의견·이유·비교·협상 문장, `level: "advanced"`)를
-잇는 2단계 구성이다(D-70) — 심화도 새 챕터가 아니라 같은 챕터의 뒷부분이다. 문장 카드의
-한국어 해석 옆에 🔊 버튼이 있어 `speechSynthesis`를 `lang: "ko-KR"`로 다시 불러 한국어도
-읽어준다(D-69) — 한글을 아직 못 읽는 어린이가 뜻을 들을 수 있게. 광고 슬롯은 아직
-없다(파일럿 단계라 뺐다). 서버 API
-없이 브라우저 내장
-TTS(`speechSynthesis`)·STT(`SpeechRecognition`)만 쓴다. 상세·범위·향후 확장은
-`docs/learning-architecture.md`.
+**학습은 다른 카테고리처럼 3단 구조지만, 맨 안쪽 단위가 "결과"가 아니라 "챕터 × 단계"다** —
+홈 → 학습 목록(도구 카드) → 도구의 목차(챕터 카드) → 챕터의 단계 선택(기본/중급/심화) →
+문장 연습. 지금은 도구가 `basic-conversation`(기초 영어회화, 7세 이하 대상) 하나, 그 안
+챕터는 4개(총 194문장, 기본 122 + 중급 48 + 심화 24, D-71)다 — 인사/기분 표현, 하루
+일과(아침+식사+목욕/잠자리 통합), 가족·자기소개, 놀이터에서(놀이+날씨 통합). 단어 나열이
+아니라 일상대화 위주로 구성했고(어린이 애니메이션 참고, D-65), 시간순으로 이어지거나
+소재가 겹치는 상황은 챕터 하나로 묶는다(D-66) — 처음엔 8개로 더 잘게 나눴다가 통합했다.
+챕터 안에는 같은 문장 틀에 단어만 바꾼 반복(패턴 드릴, 예 "I like ~"·"This is my ~")도
+섞여 있다(D-67). 챕터마다 기본(입문 생존 표현) → 중급(짧은 질문·요청) → 심화(원어민 7세
+수준의 의견·이유·비교·협상 문장, `level: "advanced"`)로 이어지는 3단계 구성이다(D-70,
+D-71) — 단계별로 새 챕터를 만들지 않고 같은 챕터 데이터 안에서 `level` 필드로만 나눈다.
+챕터를 클릭하면 단계 선택 화면이 먼저 뜨고, 각 단계는 진행 상태가 서로 독립적이다. 문장
+카드의 한국어 해석 옆에 🔊 버튼이 있어 `speechSynthesis`를 `lang: "ko-KR"`로 다시 불러
+한국어도 읽어준다(D-69) — 한글을 아직 못 읽는 어린이가 뜻을 들을 수 있게. 광고 슬롯은
+아직 없다(파일럿 단계라 뺐다). 서버 API 없이 브라우저 내장 TTS(`speechSynthesis`)·
+STT(`SpeechRecognition`)만 쓴다. 상세·범위·향후 확장은 `docs/learning-architecture.md`.
 
 **부부 관계 성향 체크만 화면이 10개다** — 축 선택·이용 안내·배우자 초대·결합 결과가 더 있기 때문이다.
 배우자 결과는 기본적으로 주소(`?p=<25자 코드>`)로 실어 나르므로 `couple-pair`만 쿼리 스트링에

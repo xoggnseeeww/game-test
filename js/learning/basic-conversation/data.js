@@ -12,12 +12,15 @@
 // 챕터가 잘게 계속 늘어나면 목차 자체가 또 하나의 목록이 돼서 "하나의 공부 도구"라는
 // 원래 취지(D-62·D-63)가 흐려진다.
 //
-// 문장에는 `level`이 있을 수 있다(D-70). 없으면 "기초"(입문 생존 표현), `"advanced"`면
-// "심화"(의견·이유·비교·협상이 들어간, 원어민 7세 정도의 문장). 각 챕터 안에서 기초를
-// 전부 배열한 다음 심화를 뒤에 잇는다 — 같은 상황을 계속 반복하며 단계만 올라가는
-// 흐름이라, 심화용으로 새 챕터를 또 만들지 않는다. 진짜 다중 턴 대화(질문→대답→되묻기)는
-// 이 앱의 "문장 하나 듣고 따라 말하기" 채점 구조와 안 맞아서 지금은 만들지 않는다 — 나중에
-// 별도 대화형 도구로 다룰 계획(`docs/learning-architecture.md` §3-5).
+// 문장에는 `level`이 있을 수 있다(D-70, D-71). 없으면 "기본"(입문 생존 표현), `"intermediate"`면
+// "중급"(짧은 질문·요청 위주로 기본보다 조금 긴 문장), `"advanced"`면 "심화"(의견·이유·비교·협상이
+// 들어간, 원어민 7세 정도의 문장). 각 챕터 안에서 기본을 전부 배열한 다음 중급, 심화 순으로
+// 뒤에 잇는다 — 같은 상황을 계속 반복하며 단계만 올라가는 흐름이라, 단계용으로 새 챕터를 또
+// 만들지 않는다. 챕터를 클릭하면 이 세 단계 중 하나를 고르는 화면이 먼저 뜬다(D-71) —
+// screens.js의 renderLevelSelect. 진짜 다중 턴 대화(질문→대답→되묻기)는 이 앱의 "문장 하나
+// 듣고 따라 말하기" 채점 구조와 안 맞아서 지금은 만들지 않는다 — 나중에 별도 대화형 도구로
+// 다룰 계획(`docs/learning-architecture.md` §3-5).
+export const LEVEL_LABELS = { basic: "기본", intermediate: "중급", advanced: "심화" };
 export const CHAPTERS = [
   {
     id: "greeting",
@@ -54,6 +57,18 @@ export const CHAPTERS = [
       { id: "yes", text: "Yes!", ko: "네!" },
       { id: "no", text: "No.", ko: "아니요." },
       { id: "bye", text: "Goodbye!", ko: "안녕히 가세요!" },
+      { id: "how-was-your-day", text: "How was your day?", ko: "오늘 하루 어땠어요?", level: "intermediate" },
+      { id: "im-doing-great", text: "I'm doing great today.", ko: "오늘 진짜 좋아요.", level: "intermediate" },
+      { id: "whats-wrong", text: "What's wrong?", ko: "무슨 일이에요?", level: "intermediate" },
+      { id: "i-had-a-good-dream", text: "I had a good dream.", ko: "좋은 꿈을 꿨어요.", level: "intermediate" },
+      { id: "can-you-say-that-again", text: "Can you say that again?", ko: "다시 한번 말해줄래요?", level: "intermediate" },
+      { id: "i-dont-understand", text: "I don't understand.", ko: "이해가 안 돼요.", level: "intermediate" },
+      { id: "thats-a-good-idea", text: "That's a good idea!", ko: "그거 좋은 생각이에요!", level: "intermediate" },
+      { id: "im-proud-of-you", text: "I'm proud of you.", ko: "네가 자랑스러워요.", level: "intermediate" },
+      { id: "take-care", text: "Take care!", ko: "몸조심해요!", level: "intermediate" },
+      { id: "have-a-nice-day", text: "Have a nice day!", ko: "좋은 하루 보내요!", level: "intermediate" },
+      { id: "whats-the-matter", text: "What's the matter?", ko: "무슨 일 있어요?", level: "intermediate" },
+      { id: "im-here-for-you", text: "I'm here for you.", ko: "내가 곁에 있을게요.", level: "intermediate" },
       { id: "happy-because", text: "I'm happy because it's my birthday.", ko: "오늘 제 생일이라서 기뻐요.", level: "advanced" },
       { id: "little-nervous", text: "I feel a little nervous.", ko: "조금 긴장돼요.", level: "advanced" },
       { id: "dont-feel-good", text: "I don't feel good today.", ko: "오늘 몸이 안 좋아요.", level: "advanced" },
@@ -101,6 +116,18 @@ export const CHAPTERS = [
       { id: "cover-your-mouth", text: "Cover your mouth.", ko: "입을 가리세요." },
       { id: "go-potty", text: "I need to go potty.", ko: "화장실 가고 싶어요." },
       { id: "wipe-your-mouth", text: "Wipe your mouth.", ko: "입을 닦자." },
+      { id: "time-to-wake-up", text: "It's time to wake up.", ko: "일어날 시간이에요.", level: "intermediate" },
+      { id: "did-you-sleep-well", text: "Did you sleep well?", ko: "잘 잤어요?", level: "intermediate" },
+      { id: "what-do-you-want-for-breakfast", text: "What do you want for breakfast?", ko: "아침으로 뭐 먹고 싶어요?", level: "intermediate" },
+      { id: "hurry-up-were-late", text: "Hurry up, we're late.", ko: "서둘러요, 늦었어요.", level: "intermediate" },
+      { id: "can-you-pass-the-spoon", text: "Can you pass me the spoon?", ko: "숟가락 좀 건네줄래요?", level: "intermediate" },
+      { id: "i-need-to-wash-my-hands-first", text: "I need to wash my hands first.", ko: "먼저 손을 씻어야 해요.", level: "intermediate" },
+      { id: "lets-pick-out-your-clothes", text: "Let's pick out your clothes.", ko: "옷을 골라보자.", level: "intermediate" },
+      { id: "its-almost-bedtime", text: "It's almost bedtime.", ko: "이제 잘 시간이 다 됐어요.", level: "intermediate" },
+      { id: "did-you-brush-your-teeth", text: "Did you brush your teeth?", ko: "이 닦았어요?", level: "intermediate" },
+      { id: "the-water-is-too-hot", text: "The water is too hot.", ko: "물이 너무 뜨거워요.", level: "intermediate" },
+      { id: "lets-turn-off-the-light", text: "Let's turn off the light.", ko: "불을 끄자.", level: "intermediate" },
+      { id: "one-more-story-please", text: "One more story, please.", ko: "이야기 하나만 더 해주세요.", level: "intermediate" },
       { id: "watch-tv-after", text: "Can I watch TV after breakfast?", ko: "아침 먹고 티비 봐도 돼요?", level: "advanced" },
       { id: "dont-want-bath-yet", text: "I don't want to take a bath yet.", ko: "아직 목욕하기 싫어요.", level: "advanced" },
       { id: "five-more-minutes", text: "Just five more minutes, please.", ko: "딱 5분만 더요.", level: "advanced" },
@@ -140,6 +167,24 @@ export const CHAPTERS = [
       { id: "color-red", text: "It's red.", ko: "빨간색이에요." },
       { id: "color-yellow", text: "It's yellow.", ko: "노란색이에요." },
       { id: "color-green", text: "It's green.", ko: "초록색이에요." },
+      { id: "have-a-dog", text: "I have a dog.", ko: "나는 강아지가 있어요." },
+      { id: "have-a-cat", text: "I have a cat.", ko: "나는 고양이가 있어요." },
+      { id: "my-birthday", text: "My birthday is in May.", ko: "내 생일은 5월이에요." },
+      { id: "go-to-school", text: "I go to school.", ko: "나는 학교에 다녀요." },
+      { id: "this-is-my-toy", text: "This is my toy.", ko: "이건 내 장난감이에요." },
+      { id: "hair-is-black", text: "My hair is black.", ko: "내 머리는 까매요." },
+      { id: "how-old-are-you", text: "How old are you?", ko: "몇 살이에요?", level: "intermediate" },
+      { id: "where-do-you-live", text: "Where do you live?", ko: "어디 살아요?", level: "intermediate" },
+      { id: "do-you-have-any-siblings", text: "Do you have any siblings?", ko: "형제자매 있어요?", level: "intermediate" },
+      { id: "my-mom-is-a-teacher", text: "My mom is a teacher.", ko: "우리 엄마는 선생님이에요.", level: "intermediate" },
+      { id: "my-dad-works-hard", text: "My dad works hard.", ko: "우리 아빠는 열심히 일해요.", level: "intermediate" },
+      { id: "i-am-the-youngest", text: "I am the youngest.", ko: "나는 막내예요.", level: "intermediate" },
+      { id: "whats-your-favorite-food", text: "What's your favorite food?", ko: "제일 좋아하는 음식이 뭐예요?", level: "intermediate" },
+      { id: "i-want-to-learn-piano", text: "I want to learn piano.", ko: "저는 피아노를 배우고 싶어요.", level: "intermediate" },
+      { id: "can-we-visit-grandma", text: "Can we visit grandma this weekend?", ko: "이번 주말에 할머니 댁 가도 돼요?", level: "intermediate" },
+      { id: "my-family-is-important-to-me", text: "My family is important to me.", ko: "우리 가족은 저한테 중요해요.", level: "intermediate" },
+      { id: "i-look-just-like-my-dad", text: "I look just like my dad.", ko: "저는 아빠를 꼭 닮았어요.", level: "intermediate" },
+      { id: "do-you-like-my-drawing", text: "Do you like my drawing?", ko: "내 그림 마음에 들어요?", level: "intermediate" },
       { id: "dogs-cuter", text: "I think dogs are cuter than cats.", ko: "저는 강아지가 고양이보다 더 귀여운 것 같아요.", level: "advanced" },
       { id: "brother-older", text: "My brother is older than me.", ko: "형(오빠)이 저보다 나이가 많아요.", level: "advanced" },
       { id: "want-to-be-doctor", text: "I want to be a doctor when I grow up.", ko: "저는 커서 의사가 되고 싶어요.", level: "advanced" },
@@ -181,6 +226,22 @@ export const CHAPTERS = [
       { id: "want-to-swing", text: "I want to swing.", ko: "그네 타고 싶어요." },
       { id: "build-sandcastle", text: "Let's build a sandcastle.", ko: "모래성 만들자." },
       { id: "one-two-three-go", text: "One, two, three, go!", ko: "하나, 둘, 셋, 출발!" },
+      { id: "look-at-that", text: "Look at that!", ko: "저것 좀 봐!" },
+      { id: "im-it", text: "I'm it!", ko: "내가 술래야!" },
+      { id: "can-i-go-on-the-slide", text: "Can I go on the slide?", ko: "미끄럼틀 타도 돼요?" },
+      { id: "lets-climb-up-here", text: "Let's climb up here.", ko: "여기 올라가자." },
+      { id: "can-i-join-you", text: "Can I join you?", ko: "나도 같이 껴도 돼요?", level: "intermediate" },
+      { id: "whose-turn-is-it", text: "Whose turn is it?", ko: "누구 차례예요?", level: "intermediate" },
+      { id: "lets-play-together", text: "Let's play together.", ko: "같이 놀자.", level: "intermediate" },
+      { id: "be-careful", text: "Be careful!", ko: "조심해요!", level: "intermediate" },
+      { id: "are-you-okay", text: "Are you okay?", ko: "괜찮아요?", level: "intermediate" },
+      { id: "that-was-close", text: "That was close!", ko: "아슬아슬했다!", level: "intermediate" },
+      { id: "can-you-push-me-on-the-swing", text: "Can you push me on the swing?", ko: "그네 좀 밀어줄래요?", level: "intermediate" },
+      { id: "lets-go-down-the-slide-together", text: "Let's go down the slide together.", ko: "같이 미끄럼틀 타자.", level: "intermediate" },
+      { id: "i-need-a-break", text: "I need a break.", ko: "저 좀 쉴게요.", level: "intermediate" },
+      { id: "should-we-bring-a-snack", text: "Should we bring a snack?", ko: "간식 챙겨갈까요?", level: "intermediate" },
+      { id: "the-sun-is-so-bright", text: "The sun is so bright.", ko: "햇빛이 진짜 밝다.", level: "intermediate" },
+      { id: "lets-play-here-again-next-time", text: "Let's play here again next time.", ko: "다음에 또 여기서 놀자.", level: "intermediate" },
       { id: "play-something-else", text: "Can we play something else?", ko: "우리 다른 거 하면 안 돼요?", level: "advanced" },
       { id: "not-fair", text: "That's not fair!", ko: "그건 불공평해요!", level: "advanced" },
       { id: "go-first-this-time", text: "I want to go first this time.", ko: "이번엔 제가 먼저 하고 싶어요.", level: "advanced" },

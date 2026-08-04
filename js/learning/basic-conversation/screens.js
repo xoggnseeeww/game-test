@@ -5,7 +5,7 @@ import { app, go, onLeave } from "../../core/router.js";
 import { el, bindNav } from "../../core/dom.js";
 import { state } from "../../core/state.js";
 import { saveLearningProgress } from "../cloud.js";
-import { CHAPTERS } from "./data.js";
+import { CHAPTERS, LEVEL_LABELS } from "./data.js";
 import { similarity, feedbackTier, TIER_TEXT } from "./score.js";
 
 function supportsSpeech() {
@@ -52,14 +52,15 @@ export function renderBasicConversationIntro() {
       <div class="section-title">🔥 목차</div>
       <div class="test-list">
         ${CHAPTERS.map((ch) => {
-          const advanced = ch.sentences.filter((s) => s.level === "advanced").length;
-          const basic = ch.sentences.length - advanced;
+          const desc = Object.keys(LEVEL_LABELS)
+            .map((level) => `${LEVEL_LABELS[level]} ${ch.sentences.filter((s) => (s.level || "basic") === level).length}`)
+            .join(" · ");
           return `
           <button class="test-card" data-nav="learning-basic-conversation-${ch.id}">
             <div class="icon" style="background:#FF9F45;">${ch.emoji}</div>
             <div class="body">
               <div class="name">${ch.title}</div>
-              <div class="desc">${advanced > 0 ? `기초 ${basic} · 심화 ${advanced}` : `문장 ${basic}개`}</div>
+              <div class="desc">${desc}</div>
             </div>
             <div class="chevron">›</div>
           </button>
@@ -71,9 +72,42 @@ export function renderBasicConversationIntro() {
   bindNav(app);
 }
 
-export function renderChapter(chapter) {
-  const N = chapter.sentences.length;
-  state.learning[chapter.id] ??= { index: 0 };
+// 챕터를 누르면 먼저 단계(기본/중급/심화)를 고른다(D-71) — 심화로 바로 이어지던 흐름이
+// 갑자기 어려워진다는 지적에 중급을 끼워 넣으면서, 세 단계를 한 번에 죽 이어 풀기보다
+// 원하는 단계만 골라 반복할 수 있게 했다.
+export function renderLevelSelect(chapter) {
+  app.appendChild(el(`
+    <div>
+      <div class="back-row">
+        <button class="back-btn" data-nav="learning-basic-conversation">‹</button>
+        <div class="back-title">${chapter.title}</div>
+      </div>
+      <div class="section-title">${chapter.emoji} 단계를 골라주세요</div>
+      <div class="test-list">
+        ${Object.keys(LEVEL_LABELS).map((level) => {
+          const count = chapter.sentences.filter((s) => (s.level || "basic") === level).length;
+          return `
+          <button class="test-card" data-nav="learning-basic-conversation-${chapter.id}-${level}">
+            <div class="icon" style="background:#FF9F45;">${chapter.emoji}</div>
+            <div class="body">
+              <div class="name">${LEVEL_LABELS[level]}</div>
+              <div class="desc">문장 ${count}개</div>
+            </div>
+            <div class="chevron">›</div>
+          </button>
+        `;
+        }).join("")}
+      </div>
+    </div>
+  `));
+  bindNav(app);
+}
+
+export function renderChapter(chapter, level) {
+  const sentences = chapter.sentences.filter((s) => (s.level || "basic") === level);
+  const N = sentences.length;
+  const key = `${chapter.id}-${level}`;
+  state.learning[key] ??= { index: 0 };
 
   let activeRecognition = null;
   onLeave(() => {
@@ -84,7 +118,7 @@ export function renderChapter(chapter) {
   app.appendChild(el(`
     <div class="learning-screen">
       <div class="back-row">
-        <button class="back-btn" data-nav="learning-basic-conversation">‹</button>
+        <button class="back-btn" data-nav="learning-basic-conversation-${chapter.id}">‹</button>
         <div class="back-title" id="learning-title"></div>
       </div>
       <div id="learning-card"></div>
@@ -95,33 +129,34 @@ export function renderChapter(chapter) {
 
   const titleEl = app.querySelector("#learning-title");
   const cardEl = app.querySelector("#learning-card");
+  const levelTitle = `${chapter.title} · ${LEVEL_LABELS[level]}`;
 
   function showDone() {
-    titleEl.textContent = chapter.title;
+    titleEl.textContent = levelTitle;
     cardEl.innerHTML = `
       <div class="empty-state">
         <div class="emoji">🎉</div>
         <div class="msg">문장 ${N}개를 다 배웠어요!</div>
       </div>
       <div class="cta"><button class="cta-btn" id="learning-restart">처음부터 다시 놀기</button></div>
-      <button class="retry-btn" id="learning-toc">목차로 돌아가기</button>
+      <button class="retry-btn" id="learning-toc">단계 다시 고르기</button>
     `;
     cardEl.querySelector("#learning-restart").addEventListener("click", () => {
-      state.learning[chapter.id] = { index: 0 };
+      state.learning[key] = { index: 0 };
       saveLearningProgress();
       showCard();
     });
-    cardEl.querySelector("#learning-toc").addEventListener("click", () => go("learning-basic-conversation"));
+    cardEl.querySelector("#learning-toc").addEventListener("click", () => go(`learning-basic-conversation-${chapter.id}`));
   }
 
   function showCard() {
-    const st = state.learning[chapter.id];
+    const st = state.learning[key];
     if (st.index >= N) return showDone();
-    const card = chapter.sentences[st.index];
-    titleEl.textContent = `${chapter.title} (${st.index + 1}/${N})`;
+    const card = sentences[st.index];
+    titleEl.textContent = `${levelTitle} (${st.index + 1}/${N})`;
     cardEl.innerHTML = `
       <div class="cover">
-        ${card.level === "advanced" ? `<div class="tag">심화</div>` : ""}
+        ${level !== "basic" ? `<div class="tag">${LEVEL_LABELS[level]}</div>` : ""}
         <h2>${card.text}</h2>
         <p class="cover-ko">
           ${card.ko}
@@ -151,7 +186,7 @@ export function renderChapter(chapter) {
 
     // 이미 아는 문장이면 듣기/말하기 없이 바로 다음으로 — 강제로 3단계를 다 거치게 하지 않는다.
     cardEl.querySelector("#learning-skip").addEventListener("click", () => {
-      state.learning[chapter.id].index += 1;
+      state.learning[key].index += 1;
       saveLearningProgress();
       showCard();
     });
@@ -178,7 +213,7 @@ export function renderChapter(chapter) {
             <div class="cta"><button class="cta-btn" id="learning-next">${st.index + 1 < N ? "다음 문장" : "완료!"}</button></div>
           `;
           resultEl.querySelector("#learning-next").addEventListener("click", () => {
-            state.learning[chapter.id].index += 1;
+            state.learning[key].index += 1;
             saveLearningProgress();
             showCard();
           });
