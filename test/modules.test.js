@@ -118,7 +118,7 @@ test("등록되는 화면 id와 경로가 겹치지 않는다", async () => {
   assert.ok(paths.includes("/test/adhd/result"));
   assert.ok(adhdScreens.some((s) => s.id === "test-shared" && s.dynamicPath));
   assert.ok(paths.includes("/game/numpath"));
-  assert.ok(paths.includes("/learning/greeting"));
+  assert.ok(paths.includes("/learning"));
   assert.ok(coupleScreens.some((s) => s.id === "couple-shared" && s.dynamicPath));
 
   // 배우자 초대 링크는 ?p=<코드>를 붙여 보낸다. 그 주소가 고정 경로로 등록돼 있어야

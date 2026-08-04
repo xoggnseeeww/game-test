@@ -35,7 +35,9 @@ js/core/
   share.js              공유 URL · navigator.share · 결과 카드 캔버스
   util.js               shuffle · normalizePath · roundRect
   ads.js                카카오 AdFit — adSlotMarkup()(단위 코드 단일 소스) · adGateMarkup()(전면 게이트 마크업) · refreshAds()(로더 태그 재실행)
-js/screens/home.js      홈 · 심리테스트 목록 · 미니게임 목록 · 학습 목록 · 개인정보처리방침 + commonScreens
+js/screens/home.js      홈(카테고리 3개: 심리테스트/미니게임/학습) · 심리테스트 목록 · 미니게임 목록 ·
+                        개인정보처리방침 + commonScreens. 학습만 목록 화면이 없다 — 홈 카드가
+                        곧장 학습 화면으로 간다(D-62, 아래 참고)
 js/tests/<id>/
   data.js               문항·결과 유형·슬러그·게임 상수 (단일 소스)
   score.js              채점 (DOM을 모른다 → node --test로 직접 검증 가능)
@@ -52,7 +54,9 @@ js/games/<id>/          테스트에 속하지 않는 독립 미니게임(예: n
   index.js               디스크립터: <id>Game(메타) + <id>Screens(화면 배열)
 js/learning/mascot.js   학습 카테고리 전체가 공유하는 인라인 SVG 마스코트(표정·소품 조합, D-61).
                         외부 이미지 파일 없음 — mood 문자열 → svg 마크업
-js/learning/<id>/       테스트에 속하지 않는 학습 콘텐츠(예: greeting). games/*와 같은 모양
+js/learning/<id>/       학습 카테고리를 이루는 콘텐츠 폴더(예: greeting). games/*와 폴더 모양은
+                        같지만 레지스트리·목록 카드가 없다 — 학습은 독립 항목을 고르는
+                        카탈로그가 아니라 하나의 공부 도구라서다(D-62)
   data.js               문장 데이터(각 문장의 mood는 mascot.js의 MASCOTS 키와 일치해야 한다) — 단일 소스
   score.js              발음 유사도 판정 — Levenshtein 기반, DOM을 모른다
   screens.js            렌더 함수 (브라우저 TTS/STT 직접 연동, 서버 API 없음). 듣기/말하기를
@@ -61,8 +65,10 @@ js/learning/<id>/       테스트에 속하지 않는 학습 콘텐츠(예: gree
 ```
 
 **의존 방향**: `tests/*`·`games/*`·`learning/*` → `core/*`. `core`는 테스트도 게임도 학습 콘텐츠도 모른다.
-`screens/home.js`는 `listTests()`/`listGames()`/`listLearning()`으로 등록된 것을 조회할 뿐, 개별
-테스트·게임·학습 콘텐츠를 import 하지 않는다 — **뭘 추가해도 홈 화면 파일의 목록 렌더 로직은 안 고친다.**
+`screens/home.js`는 심리테스트·미니게임은 `listTests()`/`listGames()`로 등록된 것을 조회해서 목록을
+만들고, 개별 테스트·게임을 import 하지 않는다 — **테스트나 게임을 추가해도 홈 화면 파일은 안 고친다.**
+**학습만 예외다** — 카탈로그가 아니라 도구 하나라 목록 화면 자체가 없고, 홈의 학습 카드가
+`js/learning/greeting`의 화면 id로 직접 간다(D-62).
 
 **`score.js`/`engine.js`/`generate.js`/`solve.js`가 DOM을 모른다는 점이 중요하다.** 로직만 순수 함수로 떼어놨기 때문에 `node --test`에서 브라우저 없이 검증된다(§8).
 
@@ -100,9 +106,12 @@ js/learning/<id>/       테스트에 속하지 않는 학습 콘텐츠(예: gree
 결과별 슬러그 공유가 아니라 게임 주소 자체를 공유한다(§7). 반응속도·딜레마 게임은 테스트 점수에
 반영되는 하위 단계라 여기 등록하지 않는다(`docs/decisions/2026-h2.md` D-4).
 
-**`registerLearning(descriptor)` / `listLearning()`** — `registerGame`/`listGames`를 그대로 복사한
-학습 콘텐츠 레지스트리(D-60). 결과가 점수로 반영되는 하위 단계가 아니라 그 자체로 콘텐츠라는
-점이 게임과 같아서 모양을 그대로 가져왔다 — 다르게 다룰 이유가 생기면 그때 갈라진다.
+**학습에는 레지스트리가 없다.** 처음엔 `registerGame`/`listGames`를 그대로 복사해
+`registerLearning`/`listLearning`을 만들었는데(D-60), 학습 콘텐츠를 하나 더 만들자마자
+"독립 항목을 목록에서 골라 들어간다"는 카탈로그 모델이 이 콘텐츠엔 안 맞는다는 게 드러나
+되돌렸다(D-62) — 학습은 심리테스트·게임과 달리 여러 상황을 순서대로 밟아나가는 **하나의
+공부 도구**다. `js/main.js`가 `learningGreetingScreens`를 그냥 `registerScreens()`에 등록만
+한다.
 
 ## 3. 화면 표
 
@@ -111,8 +120,7 @@ js/learning/<id>/       테스트에 속하지 않는 학습 콘텐츠(예: gree
 | `/` | `home` | — | — |
 | `/test` | `psych-list` | — | — |
 | `/game` | `game-list` | — | — |
-| `/learning` | `learning-list` | — | — |
-| `/learning/greeting` | `learning-greeting` | learning | — |
+| `/learning` | `learning-greeting` | learning | — |
 | `/test/adhd` | `test-intro` | — | — |
 | `/test/adhd/play` | `test-question` | — | 답이 다 차 있으면 마지막 문항으로 되돌림 |
 | `/test/adhd/result` | `test-result` | — | 답 부족 → `test-intro`, 게임 미완료 → `reaction-intro` |
@@ -155,9 +163,9 @@ js/learning/<id>/       테스트에 속하지 않는 학습 콘텐츠(예: gree
 `docs/disc-architecture.md`로 분리돼 있다. NumPath(테스트에 속하지 않는 독립 게임)의 흐름·게임
 로직 개요는 `docs/numpath-architecture.md` 참고.
 
-**학습(외국어 연습)은 게임처럼 독립 콘텐츠지만 광고 슬롯이 없다** — 목록 화면(`learning-list`)에는
-다른 목록과 같이 있지만, 재생 화면(`learning-greeting`) 자체는 파일럿 단계라 뺐다(§5). 서버 API
-없이 브라우저 내장 TTS(`speechSynthesis`)·STT(`SpeechRecognition`)만 쓴다. 상세·범위·향후 확장은
+**학습(외국어 연습)은 화면이 하나뿐이고 목록이 없다** — 홈의 "학습" 카드가 곧장
+`learning-greeting`으로 간다(D-62). 광고 슬롯도 아직 없다(파일럿 단계라 뺐다). 서버 API 없이
+브라우저 내장 TTS(`speechSynthesis`)·STT(`SpeechRecognition`)만 쓴다. 상세·범위·향후 확장은
 `docs/learning-architecture.md`.
 
 **부부 관계 성향 체크만 화면이 10개다** — 축 선택·이용 안내·배우자 초대·결합 결과가 더 있기 때문이다.
@@ -238,13 +246,12 @@ state = {
 게임처럼 테스트 점수에 반영되는 하위 단계는 `registerGame()`하지 않는다(D-4) — guard가 테스트
 진행 상태를 요구해서, 독립 게임으로 노출하면 사용자를 테스트 인트로로 되돌려버린다.
 
-### 학습 콘텐츠 (독립 미니게임과 같은 절차)
-1. `js/learning/<id>/` 폴더 생성 — `data.js` / `score.js` / `screens.js` / `index.js`
-2. `index.js`에서 `<id>`(메타: `id`, `card`)와 `<id>Screens`(화면 배열) export
-3. `js/main.js`에서 `registerLearning(<id>)` **와** `registerScreens(<id>Screens)` **둘 다** 호출
-4. `npm test` — `test/modules.test.js`의 import 목록에 새 `<id>Screens`도 추가
-
-홈·목록 화면은 고치지 않는다. `renderLearningList()`가 `listLearning()`으로 카드를 만든다.
+### 학습 콘텐츠 — 새 상황을 하나의 도구 안에 추가할 때
+레지스트리가 없다(위 §2 D-62). 지금 상황이 하나(`greeting`)뿐이라 아직 "여러 상황을 어떻게
+잇나"는 실전 검증 전이지만, 방향은 `docs/learning-architecture.md` §3-5에 적어뒀다 — 새
+`js/learning/<id>/` 폴더를 만들되, 홈에 새 카드를 또 노출하는 게 아니라 **같은 학습 화면
+안에서** 상황 하나를 마치면 다음 상황으로 이어지게 만드는 쪽이다(디스크 문항이 한 화면 안에서
+순서대로 진행되는 것과 같은 결).
 
 ## 6. 채점 파이프라인
 

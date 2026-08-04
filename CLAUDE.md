@@ -82,8 +82,10 @@ js/main.js            부팅: 화면·테스트·게임·학습 콘텐츠를 라
 js/core/              router(레지스트리·guard·teardown·게임 레지스트리) · state · dom · share · util · ads ·
                       cloud-auth(관리자 로그인용 Supabase Auth 클라이언트, D-56 — cloud-auth-loader로만
                       동적 import) · auth(관리자 이메일 판별, cloud-auth 재사용) · header(우상단 햄버거 메뉴)
-js/screens/home.js    홈 · 심리테스트 목록(등록된 테스트에서 자동 생성) · 미니게임 목록(등록된 게임에서 자동 생성) ·
-                      학습 목록(등록된 학습 콘텐츠에서 자동 생성) · 개인정보처리방침
+js/screens/home.js    홈(카테고리 카드 3개: 심리테스트/미니게임/학습) · 심리테스트 목록(등록된
+                      테스트에서 자동 생성) · 미니게임 목록(등록된 게임에서 자동 생성) ·
+                      개인정보처리방침. 학습만 목록이 없다 — 카탈로그가 아니라 도구 하나라
+                      홈 카드가 학습 화면으로 바로 간다(D-62)
 js/tests/<id>/        테스트 1개 = 폴더 1개: data · score · screens · index(디스크립터)
                       현재 adhd(+반응속도 게임), disc(+딜레마 게임),
                       couple(+assemble · match — 문항지 조립과 부부 매칭이 따로 검증돼야 해서 분리).
@@ -94,10 +96,11 @@ js/tests/<id>/        테스트 1개 = 폴더 1개: data · score · screens · 
 js/games/<id>/        테스트에 속하지 않는 독립 미니게임 1개 = 폴더 1개. 현재 numpath
 js/learning/mascot.js 학습 카테고리 전체가 공유하는 인라인 SVG 마스코트(표정·소품 조합, D-61) —
                       외부 이미지 파일 없이 mood 문자열 하나로 얼굴을 그린다
-js/learning/<id>/     테스트에 속하지 않는 학습 콘텐츠 1개 = 폴더 1개(게임과 같은 레지스트리
-                      방식, D-60). 현재 greeting(어린이 모드 파일럿, 인사/기분 표현) 하나뿐 —
-                      브라우저 내장 TTS/STT만 쓰고 서버 API·로그인·영속 저장 없음. 듣기/말하기를
-                      강제하지 않고 건너뛰기 버튼도 둔다(D-61)
+js/learning/<id>/     테스트에 속하지 않는 학습 콘텐츠 1개 = 폴더 1개. 폴더 모양은 games/*와
+                      같지만(D-60) 레지스트리·목록 카드는 없다 — 학습은 카탈로그가 아니라
+                      하나의 공부 도구라서다(D-62). 현재 greeting(어린이 모드 파일럿, 인사/기분
+                      표현) 하나뿐 — 브라우저 내장 TTS/STT만 쓰고 서버 API·로그인·영속 저장
+                      없음. 듣기/말하기를 강제하지 않고 건너뛰기 버튼도 둔다(D-61)
 functions/api/couple-code/  부부 체크 짧은 코드 발급(index.js)·조회([code].js). 유일한 백엔드 —
                       Cloudflare Pages Function + KV(COUPLE_CODES). js/tests/couple/shortcode.js를
                       그대로 가져다 쓴다(발급·조회·브라우저 검증이 같은 알파벳을 봐야 한다)
@@ -150,7 +153,7 @@ docs/design-draft.html  최초 디자인 목업. 배포·동작과 무관 (.clau
 
 - 새 테스트 추가 → `js/main.js`에 `registerTest` + `registerScreens` **둘 다**. 하나만 하면 목록 카드나 공유 URL 한쪽이 조용히 빠진다
 - 새 독립 미니게임 추가(테스트에 속하지 않는 경우) → `js/main.js`에 `registerGame` + `registerScreens` **둘 다**, `test/modules.test.js`의 화면 목록에도 새 `<id>Screens` 추가. 반응속도·딜레마처럼 테스트 하위 단계인 게임은 여기 해당 안 됨(D-4)
-- 새 학습 콘텐츠 추가(`js/learning/<id>/`) → `js/main.js`에 `registerLearning` + `registerScreens` **둘 다**, `test/modules.test.js`의 화면 목록에도 새 `<id>Screens` 추가. 미니게임 레지스트리와 완전히 같은 절차다(D-60)
+- 새 학습 상황 추가(`js/learning/<id>/`) → 홈에 새 카드를 또 만들지 않는다(D-62) — 기존 학습 화면 흐름 안에서 다음 상황으로 이어지게 붙인다. `js/main.js`엔 `registerScreens(<id>Screens)`만 호출, `test/modules.test.js`의 화면 목록에도 새 `<id>Screens` 추가
 - 학습 콘텐츠 문장 데이터에 새 `mood` 값 추가 → `js/learning/mascot.js`의 `MASCOTS`에 같은 키 추가. 안 하면 조용히 기본 마스코트(`wave`)로 대체된다 — `test/learning.mascot.test.js`가 이 대응을 검사한다(D-61)
 - 결과 유형 추가/삭제 → 같은 `data.js`의 슬러그 맵도 갱신 (없으면 공유 URL이 조용히 홈으로 폴백) — DISC는 `slug` 필드가 단일 소스라 자동
 - 문항 수 변경 → 해당 `score.js`의 만점 분모가 문항 수에서 파생되는지 확인 (ADHD `toPct` 분모 `16` = 축당 4문항 × 4점)

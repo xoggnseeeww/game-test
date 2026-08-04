@@ -52,7 +52,7 @@ export function renderLearningGreeting() {
   app.appendChild(el(`
     <div class="learning-screen">
       <div class="back-row">
-        <button class="back-btn" data-nav="learning-list">‹</button>
+        <button class="back-btn" data-nav="home">‹</button>
         <div class="back-title" id="learning-title"></div>
       </div>
       <div id="learning-card"></div>
