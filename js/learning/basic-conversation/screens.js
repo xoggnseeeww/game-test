@@ -1,15 +1,12 @@
-// 인사 · 기분 표현 상황: 문장 하나씩 듣기 → 말하기 → 결과 3단계를 반복한다(기획서 2-2).
-// disc-question과 같은 이유로 카드 하나 진입 시 화면 골격을 한 번만 그리고, 문장이
-// 바뀔 때는 #learning-card 안쪽만 갈아끼운다(전체 재렌더는 리스너·오디오를 새로 붙여야
-// 해서 더 번거롭고, 광고 슬롯이 있는 화면이었다면 중복 노출까지 생겼을 패턴).
-import { app, onLeave } from "../../core/router.js";
+// "기초 영어회화" 도구: 목차(챕터 목록) → 챕터 하나(문장 하나씩 듣기 → 말하기 → 결과 반복,
+// 기획서 2-2). disc-question과 같은 이유로 챕터 진입 시 화면 골격을 한 번만 그리고, 문장이
+// 바뀔 때는 #learning-card 안쪽만 갈아끼운다.
+import { app, go, onLeave } from "../../core/router.js";
 import { el, bindNav } from "../../core/dom.js";
 import { state } from "../../core/state.js";
-import { SENTENCES } from "./data.js";
+import { CHAPTERS } from "./data.js";
 import { similarity, feedbackTier, TIER_TEXT } from "./score.js";
 import { mascotFor } from "../mascot.js";
-
-const N = SENTENCES.length;
 
 function supportsSpeech() {
   return typeof window !== "undefined" && "speechSynthesis" in window;
@@ -42,7 +39,38 @@ function listen(onResult, onError) {
   return rec;
 }
 
-export function renderLearningGreeting() {
+// 목차 — 심리테스트 목록(renderPsychList)과 같은 카드 목록 패턴을 그대로 쓴다. 챕터가
+// 하나뿐이어도 나중에 늘어날 자리를 미리 잡아둔다(데이터에서 자동 생성이라 챕터를
+// 추가해도 이 화면은 고칠 필요 없다).
+export function renderBasicConversationIntro() {
+  app.appendChild(el(`
+    <div>
+      <div class="back-row">
+        <button class="back-btn" data-nav="learning-list">‹</button>
+        <div class="back-title">기초 영어회화</div>
+      </div>
+      <div class="section-title">🔥 목차</div>
+      <div class="test-list">
+        ${CHAPTERS.map((ch) => `
+          <button class="test-card" data-nav="learning-basic-conversation-${ch.id}">
+            <div class="icon" style="background:#FF9F45;">${ch.emoji}</div>
+            <div class="body">
+              <div class="name">${ch.title}</div>
+              <div class="desc">문장 ${ch.sentences.length}개</div>
+            </div>
+            <div class="chevron">›</div>
+          </button>
+        `).join("")}
+      </div>
+    </div>
+  `));
+  bindNav(app);
+}
+
+export function renderChapter(chapter) {
+  const N = chapter.sentences.length;
+  state.learning[chapter.id] ??= { index: 0 };
+
   let activeRecognition = null;
   onLeave(() => {
     window.speechSynthesis?.cancel();
@@ -52,7 +80,7 @@ export function renderLearningGreeting() {
   app.appendChild(el(`
     <div class="learning-screen">
       <div class="back-row">
-        <button class="back-btn" data-nav="home">‹</button>
+        <button class="back-btn" data-nav="learning-basic-conversation">‹</button>
         <div class="back-title" id="learning-title"></div>
       </div>
       <div id="learning-card"></div>
@@ -65,25 +93,27 @@ export function renderLearningGreeting() {
   const cardEl = app.querySelector("#learning-card");
 
   function showDone() {
-    titleEl.textContent = "인사 · 기분 표현";
+    titleEl.textContent = chapter.title;
     cardEl.innerHTML = `
       <div class="empty-state">
         <div class="emoji">🎉</div>
         <div class="msg">문장 ${N}개를 다 배웠어요!</div>
       </div>
       <div class="cta"><button class="cta-btn" id="learning-restart">처음부터 다시 놀기</button></div>
+      <button class="retry-btn" id="learning-toc">목차로 돌아가기</button>
     `;
     cardEl.querySelector("#learning-restart").addEventListener("click", () => {
-      state.learning.greeting = { index: 0 };
+      state.learning[chapter.id] = { index: 0 };
       showCard();
     });
+    cardEl.querySelector("#learning-toc").addEventListener("click", () => go("learning-basic-conversation"));
   }
 
   function showCard() {
-    const st = state.learning.greeting;
+    const st = state.learning[chapter.id];
     if (st.index >= N) return showDone();
-    const card = SENTENCES[st.index];
-    titleEl.textContent = `인사 · 기분 표현 (${st.index + 1}/${N})`;
+    const card = chapter.sentences[st.index];
+    titleEl.textContent = `${chapter.title} (${st.index + 1}/${N})`;
     cardEl.innerHTML = `
       <div class="cover">
         ${mascotFor(card.mood)}
@@ -110,7 +140,7 @@ export function renderLearningGreeting() {
 
     // 이미 아는 문장이면 듣기/말하기 없이 바로 다음으로 — 강제로 3단계를 다 거치게 하지 않는다.
     cardEl.querySelector("#learning-skip").addEventListener("click", () => {
-      state.learning.greeting.index += 1;
+      state.learning[chapter.id].index += 1;
       showCard();
     });
 
@@ -136,7 +166,7 @@ export function renderLearningGreeting() {
             <div class="cta"><button class="cta-btn" id="learning-next">${st.index + 1 < N ? "다음 문장" : "완료!"}</button></div>
           `;
           resultEl.querySelector("#learning-next").addEventListener("click", () => {
-            state.learning.greeting.index += 1;
+            state.learning[chapter.id].index += 1;
             showCard();
           });
         },

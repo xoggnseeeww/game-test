@@ -96,9 +96,9 @@ test("등록되는 화면 id와 경로가 겹치지 않는다", async () => {
   const { discScreens } = await import("../js/tests/disc/index.js");
   const { coupleScreens } = await import("../js/tests/couple/index.js");
   const { numpathScreens } = await import("../js/games/numpath/index.js");
-  const { learningGreetingScreens } = await import("../js/learning/greeting/index.js");
+  const { basicConversationScreens } = await import("../js/learning/basic-conversation/index.js");
   const { commonScreens } = await import("../js/screens/home.js");
-  const all = [...commonScreens, ...adhdScreens, ...discScreens, ...coupleScreens, ...numpathScreens, ...learningGreetingScreens];
+  const all = [...commonScreens, ...adhdScreens, ...discScreens, ...coupleScreens, ...numpathScreens, ...basicConversationScreens];
 
   const ids = all.map((s) => s.id);
   assert.equal(new Set(ids).size, ids.length, `화면 id가 겹친다: ${ids.join(", ")}`);
@@ -119,6 +119,7 @@ test("등록되는 화면 id와 경로가 겹치지 않는다", async () => {
   assert.ok(adhdScreens.some((s) => s.id === "test-shared" && s.dynamicPath));
   assert.ok(paths.includes("/game/numpath"));
   assert.ok(paths.includes("/learning"));
+  assert.ok(paths.includes("/learning/basic-conversation"));
   assert.ok(coupleScreens.some((s) => s.id === "couple-shared" && s.dynamicPath));
 
   // 배우자 초대 링크는 ?p=<코드>를 붙여 보낸다. 그 주소가 고정 경로로 등록돼 있어야

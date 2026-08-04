@@ -16,6 +16,7 @@ export const app = typeof document !== "undefined" ? document.getElementById("ap
 const screens = new Map();
 const tests = new Map();
 const games = new Map();
+const learningTools = new Map();
 let pathIndex = null;
 
 export function registerScreens(defs) {
@@ -44,6 +45,18 @@ export function registerGame(descriptor) {
 
 export function listGames() {
   return [...games.values()];
+}
+
+// 학습(외국어 연습 등) 도구 하나의 메타데이터: { id, card }. registerTest와 대칭 —
+// 학습 카테고리 안에 서로 독립된 도구(기초 영어회화, 나중엔 다른 과목)가 여러 개 들어갈
+// 수 있어, 도구 단위로는 카탈로그가 맞다(D-63). 도구 안의 챕터(목차)는 여기 등록하지
+// 않는다 — 그건 도구 하나의 내부 화면일 뿐이다.
+export function registerLearning(descriptor) {
+  learningTools.set(descriptor.id, descriptor);
+}
+
+export function listLearning() {
+  return [...learningTools.values()];
 }
 
 // 예전 SCREEN_TO_PATH는 ROUTES를 그냥 뒤집는 방식이라, 두 주소가 같은 화면을 가리키면

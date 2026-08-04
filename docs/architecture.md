@@ -36,8 +36,7 @@ js/core/
   util.js               shuffle · normalizePath · roundRect
   ads.js                카카오 AdFit — adSlotMarkup()(단위 코드 단일 소스) · adGateMarkup()(전면 게이트 마크업) · refreshAds()(로더 태그 재실행)
 js/screens/home.js      홈(카테고리 3개: 심리테스트/미니게임/학습) · 심리테스트 목록 · 미니게임 목록 ·
-                        개인정보처리방침 + commonScreens. 학습만 목록 화면이 없다 — 홈 카드가
-                        곧장 학습 화면으로 간다(D-62, 아래 참고)
+                        학습 목록(등록된 학습 도구에서 자동 생성) · 개인정보처리방침 + commonScreens
 js/tests/<id>/
   data.js               문항·결과 유형·슬러그·게임 상수 (단일 소스)
   score.js              채점 (DOM을 모른다 → node --test로 직접 검증 가능)
@@ -54,21 +53,24 @@ js/games/<id>/          테스트에 속하지 않는 독립 미니게임(예: n
   index.js               디스크립터: <id>Game(메타) + <id>Screens(화면 배열)
 js/learning/mascot.js   학습 카테고리 전체가 공유하는 인라인 SVG 마스코트(표정·소품 조합, D-61).
                         외부 이미지 파일 없음 — mood 문자열 → svg 마크업
-js/learning/<id>/       학습 카테고리를 이루는 콘텐츠 폴더(예: greeting). games/*와 폴더 모양은
-                        같지만 레지스트리·목록 카드가 없다 — 학습은 독립 항목을 고르는
-                        카탈로그가 아니라 하나의 공부 도구라서다(D-62)
-  data.js               문장 데이터(각 문장의 mood는 mascot.js의 MASCOTS 키와 일치해야 한다) — 단일 소스
-  score.js              발음 유사도 판정 — Levenshtein 기반, DOM을 모른다
-  screens.js            렌더 함수 (브라우저 TTS/STT 직접 연동, 서버 API 없음). 듣기/말하기를
-                        강제하지 않고 건너뛰기 버튼(#learning-skip)을 항상 같이 보여준다(D-61)
-  index.js               디스크립터: <id>(메타) + <id>Screens(화면 배열)
+js/learning/<toolId>/   학습 카테고리 안의 독립 도구 1개 = 폴더 1개(예: basic-conversation).
+                        tests/games와 같은 레지스트리 방식(D-63) — 도구가 여럿이면 학습
+                        목록(`/learning`)에 카드로 나열된다. 도구 내부는 챕터(목차) 여러
+                        개로 이뤄질 수 있고, index.js가 CHAPTERS 배열에서 챕터별 화면을
+                        자동 생성한다
+  data.js               챕터 목차(각 챕터 = { id, title, emoji, sentences }). 문장의 mood는
+                        mascot.js의 MASCOTS 키와 일치해야 한다 — 단일 소스
+  score.js              발음 유사도 판정 — Levenshtein 기반, DOM을 모른다. 챕터에 무관하게 공용
+  screens.js            렌더 함수: 목차 화면 + 챕터 화면(브라우저 TTS/STT 직접 연동, 서버 API
+                        없음). 듣기/말하기를 강제하지 않고 건너뛰기 버튼(#learning-skip)을
+                        항상 같이 보여준다(D-61)
+  index.js               디스크립터: <tool>(메타: id, card) + <tool>Screens(목차 화면 +
+                        CHAPTERS.map()으로 생성한 챕터별 화면)
 ```
 
 **의존 방향**: `tests/*`·`games/*`·`learning/*` → `core/*`. `core`는 테스트도 게임도 학습 콘텐츠도 모른다.
-`screens/home.js`는 심리테스트·미니게임은 `listTests()`/`listGames()`로 등록된 것을 조회해서 목록을
-만들고, 개별 테스트·게임을 import 하지 않는다 — **테스트나 게임을 추가해도 홈 화면 파일은 안 고친다.**
-**학습만 예외다** — 카탈로그가 아니라 도구 하나라 목록 화면 자체가 없고, 홈의 학습 카드가
-`js/learning/greeting`의 화면 id로 직접 간다(D-62).
+`screens/home.js`는 `listTests()`/`listGames()`/`listLearning()`으로 등록된 것을 조회할 뿐, 개별
+테스트·게임·학습 도구를 import 하지 않는다 — **뭘 추가해도 홈 화면 파일의 목록 렌더 로직은 안 고친다.**
 
 **`score.js`/`engine.js`/`generate.js`/`solve.js`가 DOM을 모른다는 점이 중요하다.** 로직만 순수 함수로 떼어놨기 때문에 `node --test`에서 브라우저 없이 검증된다(§8).
 
@@ -106,12 +108,15 @@ js/learning/<id>/       학습 카테고리를 이루는 콘텐츠 폴더(예: g
 결과별 슬러그 공유가 아니라 게임 주소 자체를 공유한다(§7). 반응속도·딜레마 게임은 테스트 점수에
 반영되는 하위 단계라 여기 등록하지 않는다(`docs/decisions/2026-h2.md` D-4).
 
-**학습에는 레지스트리가 없다.** 처음엔 `registerGame`/`listGames`를 그대로 복사해
-`registerLearning`/`listLearning`을 만들었는데(D-60), 학습 콘텐츠를 하나 더 만들자마자
-"독립 항목을 목록에서 골라 들어간다"는 카탈로그 모델이 이 콘텐츠엔 안 맞는다는 게 드러나
-되돌렸다(D-62) — 학습은 심리테스트·게임과 달리 여러 상황을 순서대로 밟아나가는 **하나의
-공부 도구**다. `js/main.js`가 `learningGreetingScreens`를 그냥 `registerScreens()`에 등록만
-한다.
+**`registerLearning(descriptor)` / `listLearning()`** — `registerTest`/`listTests`와 대칭인
+학습 도구 레지스트리(D-63). 학습 카테고리 **안에는** 서로 독립된 도구(기초 영어회화, 나중엔
+다른 과목)가 여러 개 들어갈 수 있어 도구 단위로는 카탈로그가 맞다 — 도구 하나(예:
+`basic-conversation`)를 등록하면 학습 목록(`/learning`)에 카드로 나온다. **도구 안의
+챕터(목차)는 여기 등록하지 않는다** — `registerScreens()`로 화면만 늘어날 뿐, 챕터 자체는
+목차 화면(§3 `learning-basic-conversation`)이 그 도구의 `CHAPTERS` 데이터에서 직접 만든다.
+처음엔(D-60) 챕터 하나(`greeting`)를 도구인 것처럼 최상위에 바로 등록했다가, 사용자가
+"학습 카테고리 안에 다른 공부 도구도 넣을 거다, 지금 건 그 안의 목차 항목 하나여야 한다"고
+바로잡아서(D-63) 지금 모양(도구만 레지스트리, 챕터는 도구 내부)이 됐다.
 
 ## 3. 화면 표
 
@@ -120,7 +125,9 @@ js/learning/<id>/       학습 카테고리를 이루는 콘텐츠 폴더(예: g
 | `/` | `home` | — | — |
 | `/test` | `psych-list` | — | — |
 | `/game` | `game-list` | — | — |
-| `/learning` | `learning-greeting` | learning | — |
+| `/learning` | `learning-list` | — | — |
+| `/learning/basic-conversation` | `learning-basic-conversation` | learning | — |
+| `/learning/basic-conversation/greeting` | `learning-basic-conversation-greeting` | learning | — |
 | `/test/adhd` | `test-intro` | — | — |
 | `/test/adhd/play` | `test-question` | — | 답이 다 차 있으면 마지막 문항으로 되돌림 |
 | `/test/adhd/result` | `test-result` | — | 답 부족 → `test-intro`, 게임 미완료 → `reaction-intro` |
@@ -163,9 +170,11 @@ js/learning/<id>/       학습 카테고리를 이루는 콘텐츠 폴더(예: g
 `docs/disc-architecture.md`로 분리돼 있다. NumPath(테스트에 속하지 않는 독립 게임)의 흐름·게임
 로직 개요는 `docs/numpath-architecture.md` 참고.
 
-**학습(외국어 연습)은 화면이 하나뿐이고 목록이 없다** — 홈의 "학습" 카드가 곧장
-`learning-greeting`으로 간다(D-62). 광고 슬롯도 아직 없다(파일럿 단계라 뺐다). 서버 API 없이
-브라우저 내장 TTS(`speechSynthesis`)·STT(`SpeechRecognition`)만 쓴다. 상세·범위·향후 확장은
+**학습은 다른 카테고리처럼 3단 구조지만, 맨 안쪽 단위가 "결과"가 아니라 "챕터"다** — 홈 →
+학습 목록(도구 카드) → 도구의 목차(챕터 카드) → 챕터 하나(문장 연습). 지금은 도구가
+`basic-conversation`(기초 영어회화) 하나, 그 안 챕터도 `greeting`(인사·기분 표현) 하나뿐이다.
+광고 슬롯은 아직 없다(파일럿 단계라 뺐다). 서버 API 없이 브라우저 내장
+TTS(`speechSynthesis`)·STT(`SpeechRecognition`)만 쓴다. 상세·범위·향후 확장은
 `docs/learning-architecture.md`.
 
 **부부 관계 성향 체크만 화면이 10개다** — 축 선택·이용 안내·배우자 초대·결합 결과가 더 있기 때문이다.
@@ -210,9 +219,8 @@ state = {
     partner: null,   // 초대 링크(?p=)나 직접 입력으로 푼 배우자 결과 — 문항을 다시 시작해도 살려둔다
     shortCode: null, // 초대 화면에서 발급받은 짧은 코드 캐시 { code, for } (D-45)
   },
-  learning: {
-    greeting: { index: 0 },  // 상황 폴더(js/learning/<id>)당 키 하나. index만 있으면 충분하다(D-60)
-  },
+  learning: {},  // 챕터 화면이 처음 열릴 때 `state.learning[chapter.id] ??= { index: 0 }`로
+                 // 챕터 id별 키가 늘어난다. index만 있으면 충분하다(D-60, D-63)
 }
 ```
 
@@ -246,12 +254,21 @@ state = {
 게임처럼 테스트 점수에 반영되는 하위 단계는 `registerGame()`하지 않는다(D-4) — guard가 테스트
 진행 상태를 요구해서, 독립 게임으로 노출하면 사용자를 테스트 인트로로 되돌려버린다.
 
-### 학습 콘텐츠 — 새 상황을 하나의 도구 안에 추가할 때
-레지스트리가 없다(위 §2 D-62). 지금 상황이 하나(`greeting`)뿐이라 아직 "여러 상황을 어떻게
-잇나"는 실전 검증 전이지만, 방향은 `docs/learning-architecture.md` §3-5에 적어뒀다 — 새
-`js/learning/<id>/` 폴더를 만들되, 홈에 새 카드를 또 노출하는 게 아니라 **같은 학습 화면
-안에서** 상황 하나를 마치면 다음 상황으로 이어지게 만드는 쪽이다(디스크 문항이 한 화면 안에서
-순서대로 진행되는 것과 같은 결).
+### 학습 도구 (독립 미니게임과 같은 절차)
+1. `js/learning/<toolId>/` 폴더 생성 — `data.js`(챕터 목차: `CHAPTERS` 배열) / `score.js` /
+   `screens.js`(목차 화면 + 챕터 화면) / `index.js`
+2. `index.js`에서 `<tool>`(메타: `id`, `card`)과 `<tool>Screens`(목차 화면 1개 +
+   `CHAPTERS.map()`으로 생성한 챕터별 화면) export
+3. `js/main.js`에서 `registerLearning(<tool>)` **와** `registerScreens(<tool>Screens)` **둘 다** 호출
+4. `npm test` — `test/modules.test.js`의 import 목록에 새 `<tool>Screens`도 추가
+
+홈·목록 화면은 고치지 않는다. `renderLearningList()`가 `listLearning()`으로 도구 카드를 만든다.
+
+### 학습 도구 안에 새 챕터(목차 항목) 추가할 때
+레지스트리에 새로 등록하지 않는다 — 해당 도구의 `data.js`(`CHAPTERS` 배열)에 항목만
+추가하면 그 도구의 `index.js`가 화면을 자동 생성하고, 목차 화면(`renderBasicConversationIntro`
+류)도 데이터에서 카드를 만들어서 따로 고칠 게 없다. `test/learning.mascot.test.js`가 새
+문장의 `mood`가 `js/learning/mascot.js`의 `MASCOTS`에 실재하는지 검사한다.
 
 ## 6. 채점 파이프라인
 

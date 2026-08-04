@@ -1,5 +1,5 @@
 // 홈 · 심리테스트 목록 · 미니게임 목록.
-import { app, listTests, listGames } from "../core/router.js";
+import { app, listTests, listGames, listLearning } from "../core/router.js";
 import { el, bindNav } from "../core/dom.js";
 import { adSlotMarkup } from "../core/ads.js";
 import { isAdmin } from "../core/auth.js";
@@ -33,7 +33,7 @@ export function renderHome() {
           <div class="title">미니게임</div>
           <div class="sub">머리 쓰는 잠깐의 퍼즐</div>
         </button>
-        <button class="category-card" style="background:#FFF3E4;" data-nav="learning-greeting">
+        <button class="category-card" style="background:#FFF3E4;" data-nav="learning-list">
           <div class="icon" style="background:#FF9F45;">🗣️</div>
           <div class="title">학습</div>
           <div class="sub">듣고 따라 말하는 영어</div>
@@ -117,6 +117,45 @@ export function renderGameList() {
   bindNav(app);
 }
 
+// 목록 카드는 등록된 학습 도구에서 뽑아 쓴다(renderGameList와 같은 패턴). 도구 하나(기초
+// 영어회화)의 내부 챕터(목차)는 여기 안 나온다 — 그건 그 도구 화면 안에서 보여준다.
+export function renderLearningList() {
+  const tools = listLearning();
+  app.appendChild(el(`
+    <div>
+      <div class="back-row">
+        <button class="back-btn" data-nav="home">‹</button>
+        <div class="back-title">학습</div>
+      </div>
+      ${adSlotMarkup("bannerTop", "margin-top:10px; margin-bottom:4px;")}
+      ${
+        tools.length === 0
+          ? `
+      <div class="empty-state">
+        <div class="emoji">🛠️</div>
+        <div class="msg">준비 중인 학습이 있어요<br/>조금만 기다려주세요!</div>
+      </div>`
+          : `
+      <div class="section-title">🔥 지금 인기</div>
+      <div class="test-list">
+        ${tools.map((t) => `
+          <button class="test-card" data-nav="${t.card.screen}">
+            <div class="icon" style="background:${t.card.color};">${t.card.emoji}</div>
+            <div class="body">
+              <div class="name">${t.card.name}</div>
+              <div class="desc">${t.card.desc}</div>
+            </div>
+            <div class="chevron">›</div>
+          </button>
+        `).join("")}
+      </div>`
+      }
+      ${adSlotMarkup("bannerBottom", "margin-top:6px; margin-bottom:22px;")}
+    </div>
+  `));
+  bindNav(app);
+}
+
 // 실제로 저장·처리하는 것만 적는다 — 아직 안 하는 걸(계정, 회원 데이터 등) 미리 적어두면
 // 나중에 실제로 그 기능이 생겼을 때 방침이 먼저 거짓말이 된다. 부부 체크 짧은 코드
 // 도입(D-45)으로 "영속 데이터 없음"이 깨진 예외 하나가 생겨서 이 화면을 만들었다.
@@ -184,5 +223,6 @@ export const commonScreens = [
   { id: "home", path: "/", title: "과몰입구역 - 심리테스트 · 미니게임", render: renderHome },
   { id: "psych-list", path: "/test", title: "심리테스트 | 과몰입구역", render: renderPsychList },
   { id: "game-list", path: "/game", title: "미니게임 | 과몰입구역", render: renderGameList },
+  { id: "learning-list", path: "/learning", title: "학습 | 과몰입구역", render: renderLearningList },
   { id: "privacy", path: "/privacy", title: "개인정보처리방침 | 과몰입구역", render: renderPrivacy },
 ];

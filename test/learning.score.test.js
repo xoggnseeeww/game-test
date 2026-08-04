@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { similarity, feedbackTier, TIER_TEXT } from "../js/learning/greeting/score.js";
-import { SENTENCES } from "../js/learning/greeting/data.js";
+import { similarity, feedbackTier, TIER_TEXT } from "../js/learning/basic-conversation/score.js";
+import { CHAPTERS } from "../js/learning/basic-conversation/data.js";
 
 test("정확히 맞히면 100%, 완전히 다르면 낮은 점수", () => {
   assert.equal(similarity("Hello!", "Hello!"), 100);
@@ -29,7 +29,18 @@ test("모든 등급에 대응하는 피드백 문구가 있다", () => {
   }
 });
 
-test("문장 데이터는 최소 1개 이상이고, id가 중복되지 않는다", () => {
-  assert.ok(SENTENCES.length > 0);
-  assert.equal(new Set(SENTENCES.map((s) => s.id)).size, SENTENCES.length);
+test("목차는 챕터가 최소 1개 이상이고, 챕터 id가 중복되지 않는다", () => {
+  assert.ok(CHAPTERS.length > 0);
+  assert.equal(new Set(CHAPTERS.map((c) => c.id)).size, CHAPTERS.length);
+});
+
+test("각 챕터의 문장은 최소 1개 이상이고, 챕터 안에서 문장 id가 중복되지 않는다", () => {
+  for (const ch of CHAPTERS) {
+    assert.ok(ch.sentences.length > 0, `챕터 "${ch.id}"에 문장이 없다`);
+    assert.equal(
+      new Set(ch.sentences.map((s) => s.id)).size,
+      ch.sentences.length,
+      `챕터 "${ch.id}"의 문장 id가 중복된다`
+    );
+  }
 });

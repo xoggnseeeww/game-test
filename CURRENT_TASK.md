@@ -3,7 +3,28 @@
 > 이 파일은 1~2k 토큰 이하를 유지한다 — "언젠가 할 일"이 아니라 "지금 유효한 작업"만.
 
 ## 현재 작업
-2026-08-03(3): **학습의 레지스트리·목록 화면 제거 — "카탈로그"에서 "하나의 공부 도구"로 정정**
+2026-08-03(4): **학습을 2단(도구 카탈로그 → 도구 내 목차)으로 재정정**(D-63). 직전 세션(D-62,
+바로 아래)에서 학습 카테고리의 레지스트리·목록을 통째로 없앤 게 과잉이었다 — 사용자가
+"학습에 하나의 도구로 만들어줘야지 목차별로 다 나열할 수가 없잖아. 하나의 공부 창이
+되는거지. 왜냐하면 학습 카테고리 안에 다른 공부 도구들도 넣을거거든"이라고 정확한 목표
+구조를 알려줬다: 홈 → 학습 목록(도구 카드, 심리테스트 목록과 대칭) → 도구 하나("기초
+영어회화")의 목차(챕터 카드) → 챕터 하나(문장 연습). "상황을 홈 최상위 카드로 노출하지
+않는다"는 D-62의 판단은 유효했고, 빠진 건 "도구 레벨엔 카탈로그가 있어야 한다"였다.
+`js/core/router.js`에 `registerLearning`/`listLearning` 재추가(도구 등록용, `registerTest`와
+대칭). `js/screens/home.js`에 `renderLearningList()` 재추가. `js/learning/greeting/` →
+`js/learning/basic-conversation/`로 이동하고, `data.js`를 평평한 `SENTENCES`에서 챕터
+배열 `CHAPTERS`(챕터마다 `{ id, title, emoji, sentences }`)로 재구성 — `index.js`가
+`CHAPTERS.map()`으로 챕터별 화면을 자동 생성해 챕터가 늘어도 이 파일을 안 고친다.
+경로: `/learning`(도구 목록) → `/learning/basic-conversation`(목차) →
+`/learning/basic-conversation/greeting`(첫 챕터). `state.learning`도 `{ greeting: {...} }`
+고정 키에서 `{}` + 챕터 화면 진입 시 `state.learning[chapter.id] ??= { index: 0 }` 지연
+초기화로 바꿔, 도구·챕터가 늘어도 state.js를 안 고친다.
+`test/learning.score.test.js`·`test/learning.mascot.test.js`를 `CHAPTERS` 구조에 맞게
+갱신(챕터 id 중복·챕터별 문장 id 중복 검사 추가). `npm test` 144/144(챕터 검사 1개 순증).
+헤드리스 브라우저로 홈 → 학습 목록 → 기초 영어회화 목차 → greeting 챕터 진입, 건너뛰기
+5회 → 완료 → "목차로 돌아가기", 뒤로가기를 3단(챕터→목차→목록→홈) 전부 확인.
+
+이전(2026-08-03(3)): **학습의 레지스트리·목록 화면 제거 — "카탈로그"에서 "하나의 공부 도구"로 정정**
 (D-62). 사용자 피드백 — "학습에 하나의 도구로 만들어줘야지 목차별로 다 나열할 수가 없잖아.
 하나의 공부 창이 되는거지." 직전 세션(D-60)에서 `registerGame`/`listGames`를 그대로 복사해
 `registerLearning`/`listLearning` + 목록 화면(`learning-list`)을 만든 게 잘못된 모델이었다 —
