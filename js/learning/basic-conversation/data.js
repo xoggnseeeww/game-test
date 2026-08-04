@@ -5,6 +5,12 @@
 // "아침에 일어나기", "친구랑 놀기", "밥 먹기", "잠자리" 같은 하루 일과 하나를 에피소드로
 // 삼는 것과 같은 결. 단어 암기(This is a rabbit)보다 그 상황에서 실제로 주고받는 말
 // (Let's play! / Can I have more?)을 우선했다.
+//
+// 챕터는 잘게 쪼개지 않고 묶는다(D-66) — 하루 일과처럼 시간 순으로 자연스럽게 이어지는
+// 상황이나, 가족·자기소개처럼 소재가 겹치는 상황은 챕터 하나로 합쳐서 문항 수를 키운다.
+// 새 상황이 생기면 새 챕터부터 만들지 말고, 기존 챕터 중 붙일 자리가 있는지 먼저 본다 —
+// 챕터가 잘게 계속 늘어나면 목차 자체가 또 하나의 목록이 돼서 "하나의 공부 도구"라는
+// 원래 취지(D-62·D-63)가 흐려진다.
 export const CHAPTERS = [
   {
     id: "greeting",
@@ -44,9 +50,11 @@ export const CHAPTERS = [
     ],
   },
   {
-    id: "morning-routine",
-    title: "아침 일과",
-    emoji: "☀️",
+    // 옛 morning-routine + meal-time + bath-bedtime을 하나로. 아침에 일어나서 밥 먹고
+    // 놀다가 씻고 잠드는 하루 흐름을 그대로 시간순으로 이었다.
+    id: "daily-routine",
+    title: "하루 일과",
+    emoji: "🌅",
     sentences: [
       { id: "wake-up", text: "Wake up!", ko: "일어나요!" },
       { id: "brush-teeth", text: "Let's brush our teeth.", ko: "이 닦자." },
@@ -56,26 +64,54 @@ export const CHAPTERS = [
       { id: "wheres-my-shoes", text: "Where are my shoes?", ko: "내 신발 어디 있어요?" },
       { id: "im-ready", text: "I'm ready!", ko: "준비 다 됐어요!" },
       { id: "lets-go", text: "Let's go!", ko: "가자!" },
+      { id: "im-hungry", text: "I'm hungry.", ko: "배고파요." },
+      { id: "lets-eat", text: "Let's eat!", ko: "먹자!" },
+      { id: "this-is-yummy", text: "This is yummy!", ko: "이거 맛있어요!" },
+      { id: "i-dont-like-this", text: "I don't like this.", ko: "이거 안 좋아해요." },
+      { id: "can-i-have-more", text: "Can I have more?", ko: "더 먹어도 돼요?" },
+      { id: "im-full", text: "I'm full.", ko: "배불러요." },
+      { id: "cheers", text: "Cheers!", ko: "건배!" },
+      { id: "thank-you-for-the-food", text: "Thank you for the food.", ko: "잘 먹겠습니다." },
+      { id: "bath-time", text: "Bath time!", ko: "목욕할 시간이에요!" },
+      { id: "water-is-warm", text: "The water is warm.", ko: "물이 따뜻해요." },
+      { id: "wash-your-hair", text: "Let's wash your hair.", ko: "머리 감자." },
+      { id: "put-on-pajamas", text: "Put on your pajamas.", ko: "잠옷 입자." },
+      { id: "brush-teeth-again", text: "Brush your teeth.", ko: "이 닦자." },
+      { id: "bedtime-story", text: "Let's read a bedtime story.", ko: "자기 전에 책 읽어 줄게." },
+      { id: "sweet-dreams", text: "Sweet dreams!", ko: "좋은 꿈 꿔!" },
+      { id: "good-night-again", text: "Good night!", ko: "잘 자요!" },
     ],
   },
   {
-    id: "family",
-    title: "가족 이야기",
+    // 옛 self-intro + family를 하나로. 나를 소개하는 문장과 우리 가족을 소개하는 문장은
+    // 소재가 이어져 있어 굳이 나눌 이유가 없었다.
+    id: "family-and-me",
+    title: "가족 · 자기소개",
     emoji: "👨‍👩‍👧",
     sentences: [
+      { id: "name-is-amy", text: "My name is Amy.", ko: "내 이름은 에이미예요." },
+      { id: "seven-years-old", text: "I am seven years old.", ko: "나는 일곱 살이에요." },
+      { id: "live-in-seoul", text: "I live in Seoul.", ko: "나는 서울에 살아요." },
+      { id: "like-drawing", text: "I like drawing.", ko: "나는 그림 그리기를 좋아해요." },
+      { id: "favorite-color", text: "My favorite color is blue.", ko: "내가 제일 좋아하는 색은 파란색이에요." },
+      { id: "am-a-student", text: "I am a student.", ko: "나는 학생이에요." },
+      { id: "nice-to-meet-you-too", text: "Nice to meet you too!", ko: "저도 만나서 반가워요!" },
       { id: "this-is-mom", text: "This is my mom.", ko: "이 사람은 우리 엄마예요." },
       { id: "this-is-dad", text: "This is my dad.", ko: "이 사람은 우리 아빠예요." },
+      { id: "have-big-brother", text: "I have a big brother.", ko: "나는 형(오빠)이 있어요." },
+      { id: "wheres-grandma", text: "Where is grandma?", ko: "할머니 어디 계세요?" },
       { id: "i-love-you", text: "I love you.", ko: "사랑해요." },
-      { id: "can-you-help-me", text: "Can you help me?", ko: "도와줄 수 있어요?" },
-      { id: "read-together", text: "Let's read a book together.", ko: "같이 책 읽자." },
       { id: "i-miss-you", text: "I miss you.", ko: "보고 싶어요." },
       { id: "give-me-a-hug", text: "Give me a hug.", ko: "안아 주세요." },
-      { id: "wheres-grandma", text: "Where is grandma?", ko: "할머니 어디 계세요?" },
+      { id: "can-you-help-me", text: "Can you help me?", ko: "도와줄 수 있어요?" },
+      { id: "read-together", text: "Let's read a book together.", ko: "같이 책 읽자." },
     ],
   },
   {
-    id: "playing-with-friends",
-    title: "친구랑 놀기",
+    // 옛 playing-with-friends + weather를 하나로. 밖에서 노는 동안 날씨 얘기가 자연스럽게
+    // 섞여 나오는 상황이라 같이 뒀다.
+    id: "playground",
+    title: "놀이터에서",
     emoji: "🎈",
     sentences: [
       { id: "lets-play", text: "Let's play!", ko: "같이 놀자!" },
@@ -88,43 +124,6 @@ export const CHAPTERS = [
       { id: "lets-share", text: "Let's share.", ko: "같이 나눠 쓰자." },
       { id: "tag-youre-it", text: "Tag, you're it!", ko: "잡았다, 네 차례야!" },
       { id: "lets-race", text: "Let's race!", ko: "우리 달리기 하자!" },
-    ],
-  },
-  {
-    id: "meal-time",
-    title: "밥 먹을 때",
-    emoji: "🍽️",
-    sentences: [
-      { id: "im-hungry", text: "I'm hungry.", ko: "배고파요." },
-      { id: "lets-eat", text: "Let's eat!", ko: "먹자!" },
-      { id: "this-is-yummy", text: "This is yummy!", ko: "이거 맛있어요!" },
-      { id: "i-dont-like-this", text: "I don't like this.", ko: "이거 안 좋아해요." },
-      { id: "can-i-have-more", text: "Can I have more?", ko: "더 먹어도 돼요?" },
-      { id: "im-full", text: "I'm full.", ko: "배불러요." },
-      { id: "cheers", text: "Cheers!", ko: "건배!" },
-      { id: "thank-you-for-the-food", text: "Thank you for the food.", ko: "잘 먹겠습니다." },
-    ],
-  },
-  {
-    id: "bath-bedtime",
-    title: "목욕 · 잠자리",
-    emoji: "🛁",
-    sentences: [
-      { id: "bath-time", text: "Bath time!", ko: "목욕할 시간이에요!" },
-      { id: "water-is-warm", text: "The water is warm.", ko: "물이 따뜻해요." },
-      { id: "wash-your-hair", text: "Let's wash your hair.", ko: "머리 감자." },
-      { id: "put-on-pajamas", text: "Put on your pajamas.", ko: "잠옷 입자." },
-      { id: "brush-teeth-again", text: "Brush your teeth.", ko: "이 닦자." },
-      { id: "bedtime-story", text: "Let's read a bedtime story.", ko: "자기 전에 책 읽어 줄게." },
-      { id: "sweet-dreams", text: "Sweet dreams!", ko: "좋은 꿈 꿔!" },
-      { id: "good-night-again", text: "Good night!", ko: "잘 자요!" },
-    ],
-  },
-  {
-    id: "weather",
-    title: "날씨 이야기",
-    emoji: "⛅",
-    sentences: [
       { id: "sunny-today", text: "It's sunny today.", ko: "오늘은 맑아요." },
       { id: "its-raining", text: "It's raining.", ko: "비가 와요." },
       { id: "its-snowing", text: "It's snowing!", ko: "눈이 와요!" },
@@ -133,21 +132,6 @@ export const CHAPTERS = [
       { id: "cold-outside", text: "It's cold outside.", ko: "밖이 추워요." },
       { id: "bring-umbrella", text: "Bring an umbrella.", ko: "우산 챙기세요." },
       { id: "beautiful-day", text: "What a beautiful day!", ko: "날씨 정말 좋다!" },
-    ],
-  },
-  {
-    id: "self-intro",
-    title: "자기소개",
-    emoji: "🙋",
-    sentences: [
-      { id: "name-is-amy", text: "My name is Amy.", ko: "내 이름은 에이미예요." },
-      { id: "seven-years-old", text: "I am seven years old.", ko: "나는 일곱 살이에요." },
-      { id: "live-in-seoul", text: "I live in Seoul.", ko: "나는 서울에 살아요." },
-      { id: "have-big-brother", text: "I have a big brother.", ko: "나는 형(오빠)이 있어요." },
-      { id: "like-drawing", text: "I like drawing.", ko: "나는 그림 그리기를 좋아해요." },
-      { id: "favorite-color", text: "My favorite color is blue.", ko: "내가 제일 좋아하는 색은 파란색이에요." },
-      { id: "am-a-student", text: "I am a student.", ko: "나는 학생이에요." },
-      { id: "nice-to-meet-you-too", text: "Nice to meet you too!", ko: "저도 만나서 반가워요!" },
     ],
   },
 ];
