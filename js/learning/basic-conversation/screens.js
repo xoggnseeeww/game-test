@@ -6,7 +6,6 @@ import { el, bindNav } from "../../core/dom.js";
 import { state } from "../../core/state.js";
 import { CHAPTERS } from "./data.js";
 import { similarity, feedbackTier, TIER_TEXT } from "./score.js";
-import { mascotFor } from "../mascot.js";
 
 function supportsSpeech() {
   return typeof window !== "undefined" && "speechSynthesis" in window;
@@ -116,9 +115,8 @@ export function renderChapter(chapter) {
     titleEl.textContent = `${chapter.title} (${st.index + 1}/${N})`;
     cardEl.innerHTML = `
       <div class="cover">
-        ${mascotFor(card.mood)}
         <h2>${card.text}</h2>
-        <p>${card.ko}</p>
+        <p class="cover-ko">${card.ko}</p>
       </div>
       ${!supportsSpeech()
         ? `<p class="learning-warn">이 브라우저는 음성 재생을 지원하지 않아요.</p>`

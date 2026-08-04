@@ -51,15 +51,14 @@ js/games/<id>/          테스트에 속하지 않는 독립 미니게임(예: n
   play.js                플레이 화면 — in-place 렌더 필요해서 screens.js와 분리
   screens.js            인트로 · 광고 게이트 · 결과 화면
   index.js               디스크립터: <id>Game(메타) + <id>Screens(화면 배열)
-js/learning/mascot.js   학습 카테고리 전체가 공유하는 인라인 SVG 마스코트(표정·소품 조합, D-61).
-                        외부 이미지 파일 없음 — mood 문자열 → svg 마크업
 js/learning/<toolId>/   학습 카테고리 안의 독립 도구 1개 = 폴더 1개(예: basic-conversation).
                         tests/games와 같은 레지스트리 방식(D-63) — 도구가 여럿이면 학습
                         목록(`/learning`)에 카드로 나열된다. 도구 내부는 챕터(목차) 여러
                         개로 이뤄질 수 있고, index.js가 CHAPTERS 배열에서 챕터별 화면을
                         자동 생성한다
-  data.js               챕터 목차(각 챕터 = { id, title, emoji, sentences }). 문장의 mood는
-                        mascot.js의 MASCOTS 키와 일치해야 한다 — 단일 소스
+  data.js               챕터 목차(각 챕터 = { id, title, emoji, sentences }) — 단일 소스.
+                        문장 카드 위 마스코트 일러스트는 D-64에서 뺐다(실물로 보니 별로였다) —
+                        이미지가 필요해지면 그때 별도 에셋으로 다시 넣는다
   score.js              발음 유사도 판정 — Levenshtein 기반, DOM을 모른다. 챕터에 무관하게 공용
   screens.js            렌더 함수: 목차 화면 + 챕터 화면(브라우저 TTS/STT 직접 연동, 서버 API
                         없음). 듣기/말하기를 강제하지 않고 건너뛰기 버튼(#learning-skip)을
@@ -172,9 +171,9 @@ js/learning/<toolId>/   학습 카테고리 안의 독립 도구 1개 = 폴더 1
 
 **학습은 다른 카테고리처럼 3단 구조지만, 맨 안쪽 단위가 "결과"가 아니라 "챕터"다** — 홈 →
 학습 목록(도구 카드) → 도구의 목차(챕터 카드) → 챕터 하나(문장 연습). 지금은 도구가
-`basic-conversation`(기초 영어회화) 하나, 그 안 챕터도 `greeting`(인사·기분 표현) 하나뿐이다.
-광고 슬롯은 아직 없다(파일럿 단계라 뺐다). 서버 API 없이 브라우저 내장
-TTS(`speechSynthesis`)·STT(`SpeechRecognition`)만 쓴다. 상세·범위·향후 확장은
+`basic-conversation`(기초 영어회화) 하나, 그 안 챕터는 4개(인사/기분 표현 30문장 · 동물/음식·
+학교/놀이터·자기소개 각 8문장)다. 광고 슬롯은 아직 없다(파일럿 단계라 뺐다). 서버 API 없이
+브라우저 내장 TTS(`speechSynthesis`)·STT(`SpeechRecognition`)만 쓴다. 상세·범위·향후 확장은
 `docs/learning-architecture.md`.
 
 **부부 관계 성향 체크만 화면이 10개다** — 축 선택·이용 안내·배우자 초대·결합 결과가 더 있기 때문이다.
@@ -267,8 +266,7 @@ state = {
 ### 학습 도구 안에 새 챕터(목차 항목) 추가할 때
 레지스트리에 새로 등록하지 않는다 — 해당 도구의 `data.js`(`CHAPTERS` 배열)에 항목만
 추가하면 그 도구의 `index.js`가 화면을 자동 생성하고, 목차 화면(`renderBasicConversationIntro`
-류)도 데이터에서 카드를 만들어서 따로 고칠 게 없다. `test/learning.mascot.test.js`가 새
-문장의 `mood`가 `js/learning/mascot.js`의 `MASCOTS`에 실재하는지 검사한다.
+류)도 데이터에서 카드를 만들어서 따로 고칠 게 없다.
 
 ## 6. 채점 파이프라인
 
