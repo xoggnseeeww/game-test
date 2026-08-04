@@ -11,8 +11,8 @@ export const basicConversation = {
     screen: "learning-basic-conversation",
     emoji: "🗣️",
     color: "#FF9F45",
-    name: "기초 영어회화",
-    desc: `상황별로 배우는 인사·표현 · 목차 ${CHAPTERS.length}개`,
+    name: "기초 영어회화 (7세 이하)",
+    desc: `일상대화로 배우는 첫 영어 · 목차 ${CHAPTERS.length}개`,
   },
 };
 

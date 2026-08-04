@@ -84,6 +84,10 @@ export const CHAPTERS = [
       { id: "bedtime-story", text: "Let's read a bedtime story.", ko: "자기 전에 책 읽어 줄게." },
       { id: "sweet-dreams", text: "Sweet dreams!", ko: "좋은 꿈 꿔!" },
       { id: "good-night-again", text: "Good night!", ko: "잘 자요!" },
+      { id: "wash-your-hands", text: "Wash your hands.", ko: "손을 씻자." },
+      { id: "cover-your-mouth", text: "Cover your mouth.", ko: "입을 가리세요." },
+      { id: "go-potty", text: "I need to go potty.", ko: "화장실 가고 싶어요." },
+      { id: "wipe-your-mouth", text: "Wipe your mouth.", ko: "입을 닦자." },
     ],
   },
   {
@@ -114,6 +118,9 @@ export const CHAPTERS = [
       { id: "give-me-a-hug", text: "Give me a hug.", ko: "안아 주세요." },
       { id: "can-you-help-me", text: "Can you help me?", ko: "도와줄 수 있어요?" },
       { id: "read-together", text: "Let's read a book together.", ko: "같이 책 읽자." },
+      { id: "color-red", text: "It's red.", ko: "빨간색이에요." },
+      { id: "color-yellow", text: "It's yellow.", ko: "노란색이에요." },
+      { id: "color-green", text: "It's green.", ko: "초록색이에요." },
     ],
   },
   {
@@ -145,6 +152,10 @@ export const CHAPTERS = [
       { id: "cloudy-today", text: "It's cloudy today.", ko: "오늘 흐려요." },
       { id: "bring-umbrella", text: "Bring an umbrella.", ko: "우산 챙기세요." },
       { id: "beautiful-day", text: "What a beautiful day!", ko: "날씨 정말 좋다!" },
+      { id: "go-to-the-park", text: "Can we go to the park?", ko: "우리 공원 가도 돼요?" },
+      { id: "want-to-swing", text: "I want to swing.", ko: "그네 타고 싶어요." },
+      { id: "build-sandcastle", text: "Let's build a sandcastle.", ko: "모래성 만들자." },
+      { id: "one-two-three-go", text: "One, two, three, go!", ko: "하나, 둘, 셋, 출발!" },
     ],
   },
 ];

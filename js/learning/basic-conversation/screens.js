@@ -15,10 +15,10 @@ function supportsRecognition() {
   return typeof window !== "undefined" && !!(window.SpeechRecognition || window.webkitSpeechRecognition);
 }
 
-function speak(text, rate) {
+function speak(text, rate, lang = "en-US") {
   window.speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
-  u.lang = "en-US";
+  u.lang = lang;
   u.rate = rate;
   window.speechSynthesis.speak(u);
 }
@@ -116,7 +116,10 @@ export function renderChapter(chapter) {
     cardEl.innerHTML = `
       <div class="cover">
         <h2>${card.text}</h2>
-        <p class="cover-ko">${card.ko}</p>
+        <p class="cover-ko">
+          ${card.ko}
+          ${supportsSpeech() ? `<button class="ko-listen-btn" id="learning-listen-ko" aria-label="한국어 뜻 듣기">🔊</button>` : ""}
+        </p>
       </div>
       ${!supportsSpeech()
         ? `<p class="learning-warn">이 브라우저는 음성 재생을 지원하지 않아요.</p>`
@@ -135,6 +138,9 @@ export function renderChapter(chapter) {
     cardEl.querySelectorAll(".learning-listen .cta-btn").forEach((btn) => {
       btn.addEventListener("click", () => speak(card.text, Number(btn.dataset.rate)));
     });
+
+    // 한글을 아직 못 읽는 어린이도 뜻을 알 수 있게 — 한국어 해석도 읽어준다.
+    cardEl.querySelector("#learning-listen-ko")?.addEventListener("click", () => speak(card.ko, 1, "ko-KR"));
 
     // 이미 아는 문장이면 듣기/말하기 없이 바로 다음으로 — 강제로 3단계를 다 거치게 하지 않는다.
     cardEl.querySelector("#learning-skip").addEventListener("click", () => {

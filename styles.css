@@ -2069,6 +2069,24 @@ button.meta-chip {
    .cover p보다 상세도가 높아야 이긴다(둘 다 .cover 안 p라서 클래스 하나로는 밀린다). */
 .cover p.cover-ko { font-size: 17px; }
 
+/* 학습 카테고리: 한글을 아직 못 읽는 어린이를 위한 뜻 듣기 버튼 — 해석 문장 옆에 작게 붙인다
+   (D-68). .cover-ko의 흰색 텍스트 옆이라 배경도 흰 반투명으로 눈에 띄게 한다. */
+.ko-listen-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  margin-left: 6px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255,255,255,.22);
+  color: inherit;
+  font-size: 14px;
+  vertical-align: middle;
+}
+
 /* 학습 카테고리: 듣기 버튼 두 개(기본/천천히)를 나란히 놓는 행. .cta-btn은 width:100%라
    flex 안에서는 flex:1로 눌러줘야 나란히 앉는다. */
 .learning-listen {
