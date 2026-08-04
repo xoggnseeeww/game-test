@@ -4,6 +4,7 @@
 import { app, go, onLeave } from "../../core/router.js";
 import { el, bindNav } from "../../core/dom.js";
 import { state } from "../../core/state.js";
+import { saveLearningProgress } from "../cloud.js";
 import { CHAPTERS } from "./data.js";
 import { similarity, feedbackTier, TIER_TEXT } from "./score.js";
 
@@ -103,6 +104,7 @@ export function renderChapter(chapter) {
     `;
     cardEl.querySelector("#learning-restart").addEventListener("click", () => {
       state.learning[chapter.id] = { index: 0 };
+      saveLearningProgress();
       showCard();
     });
     cardEl.querySelector("#learning-toc").addEventListener("click", () => go("learning-basic-conversation"));
@@ -139,6 +141,7 @@ export function renderChapter(chapter) {
     // 이미 아는 문장이면 듣기/말하기 없이 바로 다음으로 — 강제로 3단계를 다 거치게 하지 않는다.
     cardEl.querySelector("#learning-skip").addEventListener("click", () => {
       state.learning[chapter.id].index += 1;
+      saveLearningProgress();
       showCard();
     });
 
@@ -165,6 +168,7 @@ export function renderChapter(chapter) {
           `;
           resultEl.querySelector("#learning-next").addEventListener("click", () => {
             state.learning[chapter.id].index += 1;
+            saveLearningProgress();
             showCard();
           });
         },
