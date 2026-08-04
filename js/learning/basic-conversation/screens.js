@@ -51,16 +51,20 @@ export function renderBasicConversationIntro() {
       </div>
       <div class="section-title">🔥 목차</div>
       <div class="test-list">
-        ${CHAPTERS.map((ch) => `
+        ${CHAPTERS.map((ch) => {
+          const advanced = ch.sentences.filter((s) => s.level === "advanced").length;
+          const basic = ch.sentences.length - advanced;
+          return `
           <button class="test-card" data-nav="learning-basic-conversation-${ch.id}">
             <div class="icon" style="background:#FF9F45;">${ch.emoji}</div>
             <div class="body">
               <div class="name">${ch.title}</div>
-              <div class="desc">문장 ${ch.sentences.length}개</div>
+              <div class="desc">${advanced > 0 ? `기초 ${basic} · 심화 ${advanced}` : `문장 ${basic}개`}</div>
             </div>
             <div class="chevron">›</div>
           </button>
-        `).join("")}
+        `;
+        }).join("")}
       </div>
     </div>
   `));
@@ -117,6 +121,7 @@ export function renderChapter(chapter) {
     titleEl.textContent = `${chapter.title} (${st.index + 1}/${N})`;
     cardEl.innerHTML = `
       <div class="cover">
+        ${card.level === "advanced" ? `<div class="tag">심화</div>` : ""}
         <h2>${card.text}</h2>
         <p class="cover-ko">
           ${card.ko}

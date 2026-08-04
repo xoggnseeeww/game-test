@@ -11,6 +11,13 @@
 // 새 상황이 생기면 새 챕터부터 만들지 말고, 기존 챕터 중 붙일 자리가 있는지 먼저 본다 —
 // 챕터가 잘게 계속 늘어나면 목차 자체가 또 하나의 목록이 돼서 "하나의 공부 도구"라는
 // 원래 취지(D-62·D-63)가 흐려진다.
+//
+// 문장에는 `level`이 있을 수 있다(D-70). 없으면 "기초"(입문 생존 표현), `"advanced"`면
+// "심화"(의견·이유·비교·협상이 들어간, 원어민 7세 정도의 문장). 각 챕터 안에서 기초를
+// 전부 배열한 다음 심화를 뒤에 잇는다 — 같은 상황을 계속 반복하며 단계만 올라가는
+// 흐름이라, 심화용으로 새 챕터를 또 만들지 않는다. 진짜 다중 턴 대화(질문→대답→되묻기)는
+// 이 앱의 "문장 하나 듣고 따라 말하기" 채점 구조와 안 맞아서 지금은 만들지 않는다 — 나중에
+// 별도 대화형 도구로 다룰 계획(`docs/learning-architecture.md` §3-5).
 export const CHAPTERS = [
   {
     id: "greeting",
@@ -47,6 +54,12 @@ export const CHAPTERS = [
       { id: "yes", text: "Yes!", ko: "네!" },
       { id: "no", text: "No.", ko: "아니요." },
       { id: "bye", text: "Goodbye!", ko: "안녕히 가세요!" },
+      { id: "happy-because", text: "I'm happy because it's my birthday.", ko: "오늘 제 생일이라서 기뻐요.", level: "advanced" },
+      { id: "little-nervous", text: "I feel a little nervous.", ko: "조금 긴장돼요.", level: "advanced" },
+      { id: "dont-feel-good", text: "I don't feel good today.", ko: "오늘 몸이 안 좋아요.", level: "advanced" },
+      { id: "why-are-you-sad", text: "Why are you sad?", ko: "왜 슬퍼요?", level: "advanced" },
+      { id: "not-angry-anymore", text: "I'm not angry anymore.", ko: "이제 화 안 났어요.", level: "advanced" },
+      { id: "made-me-happy", text: "That made me really happy.", ko: "그거 때문에 진짜 기뻤어요.", level: "advanced" },
     ],
   },
   {
@@ -88,6 +101,12 @@ export const CHAPTERS = [
       { id: "cover-your-mouth", text: "Cover your mouth.", ko: "입을 가리세요." },
       { id: "go-potty", text: "I need to go potty.", ko: "화장실 가고 싶어요." },
       { id: "wipe-your-mouth", text: "Wipe your mouth.", ko: "입을 닦자." },
+      { id: "watch-tv-after", text: "Can I watch TV after breakfast?", ko: "아침 먹고 티비 봐도 돼요?", level: "advanced" },
+      { id: "dont-want-bath-yet", text: "I don't want to take a bath yet.", ko: "아직 목욕하기 싫어요.", level: "advanced" },
+      { id: "five-more-minutes", text: "Just five more minutes, please.", ko: "딱 5분만 더요.", level: "advanced" },
+      { id: "already-brushed", text: "I already brushed my teeth.", ko: "저 이미 이 닦았어요.", level: "advanced" },
+      { id: "whats-for-dinner", text: "What's for dinner tonight?", ko: "오늘 저녁 뭐예요?", level: "advanced" },
+      { id: "clean-up-first", text: "I'll clean up my toys first.", ko: "장난감부터 치울게요.", level: "advanced" },
     ],
   },
   {
@@ -121,6 +140,12 @@ export const CHAPTERS = [
       { id: "color-red", text: "It's red.", ko: "빨간색이에요." },
       { id: "color-yellow", text: "It's yellow.", ko: "노란색이에요." },
       { id: "color-green", text: "It's green.", ko: "초록색이에요." },
+      { id: "dogs-cuter", text: "I think dogs are cuter than cats.", ko: "저는 강아지가 고양이보다 더 귀여운 것 같아요.", level: "advanced" },
+      { id: "brother-older", text: "My brother is older than me.", ko: "형(오빠)이 저보다 나이가 많아요.", level: "advanced" },
+      { id: "want-to-be-doctor", text: "I want to be a doctor when I grow up.", ko: "저는 커서 의사가 되고 싶어요.", level: "advanced" },
+      { id: "good-at-drawing-not-singing", text: "I'm good at drawing, but not at singing.", ko: "저는 그림은 잘 그리는데 노래는 못해요.", level: "advanced" },
+      { id: "guess-how-old", text: "Can you guess how old I am?", ko: "제가 몇 살인지 맞혀보세요.", level: "advanced" },
+      { id: "look-like-mom", text: "I look like my mom.", ko: "저는 엄마를 닮았어요.", level: "advanced" },
     ],
   },
   {
@@ -156,6 +181,12 @@ export const CHAPTERS = [
       { id: "want-to-swing", text: "I want to swing.", ko: "그네 타고 싶어요." },
       { id: "build-sandcastle", text: "Let's build a sandcastle.", ko: "모래성 만들자." },
       { id: "one-two-three-go", text: "One, two, three, go!", ko: "하나, 둘, 셋, 출발!" },
+      { id: "play-something-else", text: "Can we play something else?", ko: "우리 다른 거 하면 안 돼요?", level: "advanced" },
+      { id: "not-fair", text: "That's not fair!", ko: "그건 불공평해요!", level: "advanced" },
+      { id: "go-first-this-time", text: "I want to go first this time.", ko: "이번엔 제가 먼저 하고 싶어요.", level: "advanced" },
+      { id: "take-turns", text: "Let's take turns.", ko: "우리 번갈아 하자.", level: "advanced" },
+      { id: "fell-down-okay", text: "I fell down, but I'm okay.", ko: "넘어졌는데 저 괜찮아요.", level: "advanced" },
+      { id: "come-back-tomorrow", text: "Can we come back tomorrow?", ko: "우리 내일 또 와도 돼요?", level: "advanced" },
     ],
   },
 ];
