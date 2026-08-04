@@ -99,6 +99,7 @@ body {
 }
 
 .hamburger-btn {
+  position: relative;
   width: 40px;
   height: 40px;
   border-radius: 12px;
@@ -107,6 +108,18 @@ body {
   font-size: 19px;
   cursor: pointer;
   line-height: 1;
+}
+
+.hamburger-btn.logged-in::after {
+  content: "";
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #34C759;
+  border: 2px solid #fff;
 }
 
 .hamburger-panel {
@@ -125,7 +138,8 @@ body {
   display: block;
 }
 
-.hamburger-home {
+.hamburger-home,
+.hamburger-mypage {
   display: block;
   width: 100%;
   background: none;
@@ -136,9 +150,13 @@ body {
   font-weight: 700;
   color: #17171A;
   padding: 2px 2px 12px;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   cursor: pointer;
   font-family: inherit;
+}
+
+.hamburger-mypage {
+  margin-bottom: 12px;
 }
 
 .hamburger-account {
@@ -396,6 +414,12 @@ body {
    공통 화면이라 브랜드 색이 아니라 중립 색만 쓴다. */
 .legal-block {
   padding: 4px 20px 30px;
+}
+
+/* 마이페이지의 계정 박스 — .hamburger-account를 그대로 재사용하되, 원래 있던
+   .hamburger-panel의 14px 패딩이 없는 자리라 여기서 직접 좌우 여백을 준다. */
+.mypage-account {
+  padding: 14px 20px 4px;
 }
 
 .legal-updated {

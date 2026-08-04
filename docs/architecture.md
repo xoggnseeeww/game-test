@@ -32,8 +32,12 @@ js/core/
                         그대로 쓴다. 로그인한 이메일을 currentEmail로 추적하고, isAdmin()이
                         ADMIN_EMAIL과 같은지만 별도로 판별한다(서버 검증 없음, "출시 예정" 게이트용).
                         localStorage(`gt_user_email`)에 이메일만 보관, isAdmin()/logout()/
-                        renderSignInButton() 제공
-  header.js             #app 밖(body)에 붙는 전역 우상단 햄버거 메뉴 — 로그인 상태 표시·로그인/로그아웃
+                        renderSignInButton() 제공. onAuthChange()는 구독자가 여럿(header.js +
+                        screens/home.js의 마이페이지)이라 Set 기반 pub-sub이다(D-70) — 단일
+                        콜백 변수였다면 나중 구독이 먼저 것을 덮어썼다
+  header.js             #app 밖(body)에 붙는 전역 우상단 햄버거 메뉴 — 로그인 상태 표시·로그인/로그아웃·
+                        마이페이지 이동(D-70). 로그인 시 버튼 자체에 점 배지(`.logged-in`)를 남겨
+                        메뉴를 열어보지 않아도 로그인 여부를 알 수 있다
   share.js              공유 URL · navigator.share · 결과 카드 캔버스
   util.js               shuffle · normalizePath · roundRect
   ads.js                카카오 AdFit — adSlotMarkup()(단위 코드 단일 소스) · adGateMarkup()(전면 게이트 마크업) · refreshAds()(로더 태그 재실행)
@@ -132,6 +136,8 @@ js/learning/cloud.js     학습 진행률(state.learning)을 Supabase에 동기�
 | `/test` | `psych-list` | — | — |
 | `/game` | `game-list` | — | — |
 | `/learning` | `learning-list` | — | — |
+| `/privacy` | `privacy` | — | — |
+| `/mypage` | `mypage` | — | — (D-70, 로그인 상태·학습 진행률 요약) |
 | `/learning/basic-conversation` | `learning-basic-conversation` | learning | — |
 | `/learning/basic-conversation/greeting` | `learning-basic-conversation-greeting` | learning | — |
 | `/test/adhd` | `test-intro` | — | — |

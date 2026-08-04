@@ -71,8 +71,8 @@
 
 ## 기술 스택
 빌드 없는 정적 SPA. 브라우저 네이티브 ES 모듈(`<script type="module">`), 런타임 의존성 0(npm 설치
-기준 — 브라우저가 직접 불러오는 CDN 모듈은 있다). 외부 CDN 의존: 폰트 하나 + 우상단 관리자
-로그인용 Supabase JS(`js/core/cloud-auth.js`, D-56). **동적 import로만** 연결돼 있어 CDN이
+기준 — 브라우저가 직접 불러오는 CDN 모듈은 있다). 외부 CDN 의존: 폰트 하나 + 우상단 로그인용
+Supabase JS(`js/core/cloud-auth.js`, D-56, D-68부터 일반 방문자에게도 열림). **동적 import로만** 연결돼 있어 CDN이
 막혀도 로그인 관련 기능만 빠지고 나머지 앱은 정상 동작한다(`cloud-auth-loader.js` 참고). 라우팅은
 History API 직접 구현 + **레지스트리 방식 라우터**. 상태는 메모리 내 단일 `state` 객체(새로고침하면
 날아감) — 로그인 이메일만 예외로 `localStorage`에 남는다(위 항목 참고).
@@ -86,11 +86,14 @@ og-shells/             테스트·게임 진입 화면 3곳의 정적 OG 셸(og-
 assets/                favicon(svg) · apple-touch-icon(png) · og-image*.png(1200×630, 홈+테스트/게임별)
 js/main.js            부팅: 화면·테스트·게임·학습 콘텐츠를 라우터에 등록 + initHeader()
 js/core/              router(레지스트리·guard·teardown·게임 레지스트리) · state · dom · share · util · ads ·
-                      cloud-auth(관리자 로그인용 Supabase Auth 클라이언트, D-56 — cloud-auth-loader로만
-                      동적 import) · auth(관리자 이메일 판별, cloud-auth 재사용) · header(우상단 햄버거 메뉴)
+                      cloud-auth(공유 Supabase Auth 클라이언트, D-56 — cloud-auth-loader로만
+                      동적 import) · auth(일반 로그인 + isAdmin() 별도 판별, D-68, cloud-auth 재사용,
+                      onAuthChange는 구독자 여럿을 받는 Set 기반) · header(우상단 햄버거 메뉴 —
+                      로그인 시 점 배지, 마이페이지 이동, D-70)
 js/screens/home.js    홈(카테고리 카드 3개: 심리테스트/미니게임/학습) · 심리테스트 목록(등록된
                       테스트에서 자동 생성) · 미니게임 목록(등록된 게임에서 자동 생성) ·
-                      학습 목록(등록된 학습 도구에서 자동 생성) · 개인정보처리방침
+                      학습 목록(등록된 학습 도구에서 자동 생성) · 개인정보처리방침 ·
+                      마이페이지(로그인 상태·학습 진행 집계, D-70 — 개별 학습 도구는 import 안 함)
 js/tests/<id>/        테스트 1개 = 폴더 1개: data · score · screens · index(디스크립터)
                       현재 adhd(+반응속도 게임), disc(+딜레마 게임),
                       couple(+assemble · match — 문항지 조립과 부부 매칭이 따로 검증돼야 해서 분리).

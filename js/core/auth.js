@@ -36,11 +36,14 @@ function setCurrentEmail(email) {
   }
 }
 
-let onChange = null;
-
-// 로그인/로그아웃으로 상태가 바뀔 때마다 UI(햄버거 메뉴)를 다시 그리도록 알려준다.
+// 로그인/로그아웃으로 상태가 바뀔 때마다 구독자들(햄버거 메뉴, 마이페이지)에게 알려준다.
+// cloud-auth.js의 pub-sub과 같은 이유로 Set을 쓴다 — 구독자가 하나뿐이던 시절엔 변수
+// 하나로 충분했지만, 마이페이지(D-70)가 두 번째로 구독하면서 마지막 등록만 살아남는
+// 버그가 될 뻔했다.
+const changeListeners = new Set();
 export function onAuthChange(fn) {
-  onChange = fn;
+  changeListeners.add(fn);
+  return () => changeListeners.delete(fn);
 }
 
 // 부팅 시 한 번 불러 지금 로그인된 계정을 확인한다 — 사이트 전체가 같은 Supabase 세션을
@@ -52,7 +55,7 @@ export function initAuth() {
     const sync = () => {
       const user = cloud.getCachedUser();
       setCurrentEmail(user ? user.email : null);
-      if (onChange) onChange();
+      for (const fn of changeListeners) fn();
     };
     sync();
     cloud.onAuthChange(sync);

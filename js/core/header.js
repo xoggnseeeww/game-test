@@ -2,6 +2,7 @@
 // #app 밖(document.body)에 한 번만 붙여서, 화면이 바뀌어도(render()가 #app을 통째로
 // 지워도) 살아남게 한다 — showModal()과 같은 이유(router.js 참고).
 import { el, goHome } from "./dom.js";
+import { go } from "./router.js";
 import { currentEmail, isAdmin, initAuth, logout, onAuthChange, renderSignInButton } from "./auth.js";
 
 export function initHeader() {
@@ -10,11 +11,13 @@ export function initHeader() {
       <button class="hamburger-btn" aria-label="메뉴">☰</button>
       <div class="hamburger-panel">
         <button class="hamburger-home">🏠 홈으로 가기</button>
+        <button class="hamburger-mypage">🙋 마이페이지</button>
       </div>
     </div>
   `);
   document.body.appendChild(root);
 
+  const hamburgerBtn = root.querySelector(".hamburger-btn");
   const panel = root.querySelector(".hamburger-panel");
   const accountBox = el(`<div class="hamburger-account-box"></div>`);
   panel.appendChild(accountBox);
@@ -22,6 +25,13 @@ export function initHeader() {
   panel.querySelector(".hamburger-home").addEventListener("click", () => {
     root.classList.remove("open");
     goHome();
+  });
+
+  // 마이페이지는 진행 상황을 잃을 게 없는 화면이라(읽기 전용) goHome()의 exitGuard 확인
+  // 모달 없이 곧장 이동한다.
+  panel.querySelector(".hamburger-mypage").addEventListener("click", () => {
+    root.classList.remove("open");
+    go("mypage");
   });
 
   // initAuth()가 Supabase 세션을 확인하는 동안 sync()가 여러 번 불릴 수 있다(초기 확인 1회 +
@@ -32,6 +42,9 @@ export function initHeader() {
   function renderPanel() {
     if (lastRenderedEmail === currentEmail) return;
     lastRenderedEmail = currentEmail;
+    // 메뉴를 열어보지 않아도 로그인 여부를 알 수 있게, 버튼 자체에 점 배지를 남긴다
+    // (로그인했는데 확인할 방법이 없다는 피드백 — D-70).
+    hamburgerBtn.classList.toggle("logged-in", !!currentEmail);
     accountBox.innerHTML = "";
     if (currentEmail) {
       accountBox.appendChild(el(`
@@ -51,7 +64,7 @@ export function initHeader() {
     }
   }
 
-  root.querySelector(".hamburger-btn").addEventListener("click", () => {
+  hamburgerBtn.addEventListener("click", () => {
     const opening = !root.classList.contains("open");
     root.classList.toggle("open", opening);
     if (opening) renderPanel();
@@ -61,6 +74,9 @@ export function initHeader() {
     if (!root.contains(e.target)) root.classList.remove("open");
   });
 
+  // 로컬 캐시(currentEmail)로 즉시 한 번 그려서, 새로고침 직후에도 Supabase 세션 확인이나
+  // 메뉴 클릭을 기다리지 않고 배지가 바로 맞는 상태로 뜨게 한다.
+  renderPanel();
   onAuthChange(renderPanel);
   initAuth();
 }

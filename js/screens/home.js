@@ -1,8 +1,9 @@
 // 홈 · 심리테스트 목록 · 미니게임 목록.
-import { app, listTests, listGames, listLearning } from "../core/router.js";
+import { app, go, onLeave, listTests, listGames, listLearning } from "../core/router.js";
 import { el, bindNav } from "../core/dom.js";
 import { adSlotMarkup } from "../core/ads.js";
-import { isAdmin } from "../core/auth.js";
+import { currentEmail, isAdmin, logout, onAuthChange, renderSignInButton } from "../core/auth.js";
+import { state } from "../core/state.js";
 
 // 하단 배너(bannerBottom)는 폰 화면에서 뷰포트 맨 아래에 고정된다(.home-ad-dock,
 // styles.css) — 모바일 앱의 "하단 고정 배너"처럼 스크롤과 무관하게 항상 보이는
@@ -156,6 +157,73 @@ export function renderLearningList() {
   bindNav(app);
 }
 
+// 로그인 상태·학습 진행률을 한눈에 확인하는 화면(D-70) — "로그인이 됐는지 안 됐는지
+// 확인이 안 된다"는 피드백으로 추가했다. 학습 도구가 늘어도 이 파일을 고칠 필요가 없도록
+// (renderLearningList와 같은 이유) 챕터 제목까지는 안 보여주고 state.learning을 도구에
+// 무관하게 집계만 한다 — 개별 학습 도구를 import하지 않는다.
+export function renderMyPage() {
+  app.appendChild(el(`
+    <div>
+      <div class="back-row">
+        <button class="back-btn" data-nav="home">‹</button>
+        <div class="back-title">마이페이지</div>
+      </div>
+      <div id="mypage-account" class="mypage-account"></div>
+      <div class="section-title">📚 학습 진행</div>
+      <div id="mypage-learning" class="legal-block"></div>
+    </div>
+  `));
+  bindNav(app);
+
+  const accountEl = app.querySelector("#mypage-account");
+  const learningEl = app.querySelector("#mypage-learning");
+
+  function renderAccount() {
+    accountEl.innerHTML = "";
+    if (currentEmail) {
+      accountEl.appendChild(el(`
+        <div class="hamburger-account">
+          <div class="hamburger-email">${currentEmail}${isAdmin() ? " · 관리자" : ""}</div>
+          <button class="hamburger-logout" id="mypage-logout">로그아웃</button>
+        </div>
+      `));
+      accountEl.querySelector("#mypage-logout").addEventListener("click", () => {
+        logout();
+        renderAccount();
+        renderLearning();
+      });
+    } else {
+      const box = el(`<div class="hamburger-signin"></div>`);
+      accountEl.appendChild(box);
+      renderSignInButton(box);
+    }
+  }
+
+  function renderLearning() {
+    const entries = Object.entries(state.learning);
+    const total = entries.reduce((sum, [, ch]) => sum + ch.index, 0);
+    learningEl.innerHTML = entries.length === 0
+      ? `<div class="empty-state">
+           <div class="emoji">📚</div>
+           <div class="msg">아직 진행한 학습이 없어요</div>
+         </div>
+         <div class="cta"><button class="cta-btn" id="mypage-go-learning">학습하러 가기</button></div>`
+      : `<p>진행 중인 챕터 ${entries.length}개 · 완료한 문장 총 ${total}개</p>
+         <p>${currentEmail ? "로그인 상태라 진행 상황이 계정에 저장돼요." : "로그인하면 진행 상황이 기기를 바꿔도 이어져요."}</p>
+         <div class="cta"><button class="cta-btn" id="mypage-go-learning">이어하기</button></div>`;
+    learningEl.querySelector("#mypage-go-learning").addEventListener("click", () => go("learning-list"));
+  }
+
+  renderAccount();
+  renderLearning();
+  // 로그인·로그아웃이 다른 경로(햄버거 메뉴)에서 일어나도 이 화면이 열려 있는 동안은
+  // 같이 갱신되게 구독한다. onLeave에 등록해 화면을 떠나면 리스너가 쌓이지 않게 한다.
+  onLeave(onAuthChange(() => {
+    renderAccount();
+    renderLearning();
+  }));
+}
+
 // 실제로 저장·처리하는 것만 적는다 — 아직 안 하는 걸(계정, 회원 데이터 등) 미리 적어두면
 // 나중에 실제로 그 기능이 생겼을 때 방침이 먼저 거짓말이 된다. 부부 체크 짧은 코드
 // 도입(D-45)으로 "영속 데이터 없음"이 깨진 예외 하나가 생겨서 이 화면을 만들었다.
@@ -235,4 +303,5 @@ export const commonScreens = [
   { id: "game-list", path: "/game", title: "미니게임 | 과몰입구역", render: renderGameList },
   { id: "learning-list", path: "/learning", title: "학습 | 과몰입구역", render: renderLearningList },
   { id: "privacy", path: "/privacy", title: "개인정보처리방침 | 과몰입구역", render: renderPrivacy },
+  { id: "mypage", path: "/mypage", title: "마이페이지 | 과몰입구역", render: renderMyPage },
 ];
