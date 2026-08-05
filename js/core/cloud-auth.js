@@ -15,7 +15,17 @@ const SUPABASE_ANON_KEY =
 
 // NumPath 마을(cloud.js)과 관리자 로그인(auth.js)이 같은 인스턴스를 쓴다 — 프로젝트
 // 자격증명을 두 곳에 복사해두지 않는다.
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+//
+// flowType: "pkce" — 기본값인 implicit 플로우는 토큰이 URL 해시(#access_token=...)로
+// 돌아오는데, 이 앱은 auth 클라이언트를 동적 import로 늦게 띄우는 구조라(위 주석) 그
+// 사이에 해시가 사라지면 로그인이 조용히 실패한다(router.js의 replaceState가 해시를
+// 보존하도록 고쳤어도, KakaoTalk 인앱 브라우저 등 리다이렉트 체인 중간에 해시를 흘리는
+// 환경까지는 못 막는다 — D-76). PKCE는 토큰 대신 코드를 `?code=`(location.search)로
+// 받는데, 이 값은 router.js가 애초부터 모든 replaceState에서 무조건 보존하던 값이라
+// 이 구조에서 훨씬 안전하다.
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: { flowType: "pkce" },
+});
 
 let cachedUser = null;
 const changeListeners = new Set();
