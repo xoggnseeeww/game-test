@@ -21,16 +21,18 @@
 // 학년은 저학년(1~2)/중학년(3~4)/고학년(5~6) 3단계로 나누되, **실제로 만든 학년만
 // GRADES에 넣는다** — 아직 안 만든 학년을 목차에 "준비중"으로 미리 보여주지 않는다(이
 // 저장소 관례: 빈 기능을 화면에 먼저 노출하지 않는다). 지금은 저학년 챕터 4개(학교 가는
-// 날·교실에서·쉬는 시간·좋아하는 것)와 중학년 챕터 4개(수업과 과제·친구 관계·방과 후
-// 생활·우리 동네)를 만들었다(D-77, D-78) — 챕터마다 문장 개수는 기본 10·중급 6·심화
-// 4(총 20개)로, 기초 영어회화의 최종 목표(단계별 30개)보다 적게 시작한다. 메커니즘
-// (문법 태그·반복·produce)이 저학년 챕터 하나(학교 가는 날)에서 실제로 동작하는 걸
-// 먼저 확인한 뒤(D-75, D-76) 같은 틀로 저학년 나머지·중학년을 채웠다 — 문법은 챕터마다
-// 하나씩 안 늘린다(예: 좋아하는 것·우리 동네 챕터는 새 문법 없이 기존 문법만 재사용).
-// 학년마다 문법 목록(`*_GRAMMAR_POINTS`)이 따로 있고, id는 그 학년 배열 안에서만
-// 유효하다 — 두 학년이 같은 개념(예: 일반동사 현재형)을 각자 새 id로 다시 정의해도
-// 괜찮다(아래 MIDDLE_GRAMMAR_POINTS의 G7이 LOWER의 G2와 겹치는 개념이지만 별개 id인
-// 이유). 다음은 고학년.
+// 날·교실에서·쉬는 시간·좋아하는 것), 중학년 챕터 4개(수업과 과제·친구 관계·방과 후
+// 생활·우리 동네), 고학년 챕터 4개(의견 나누기·꿈과 진로·요즘 이슈·여행과 경험)까지
+// 만들었다(D-77, D-78, D-79) — 챕터마다 문장 개수는 기본 10·중급 6·심화 4(총 20개)로,
+// 기초 영어회화의 최종 목표(단계별 30개)보다 적게 시작한다. 메커니즘(문법 태그·반복·
+// produce)이 저학년 챕터 하나(학교 가는 날)에서 실제로 동작하는 걸 먼저 확인한 뒤
+// (D-75, D-76) 같은 틀로 나머지 학년을 채웠다 — 문법은 챕터마다 하나씩 안 늘린다(예:
+// 좋아하는 것·우리 동네·여행과 경험 챕터는 새 문법 없이 기존 문법만 재사용). 학년마다
+// 문법 목록(`*_GRAMMAR_POINTS`)이 따로 있고, id는 그 학년 배열 안에서만 유효하다 —
+// 두 학년이 같은 개념(예: 일반동사 현재형)을 각자 새 id로 다시 정의해도 괜찮다(아래
+// MIDDLE_GRAMMAR_POINTS의 G7이 LOWER의 G2와 겹치는 개념이지만 별개 id인 이유). 3개
+// 학년이 다 찼으니, 다음은 4학년 이상 세분화나 진짜 다중 턴 대화형 도구(§3-7) 같은
+// 그다음 단계.
 //
 // 문장에는 여전히 `level`이 있다(기본/중급/심화, basic-conversation과 같은 의미) — 학년
 // 트랙 위에 기존 3단계 레벨 선택을 그대로 얹는다.
@@ -595,9 +597,284 @@ const NEIGHBORHOOD_CHAPTER = {
   ],
 };
 
-// 학년 트랙 — 실제로 만든 학년만 넣는다(위 헤더 설명 참고). 고학년은 그 학년의
-// GRAMMAR_POINTS·챕터가 준비되면 여기 항목을 추가한다(레지스트리를 새로 만들 필요
-// 없음 — index.js가 GRADES를 순회해 화면을 자동 생성한다).
+// 고학년 문법 순서. 저학년(G1~G6)·중학년(G7~G11)과 별개 배열이라 번호만 이어 붙였다
+// (같은 이유는 MIDDLE_GRAMMAR_POINTS 주석 참고). 중학년의 의무·미래·비교·진행형에서
+// 한 단 더 나아가 의견·조건·관계절처럼 원어민 초등 고학년이 실제로 쓰는 복문 구조로
+// 넘어간다.
+export const HIGH_GRAMMAR_POINTS = [
+  { id: "G12", label: "현재형 문장 복습 (고학년 소재)" },
+  { id: "G13", label: "최상급 (the most, -est)" },
+  { id: "G14", label: "조건문 (if + 현재형, will + 동사원형)" },
+  { id: "G15", label: "관계대명사 who/that (사람·사물 설명)" },
+];
+
+const OPINIONS_CHAPTER = {
+  id: "opinions",
+  title: "의견 나누기",
+  emoji: "💬",
+  sentences: [
+    { id: "i-think-summer-is-nice", text: "I think summer is nice.", ko: "저는 여름이 좋은 것 같아요.", grammar: "G12" },
+    { id: "i-agree-with-you", text: "I agree with you.", ko: "저도 그렇게 생각해요.", grammar: "G12" },
+    { id: "i-disagree-a-little", text: "I disagree a little.", ko: "저는 조금 다르게 생각해요.", grammar: "G12" },
+    { id: "everyone-has-different-opinions", text: "Everyone has different opinions.", ko: "사람마다 생각이 달라요.", grammar: "G12" },
+    { id: "i-have-my-own-opinion", text: "I have my own opinion.", ko: "저는 제 생각이 있어요.", grammar: "G12" },
+    { id: "sounds-like-a-good-idea", text: "That sounds like a good idea.", ko: "그거 좋은 생각 같아요.", grammar: "G12" },
+    { id: "i-see-your-point", text: "I see your point.", ko: "무슨 말인지 알겠어요.", grammar: "G12" },
+    { id: "lets-talk-about-it", text: "Let's talk about it.", ko: "그거에 대해 얘기해보자.", grammar: "G12" },
+    { id: "changed-my-mind-about-it", text: "I changed my mind about it.", ko: "그거에 대한 제 생각이 바뀌었어요.", grammar: "G12" },
+    { id: "okay-to-think-differently", text: "It's okay to think differently.", ko: "다르게 생각해도 괜찮아요.", grammar: "G12" },
+
+    { id: "summer-is-the-best-season", text: "I think summer is the best season.", ko: "저는 여름이 제일 좋은 계절인 것 같아요.", grammar: "G13", level: "intermediate" },
+    { id: "most-interesting-book", text: "This is the most interesting book I've read.", ko: "이게 제가 읽은 것 중에 제일 재밌는 책이에요.", grammar: "G13", level: "intermediate" },
+    { id: "hardest-subject-for-me", text: "Math is the hardest subject for me.", ko: "저한테는 수학이 제일 어려운 과목이에요.", grammar: "G13", level: "intermediate" },
+    { id: "what-do-you-think-about-this", text: "What do you think about this?", ko: "이거에 대해 어떻게 생각해요?", grammar: "G12", level: "intermediate" },
+    {
+      id: "best-movie-youve-ever-seen",
+      text: "What's the best movie you've ever seen?",
+      ko: "지금까지 본 것 중 제일 좋은 영화가 뭐예요?",
+      grammar: "G13",
+      level: "intermediate",
+      type: "produce",
+      hint: "The best movie is ___.",
+      sample: ["The best movie is Frozen.", "The best movie is the one about space."],
+    },
+    {
+      id: "agree-or-disagree-with-friend",
+      text: "Do you agree or disagree with your friend's opinion? Why?",
+      ko: "친구 의견에 동의해요, 아니면 다르게 생각해요? 왜요?",
+      grammar: "G12",
+      level: "intermediate",
+      type: "produce",
+      hint: "I agree/disagree because ___.",
+      sample: ["I agree because it makes sense.", "I disagree because I think differently."],
+    },
+
+    { id: "most-important-thing-to-know", text: "I think this is the most important thing to know.", ko: "이게 알아야 할 것 중에 제일 중요한 것 같아요.", grammar: "G13", level: "advanced" },
+    { id: "some-agree-but-others-dont", text: "Some people agree, but others don't.", ko: "어떤 사람들은 동의하는데 다른 사람들은 안 그래요.", grammar: "G12", level: "advanced" },
+    {
+      id: "opinion-about-homework",
+      text: "What's your opinion about homework?",
+      ko: "숙제에 대해 어떻게 생각해요?",
+      grammar: "G12",
+      level: "advanced",
+      type: "produce",
+      hint: "I think homework is ___.",
+      sample: ["I think homework is helpful.", "I think homework is too much sometimes."],
+    },
+    {
+      id: "most-difficult-decision",
+      text: "What's the most difficult decision you've made?",
+      ko: "지금까지 내린 결정 중에 제일 어려웠던 게 뭐예요?",
+      grammar: "G13",
+      level: "advanced",
+      type: "produce",
+      hint: "The most difficult decision was ___.",
+      sample: ["The most difficult decision was choosing a hobby.", "The most difficult decision was picking a book to read."],
+    },
+  ],
+};
+
+const DREAMS_CHAPTER = {
+  id: "dreams",
+  title: "꿈과 진로",
+  emoji: "🌟",
+  sentences: [
+    { id: "want-to-be-a-scientist", text: "I want to be a scientist.", ko: "저는 과학자가 되고 싶어요.", grammar: "G12" },
+    { id: "interested-in-space", text: "I am interested in space.", ko: "저는 우주에 관심이 있어요.", grammar: "G12" },
+    { id: "dream-job-is-a-doctor", text: "My dream job is a doctor.", ko: "제 꿈은 의사예요.", grammar: "G12" },
+    { id: "want-to-help-people", text: "I want to help people.", ko: "저는 사람들을 돕고 싶어요.", grammar: "G12" },
+    { id: "good-at-drawing", text: "I am good at drawing.", ko: "저는 그림을 잘 그려요.", grammar: "G12" },
+    { id: "learn-more-about-animals", text: "I want to learn more about animals.", ko: "저는 동물에 대해 더 배우고 싶어요.", grammar: "G12" },
+    { id: "favorite-job-is-a-teacher", text: "My favorite job is a teacher.", ko: "제가 제일 좋아하는 직업은 선생님이에요.", grammar: "G12" },
+    { id: "practice-every-day-for-my-dream", text: "I practice every day for my dream.", ko: "저는 꿈을 위해 매일 연습해요.", grammar: "G12" },
+    { id: "travel-the-world-someday", text: "I want to travel the world someday.", ko: "저는 언젠가 세계 여행을 하고 싶어요.", grammar: "G12" },
+    { id: "curious-about-many-things", text: "I am curious about many things.", ko: "저는 많은 것들이 궁금해요.", grammar: "G12" },
+
+    { id: "if-study-hard-become-scientist", text: "If I study hard, I will become a scientist.", ko: "열심히 공부하면 과학자가 될 거예요.", grammar: "G14", level: "intermediate" },
+    { id: "if-practice-more-get-better", text: "If I practice more, I will get better.", ko: "더 연습하면 더 잘하게 될 거예요.", grammar: "G14", level: "intermediate" },
+    { id: "doctor-is-most-rewarding-job", text: "I think being a doctor is the most rewarding job.", ko: "의사가 제일 보람있는 직업인 것 같아요.", grammar: "G13", level: "intermediate" },
+    { id: "if-work-hard-achieve-dream", text: "If you work hard, you can achieve your dream.", ko: "열심히 하면 꿈을 이룰 수 있어요.", grammar: "G14", level: "intermediate" },
+    {
+      id: "what-will-you-do-to-become-scientist",
+      text: "What will you do if you want to become a scientist?",
+      ko: "과학자가 되고 싶으면 뭘 할 거예요?",
+      grammar: "G14",
+      level: "intermediate",
+      type: "produce",
+      hint: "If I want to become a scientist, I will ___.",
+      sample: ["If I want to become a scientist, I will study hard.", "I will read a lot of science books."],
+    },
+    {
+      id: "dream-job-and-why",
+      text: "What's your dream job and why?",
+      ko: "꿈꾸는 직업이 뭐고 왜 그래요?",
+      grammar: "G12",
+      level: "intermediate",
+      type: "produce",
+      hint: "My dream job is ___ because ___.",
+      sample: ["My dream job is a vet because I love animals.", "My dream job is an artist because I love drawing."],
+    },
+
+    { id: "if-dont-give-up-reach-goal", text: "If I don't give up, I will reach my goal.", ko: "포기하지 않으면 목표를 이룰 거예요.", grammar: "G14", level: "advanced" },
+    { id: "most-exciting-dream-i-have", text: "I think this is the most exciting dream I have.", ko: "이게 제가 가진 꿈 중에 제일 신나는 것 같아요.", grammar: "G13", level: "advanced" },
+    {
+      id: "if-you-could-have-any-job",
+      text: "If you could have any job, what would it be?",
+      ko: "어떤 직업이든 가질 수 있다면 뭐를 하고 싶어요?",
+      grammar: "G14",
+      level: "advanced",
+      type: "produce",
+      hint: "If I could have any job, I would be ___.",
+      sample: ["If I could have any job, I would be an astronaut.", "I would be a game designer."],
+    },
+    {
+      id: "steps-to-reach-your-dream",
+      text: "What steps will you take to reach your dream?",
+      ko: "꿈을 이루기 위해 어떤 단계를 밟을 거예요?",
+      grammar: "G14",
+      level: "advanced",
+      type: "produce",
+      hint: "I will ___.",
+      sample: ["I will study hard and practice every day.", "I will ask my teacher for help."],
+    },
+  ],
+};
+
+const CURRENT_ISSUES_CHAPTER = {
+  id: "current-issues",
+  title: "요즘 이슈",
+  emoji: "🌍",
+  sentences: [
+    { id: "earth-needs-our-help", text: "The earth needs our help.", ko: "지구는 우리 도움이 필요해요.", grammar: "G12" },
+    { id: "i-recycle-my-trash", text: "I recycle my trash.", ko: "저는 쓰레기를 재활용해요.", grammar: "G12" },
+    { id: "saving-water-is-important", text: "Saving water is important.", ko: "물을 절약하는 게 중요해요.", grammar: "G12" },
+    { id: "turn-off-the-lights", text: "I turn off the lights when I leave.", ko: "저는 나갈 때 불을 꺼요.", grammar: "G12" },
+    { id: "safe-online-is-important", text: "Being safe online is important.", ko: "온라인에서 안전한 게 중요해요.", grammar: "G12" },
+    { id: "dont-share-personal-info-online", text: "I don't share personal information online.", ko: "저는 온라인에 개인정보를 안 알려줘요.", grammar: "G12" },
+    { id: "kind-online-matters-too", text: "Being kind online matters too.", ko: "온라인에서도 친절한 게 중요해요.", grammar: "G12" },
+    { id: "walk-or-bike-instead-of-driving", text: "I walk or bike instead of driving.", ko: "저는 운전 대신 걷거나 자전거를 타요.", grammar: "G12" },
+    { id: "plastic-is-bad-for-the-ocean", text: "Plastic is bad for the ocean.", ko: "플라스틱은 바다에 안 좋아요.", grammar: "G12" },
+    { id: "care-about-the-environment", text: "I care about the environment.", ko: "저는 환경에 관심이 있어요.", grammar: "G12" },
+
+    { id: "people-who-recycle-help", text: "People who recycle help the environment.", ko: "재활용하는 사람들은 환경을 도와요.", grammar: "G15", level: "intermediate" },
+    { id: "know-someone-who-cares-about-nature", text: "I know someone who cares a lot about nature.", ko: "저는 자연을 많이 아끼는 사람을 알아요.", grammar: "G15", level: "intermediate" },
+    { id: "problem-that-affects-everyone", text: "This is a problem that affects everyone.", ko: "이건 모두에게 영향을 주는 문제예요.", grammar: "G15", level: "intermediate" },
+    { id: "if-everyone-recycles-earth-cleaner", text: "If everyone recycles, the earth will be cleaner.", ko: "모두가 재활용하면 지구가 더 깨끗해질 거예요.", grammar: "G14", level: "intermediate" },
+    {
+      id: "rule-that-keeps-you-safe-online",
+      text: "What's a rule that keeps you safe online?",
+      ko: "온라인에서 안전하게 지켜주는 규칙이 뭐예요?",
+      grammar: "G15",
+      level: "intermediate",
+      type: "produce",
+      hint: "A rule that keeps me safe is ___.",
+      sample: ["A rule that keeps me safe is not sharing my address.", "I don't talk to strangers online."],
+    },
+    {
+      id: "what-can-you-do-to-help-environment",
+      text: "What can you do to help the environment?",
+      ko: "환경을 도우려면 뭘 할 수 있어요?",
+      grammar: "G12",
+      level: "intermediate",
+      type: "produce",
+      hint: "I can ___.",
+      sample: ["I can recycle more.", "I can save water and electricity."],
+    },
+
+    { id: "people-who-waste-water-hurt-environment", text: "People who waste water hurt the environment.", ko: "물을 낭비하는 사람들은 환경에 안 좋은 영향을 줘요.", grammar: "G15", level: "advanced" },
+    { id: "if-we-dont-take-care-things-worse", text: "If we don't take care of the earth, things will get worse.", ko: "지구를 돌보지 않으면 상황이 더 나빠질 거예요.", grammar: "G14", level: "advanced" },
+    {
+      id: "most-important-environmental-problem",
+      text: "What's the most important environmental problem today?",
+      ko: "요즘 제일 중요한 환경 문제가 뭐예요?",
+      grammar: "G13",
+      level: "advanced",
+      type: "produce",
+      hint: "The most important problem is ___.",
+      sample: ["The most important problem is plastic pollution.", "The most important problem is climate change."],
+    },
+    {
+      id: "why-important-to-be-kind-online",
+      text: "Why is it important to be kind online?",
+      ko: "온라인에서 친절한 게 왜 중요해요?",
+      grammar: "G12",
+      level: "advanced",
+      type: "produce",
+      hint: "It's important because ___.",
+      sample: ["It's important because words can hurt people.", "Because everyone deserves respect."],
+    },
+  ],
+};
+
+// 여행과 경험 챕터도 좋아하는 것(저학년)·우리 동네(중학년)와 같은 이유로 새 문법을
+// 도입하지 않는다 — G12~G15를 새 소재(여행·경험)로 재사용만 한다.
+const TRAVEL_CHAPTER = {
+  id: "travel",
+  title: "여행과 경험",
+  emoji: "✈️",
+  sentences: [
+    { id: "want-to-visit-paris", text: "I want to visit Paris.", ko: "저는 파리에 가보고 싶어요.", grammar: "G12" },
+    { id: "traveling-is-exciting", text: "Traveling is exciting.", ko: "여행은 신나요.", grammar: "G12" },
+    { id: "like-trying-new-food", text: "I like trying new food.", ko: "저는 새로운 음식을 먹어보는 걸 좋아해요.", grammar: "G12" },
+    { id: "take-pictures-when-i-travel", text: "I take pictures when I travel.", ko: "저는 여행할 때 사진을 찍어요.", grammar: "G12" },
+    { id: "pack-my-bag-before-a-trip", text: "I pack my bag before a trip.", ko: "저는 여행 전에 가방을 싸요.", grammar: "G12" },
+    { id: "learn-about-new-places", text: "I learn about new places.", ko: "저는 새로운 장소에 대해 배워요.", grammar: "G12" },
+    { id: "flying-on-a-plane-is-fun", text: "Flying on a plane is fun.", ko: "비행기 타는 게 재밌어요.", grammar: "G12" },
+    { id: "keep-a-travel-journal", text: "I keep a travel journal.", ko: "저는 여행 일기를 써요.", grammar: "G12" },
+    { id: "meet-new-people-when-i-travel", text: "I meet new people when I travel.", ko: "저는 여행할 때 새로운 사람들을 만나요.", grammar: "G12" },
+    { id: "every-trip-is-a-new-experience", text: "Every trip is a new experience.", ko: "여행마다 새로운 경험이에요.", grammar: "G12" },
+
+    { id: "best-trip-ive-ever-had", text: "This was the best trip I've ever had.", ko: "이게 제가 가본 것 중에 제일 좋은 여행이었어요.", grammar: "G13", level: "intermediate" },
+    { id: "if-save-money-travel-abroad", text: "If I save money, I will travel abroad.", ko: "돈을 모으면 해외여행을 갈 거예요.", grammar: "G14", level: "intermediate" },
+    { id: "met-a-person-who-was-kind", text: "I met a person who was really kind.", ko: "정말 친절한 사람을 만났어요.", grammar: "G15", level: "intermediate" },
+    { id: "food-was-most-delicious", text: "The food there was the most delicious I've ever had.", ko: "거기 음식이 제가 먹어본 것 중 제일 맛있었어요.", grammar: "G13", level: "intermediate" },
+    {
+      id: "most-memorable-trip",
+      text: "What's the most memorable trip you've had?",
+      ko: "제일 기억에 남는 여행이 뭐예요?",
+      grammar: "G13",
+      level: "intermediate",
+      type: "produce",
+      hint: "The most memorable trip was ___.",
+      sample: ["The most memorable trip was to the beach.", "The most memorable trip was visiting my grandparents."],
+    },
+    {
+      id: "if-you-could-travel-anywhere",
+      text: "If you could travel anywhere, where would you go?",
+      ko: "어디든 여행갈 수 있다면 어디 가고 싶어요?",
+      grammar: "G14",
+      level: "intermediate",
+      type: "produce",
+      hint: "If I could travel anywhere, I would go to ___.",
+      sample: ["If I could travel anywhere, I would go to Japan.", "I would go to Australia."],
+    },
+
+    { id: "learned-from-people-who-live-differently", text: "I learned a lot from people who live differently.", ko: "다르게 사는 사람들에게서 많이 배웠어요.", grammar: "G15", level: "advanced" },
+    { id: "if-travel-again-try-new-things", text: "If I travel again, I will try new things.", ko: "다시 여행 가면 새로운 걸 해볼 거예요.", grammar: "G14", level: "advanced" },
+    {
+      id: "why-is-traveling-important",
+      text: "Why do you think traveling is important?",
+      ko: "여행이 왜 중요하다고 생각해요?",
+      grammar: "G12",
+      level: "advanced",
+      type: "produce",
+      hint: "I think traveling is important because ___.",
+      sample: ["I think traveling is important because you learn new things.", "Because you meet different people."],
+    },
+    {
+      id: "experience-you-want-to-have-someday",
+      text: "What's one experience you want to have someday?",
+      ko: "언젠가 해보고 싶은 경험이 뭐예요?",
+      grammar: "G12",
+      level: "advanced",
+      type: "produce",
+      hint: "Someday I want to ___.",
+      sample: ["Someday I want to visit every continent.", "Someday I want to learn a new language."],
+    },
+  ],
+};
+
+// 학년 트랙 — 실제로 만든 학년만 넣는다(위 헤더 설명 참고).
 export const GRADES = [
   {
     id: "lower",
@@ -612,5 +889,12 @@ export const GRADES = [
     emoji: "📖",
     grammarPoints: MIDDLE_GRAMMAR_POINTS,
     chapters: [SCHOOLWORK_CHAPTER, FRIENDSHIP_CHAPTER, AFTER_SCHOOL_CHAPTER, NEIGHBORHOOD_CHAPTER],
+  },
+  {
+    id: "high",
+    label: "고학년 (5~6학년)",
+    emoji: "🎓",
+    grammarPoints: HIGH_GRAMMAR_POINTS,
+    chapters: [OPINIONS_CHAPTER, DREAMS_CHAPTER, CURRENT_ISSUES_CHAPTER, TRAVEL_CHAPTER],
   },
 ];
