@@ -8,6 +8,7 @@ import { discTest, discScreens } from "./tests/disc/index.js";
 import { coupleTest, coupleScreens } from "./tests/couple/index.js";
 import { numpathGame, numpathScreens } from "./games/numpath/index.js";
 import { basicConversation, basicConversationScreens } from "./learning/basic-conversation/index.js";
+import { elementaryConversation, elementaryConversationScreens } from "./learning/elementary-conversation/index.js";
 
 registerScreens(commonScreens);
 
@@ -25,6 +26,9 @@ registerScreens(numpathScreens);
 
 registerLearning(basicConversation);
 registerScreens(basicConversationScreens);
+
+registerLearning(elementaryConversation);
+registerScreens(elementaryConversationScreens);
 
 initHeader();
 initLearningSync();

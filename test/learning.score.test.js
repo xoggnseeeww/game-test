@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { similarity, feedbackTier, TIER_TEXT } from "../js/learning/basic-conversation/score.js";
+import { similarity, feedbackTier, TIER_TEXT } from "../js/learning/score.js";
 import { CHAPTERS } from "../js/learning/basic-conversation/data.js";
 
 test("정확히 맞히면 100%, 완전히 다르면 낮은 점수", () => {

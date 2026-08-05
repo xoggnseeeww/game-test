@@ -2159,3 +2159,23 @@ button.meta-chip {
 .learning-feedback.tier-retry { color: #8A8794; }
 
 .learning-warn { text-align: center; font-size: 13px; color: #8A8794; padding: 0 20px; }
+
+/* 초등 영어회화 produce 문장의 예시 답안 목록(D-75) — .learning-result 안에서 .learning-heard/
+   .learning-feedback 다음에 온다. 정답 채점이 아니라 "이런 식으로도 말할 수 있어요"라는
+   참고용이라 카드 톤(둥근 배경)으로 눈에 띄되 강조는 약하게 뒀다. */
+.learning-sample-list {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.learning-sample-list li {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 14px;
+  text-align: center;
+  color: #3A3844;
+}

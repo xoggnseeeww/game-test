@@ -1,0 +1,336 @@
+// "초등 영어회화" 도구: 학년(GRADES) → 챕터(목차) → 단계(기본/중급/심화) → 문장 연습.
+// basic-conversation과 같은 in-place 렌더 패턴을 쓰지만, data.js에서 설명한 세 가지
+// 보강(D-75) 때문에 연습 화면(renderElementaryChapter)은 basic-conversation의
+// renderChapter를 그대로 재사용하지 않고 새로 짰다:
+//   - 문장이 `type: "produce"`면 정답을 읽어주지 않고 질문만 던진다(유사도 채점 없음,
+//     예시 답안으로 스스로 비교).
+//   - "repeat" 문장에서 낮은 점수(retry)를 받거나 produce 문장을 "다시 연습할래요"로
+//     자가평가하면 그 문장 id를 state의 weak 목록에 남긴다 — 챕터를 다 풀면 "헷갈렸던
+//     문장만 복습하기" 버튼이 그 목록만 다시 돌린다(SRS까지는 아니지만, 최소한 "본 적
+//     있다"에서 끝나지 않고 약한 문장이 먼저 다시 나오게 하는 장치).
+import { app, go, onLeave } from "../../core/router.js";
+import { el, bindNav } from "../../core/dom.js";
+import { state } from "../../core/state.js";
+import { saveLearningProgress } from "../cloud.js";
+import { GRADES, LEVEL_LABELS } from "./data.js";
+import { similarity, feedbackTier, TIER_TEXT } from "../score.js";
+import { supportsSpeech, supportsRecognition, speak, listen } from "../speech.js";
+
+function levelCounts(sentences) {
+  return Object.keys(LEVEL_LABELS)
+    .map((level) => `${LEVEL_LABELS[level]} ${sentences.filter((s) => (s.level || "basic") === level).length}`)
+    .join(" · ");
+}
+
+// 학년 선택 — 목차 화면(renderBasicConversationIntro)과 같은 .test-list/.test-card 패턴.
+// 아직 안 만든 학년은 GRADES에 아예 없어서(D-75) 이 화면은 항상 실제로 고를 수 있는
+// 학년만 보여준다.
+export function renderElementaryGrades() {
+  app.appendChild(el(`
+    <div>
+      <div class="back-row">
+        <button class="back-btn" data-nav="learning-list">‹</button>
+        <div class="back-title">초등 영어회화</div>
+      </div>
+      <div class="section-title">🔥 학년을 골라주세요</div>
+      <div class="test-list">
+        ${GRADES.map((grade) => {
+          const total = grade.chapters.reduce((sum, ch) => sum + ch.sentences.length, 0);
+          return `
+          <button class="test-card" data-nav="learning-elementary-${grade.id}">
+            <div class="icon" style="background:#4C9AFF;">${grade.emoji}</div>
+            <div class="body">
+              <div class="name">${grade.label}</div>
+              <div class="desc">목차 ${grade.chapters.length}개 · 문장 ${total}개</div>
+            </div>
+            <div class="chevron">›</div>
+          </button>
+        `;
+        }).join("")}
+      </div>
+    </div>
+  `));
+  bindNav(app);
+}
+
+export function renderElementaryChapters(grade) {
+  app.appendChild(el(`
+    <div>
+      <div class="back-row">
+        <button class="back-btn" data-nav="learning-elementary">‹</button>
+        <div class="back-title">${grade.label}</div>
+      </div>
+      <div class="section-title">${grade.emoji} 목차</div>
+      <div class="test-list">
+        ${grade.chapters.map((ch) => `
+          <button class="test-card" data-nav="learning-elementary-${grade.id}-${ch.id}">
+            <div class="icon" style="background:#4C9AFF;">${ch.emoji}</div>
+            <div class="body">
+              <div class="name">${ch.title}</div>
+              <div class="desc">${levelCounts(ch.sentences)}</div>
+            </div>
+            <div class="chevron">›</div>
+          </button>
+        `).join("")}
+      </div>
+    </div>
+  `));
+  bindNav(app);
+}
+
+export function renderElementaryLevelSelect(grade, chapter) {
+  app.appendChild(el(`
+    <div>
+      <div class="back-row">
+        <button class="back-btn" data-nav="learning-elementary-${grade.id}">‹</button>
+        <div class="back-title">${chapter.title}</div>
+      </div>
+      <div class="section-title">${chapter.emoji} 단계를 골라주세요</div>
+      <div class="test-list">
+        ${Object.keys(LEVEL_LABELS).map((level) => {
+          const count = chapter.sentences.filter((s) => (s.level || "basic") === level).length;
+          return `
+          <button class="test-card" data-nav="learning-elementary-${grade.id}-${chapter.id}-${level}">
+            <div class="icon" style="background:#4C9AFF;">${chapter.emoji}</div>
+            <div class="body">
+              <div class="name">${LEVEL_LABELS[level]}</div>
+              <div class="desc">문장 ${count}개</div>
+            </div>
+            <div class="chevron">›</div>
+          </button>
+        `;
+        }).join("")}
+      </div>
+    </div>
+  `));
+  bindNav(app);
+}
+
+// 화면 이동(go())은 화면 id만 받고 매개변수를 못 넘긴다 — "헷갈렸던 문장만 복습하기"는
+// 새 주소를 만들 만한 상태가 아니라서(공유할 이유가 없는 일시적 연습 모드), 라우터를 타지
+// 않고 이 화면 안에서 sentences/N/reviewMode를 직접 바꿔 showCard()를 다시 부르는 식으로
+// 처리한다 — router.js의 render()처럼 app.innerHTML을 다시 비우지 않고 #learning-card
+// 안쪽만 갈아끼우면 되므로 화면 골격(back-row 등)은 그대로 둔다.
+export function renderElementaryChapter(grade, chapter, level) {
+  const key = `elementary-${grade.id}-${chapter.id}-${level}`;
+  state.learning[key] ??= { index: 0, weak: {} };
+  const st = state.learning[key];
+
+  const allSentences = chapter.sentences.filter((s) => (s.level || "basic") === level);
+  let reviewMode = false;
+  let sentences = allSentences;
+  let N = sentences.length;
+
+  let activeRecognition = null;
+  onLeave(() => {
+    window.speechSynthesis?.cancel();
+    activeRecognition?.abort();
+  });
+
+  app.appendChild(el(`
+    <div class="learning-screen">
+      <div class="back-row">
+        <button class="back-btn" data-nav="learning-elementary-${grade.id}-${chapter.id}">‹</button>
+        <div class="back-title" id="learning-title"></div>
+      </div>
+      <div id="learning-card"></div>
+    </div>
+  `));
+  bindNav(app);
+
+  const titleEl = app.querySelector("#learning-title");
+  const cardEl = app.querySelector("#learning-card");
+
+  function markWeak(id, isWeak) {
+    if (isWeak) st.weak[id] = true;
+    else delete st.weak[id];
+  }
+
+  function showDone() {
+    titleEl.textContent = `${chapter.title} · ${LEVEL_LABELS[level]}${reviewMode ? " · 복습" : ""}`;
+    const weakLeft = allSentences.some((s) => st.weak[s.id]);
+    cardEl.innerHTML = `
+      <div class="empty-state">
+        <div class="emoji">🎉</div>
+        <div class="msg">문장 ${N}개를 다 배웠어요!</div>
+      </div>
+      ${weakLeft && !reviewMode
+        ? `<div class="cta"><button class="cta-btn" id="learning-review-weak">🔁 헷갈렸던 문장만 복습하기</button></div>`
+        : ""}
+      <div class="cta"><button class="cta-btn" id="learning-restart">처음부터 다시 놀기</button></div>
+      <button class="retry-btn" id="learning-toc">단계 다시 고르기</button>
+    `;
+    cardEl.querySelector("#learning-review-weak")?.addEventListener("click", () => {
+      reviewMode = true;
+      sentences = allSentences.filter((s) => st.weak[s.id]);
+      N = sentences.length;
+      st.index = 0;
+      showCard();
+    });
+    cardEl.querySelector("#learning-restart").addEventListener("click", () => {
+      reviewMode = false;
+      sentences = allSentences;
+      N = sentences.length;
+      st.index = 0;
+      st.weak = {};
+      saveLearningProgress();
+      showCard();
+    });
+    cardEl.querySelector("#learning-toc").addEventListener("click", () => go(`learning-elementary-${grade.id}-${chapter.id}`));
+  }
+
+  function advance() {
+    st.index += 1;
+    saveLearningProgress();
+    showCard();
+  }
+
+  function showCard() {
+    if (st.index >= N) return showDone();
+    const card = sentences[st.index];
+    titleEl.textContent = `${chapter.title} · ${LEVEL_LABELS[level]}${reviewMode ? " · 복습" : ""} (${st.index + 1}/${N})`;
+    if (card.type === "produce") showProduceCard(card);
+    else showRepeatCard(card);
+  }
+
+  function showRepeatCard(card) {
+    cardEl.innerHTML = `
+      <div class="cover">
+        ${level !== "basic" ? `<div class="tag">${LEVEL_LABELS[level]}</div>` : ""}
+        <h2>${card.text}</h2>
+        <p class="cover-ko">
+          ${card.ko}
+          ${supportsSpeech() ? `<button class="ko-listen-btn" id="learning-listen-ko" aria-label="한국어 뜻 듣기">🔊</button>` : ""}
+        </p>
+      </div>
+      ${!supportsSpeech()
+        ? `<p class="learning-warn">이 브라우저는 음성 재생을 지원하지 않아요.</p>`
+        : `<div class="learning-listen">
+             <button class="cta-btn" data-rate="1">🔊 듣기</button>
+             <button class="cta-btn" data-rate="0.75">🐢 천천히</button>
+           </div>`}
+      ${!supportsRecognition()
+        ? `<p class="learning-warn">이 브라우저는 음성 인식을 지원하지 않아요.</p>`
+        : `<button class="btn-mic" id="learning-mic">🎤</button>
+           <div class="learning-mic-status" id="learning-mic-status"></div>`}
+      <div class="learning-result" id="learning-result"></div>
+      <button class="retry-btn" id="learning-skip">✓ 이미 할 수 있어요 · 다음 문장</button>
+    `;
+
+    cardEl.querySelectorAll(".learning-listen .cta-btn").forEach((btn) => {
+      btn.addEventListener("click", () => speak(card.text, Number(btn.dataset.rate)));
+    });
+    cardEl.querySelector("#learning-listen-ko")?.addEventListener("click", () => speak(card.ko, 1, "ko-KR"));
+    cardEl.querySelector("#learning-skip").addEventListener("click", advance);
+
+    const micBtn = cardEl.querySelector("#learning-mic");
+    if (!micBtn) return;
+    const micStatus = cardEl.querySelector("#learning-mic-status");
+    const resultEl = cardEl.querySelector("#learning-result");
+    const skipBtn = cardEl.querySelector("#learning-skip");
+
+    micBtn.addEventListener("click", () => {
+      micStatus.textContent = "듣고 있어요...";
+      micBtn.disabled = true;
+      activeRecognition = listen(
+        (heard) => {
+          micBtn.disabled = false;
+          micStatus.textContent = "";
+          skipBtn.style.display = "none";
+          const pct = similarity(heard, card.text);
+          const tier = feedbackTier(pct);
+          markWeak(card.id, tier === "retry");
+          resultEl.innerHTML = `
+            <p class="learning-heard">내가 말한 것: "${heard}"</p>
+            <p class="learning-feedback tier-${tier}">${TIER_TEXT[tier]}</p>
+            <div class="cta"><button class="cta-btn" id="learning-next">${st.index + 1 < N ? "다음 문장" : "완료!"}</button></div>
+          `;
+          resultEl.querySelector("#learning-next").addEventListener("click", advance);
+        },
+        (err) => {
+          micBtn.disabled = false;
+          micStatus.textContent = "";
+          console.error("음성 인식 실패:", err);
+          resultEl.innerHTML = `<p class="learning-warn">잘 안 들렸어요. 다시 눌러서 말해볼까요?</p>`;
+        }
+      );
+    });
+  }
+
+  // produce 카드: 정답 문장을 읽어주지 않는다 — 질문을 던지고 아이가 스스로 영어 문장을
+  // 만들어 답하게 한 뒤, 예시 답안(sample)과 스스로 비교하게 한다. 유사도 채점은 안 한다
+  // (정답이 하나가 아니라서 Levenshtein으로 잴 대상이 없다) — 자가평가(잘했다/다시 연습)만
+  // weak 목록에 반영한다.
+  function showProduceCard(card) {
+    cardEl.innerHTML = `
+      <div class="cover">
+        <div class="tag">질문</div>
+        <h2>${card.text}</h2>
+        <p class="cover-ko">
+          ${card.ko}
+          ${supportsSpeech() ? `<button class="ko-listen-btn" id="learning-listen-ko" aria-label="한국어 뜻 듣기">🔊</button>` : ""}
+        </p>
+      </div>
+      ${!supportsSpeech()
+        ? `<p class="learning-warn">이 브라우저는 음성 재생을 지원하지 않아요.</p>`
+        : `<div class="learning-listen">
+             <button class="cta-btn" data-rate="1">🔊 질문 듣기</button>
+           </div>`}
+      ${!supportsRecognition()
+        ? `<p class="learning-warn">이 브라우저는 음성 인식을 지원하지 않아요.</p>`
+        : `<button class="btn-mic" id="learning-mic">🎤 내 생각 말하기</button>
+           <div class="learning-mic-status" id="learning-mic-status"></div>`}
+      <div class="learning-result" id="learning-result"></div>
+      <button class="retry-btn" id="learning-skip">✓ 다음 문장</button>
+    `;
+
+    cardEl.querySelectorAll(".learning-listen .cta-btn").forEach((btn) => {
+      btn.addEventListener("click", () => speak(card.text, Number(btn.dataset.rate)));
+    });
+    cardEl.querySelector("#learning-listen-ko")?.addEventListener("click", () => speak(card.ko, 1, "ko-KR"));
+    cardEl.querySelector("#learning-skip").addEventListener("click", advance);
+
+    const micBtn = cardEl.querySelector("#learning-mic");
+    if (!micBtn) return;
+    const micStatus = cardEl.querySelector("#learning-mic-status");
+    const resultEl = cardEl.querySelector("#learning-result");
+    const skipBtn = cardEl.querySelector("#learning-skip");
+
+    micBtn.addEventListener("click", () => {
+      micStatus.textContent = "듣고 있어요...";
+      micBtn.disabled = true;
+      activeRecognition = listen(
+        (heard) => {
+          micBtn.disabled = false;
+          micStatus.textContent = "";
+          skipBtn.style.display = "none";
+          resultEl.innerHTML = `
+            <p class="learning-heard">내가 말한 것: "${heard}"</p>
+            <p class="learning-feedback">예시 답안이에요 — 비슷하게 말했나요?</p>
+            <ul class="learning-sample-list">${card.sample.map((s) => `<li>${s}</li>`).join("")}</ul>
+            <div class="cta">
+              <button class="cta-btn" id="learning-self-good">잘 말했어요</button>
+              <button class="cta-btn" id="learning-self-retry">다시 연습할래요</button>
+            </div>
+          `;
+          resultEl.querySelector("#learning-self-good").addEventListener("click", () => {
+            markWeak(card.id, false);
+            advance();
+          });
+          resultEl.querySelector("#learning-self-retry").addEventListener("click", () => {
+            markWeak(card.id, true);
+            advance();
+          });
+        },
+        (err) => {
+          micBtn.disabled = false;
+          micStatus.textContent = "";
+          console.error("음성 인식 실패:", err);
+          resultEl.innerHTML = `<p class="learning-warn">잘 안 들렸어요. 다시 눌러서 말해볼까요?</p>`;
+        }
+      );
+    });
+  }
+
+  showCard();
+}

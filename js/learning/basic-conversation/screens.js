@@ -6,38 +6,8 @@ import { el, bindNav } from "../../core/dom.js";
 import { state } from "../../core/state.js";
 import { saveLearningProgress } from "../cloud.js";
 import { CHAPTERS, LEVEL_LABELS } from "./data.js";
-import { similarity, feedbackTier, TIER_TEXT } from "./score.js";
-
-function supportsSpeech() {
-  return typeof window !== "undefined" && "speechSynthesis" in window;
-}
-
-function supportsRecognition() {
-  return typeof window !== "undefined" && !!(window.SpeechRecognition || window.webkitSpeechRecognition);
-}
-
-function speak(text, rate, lang = "en-US") {
-  window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = lang;
-  u.rate = rate;
-  window.speechSynthesis.speak(u);
-}
-
-// 어린이는 말을 시작하는 템포가 느릴 수 있어, 조기 종료 대신 결과가 올 때까지 그냥 기다린다
-// (기획서 4-3). 실패("no-speech" 등)는 onError로 그대로 올려 화면에 보여준다 — 조용히
-// 삼키지 않는다.
-function listen(onResult, onError) {
-  const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  const rec = new Recognition();
-  rec.lang = "en-US";
-  rec.interimResults = false;
-  rec.maxAlternatives = 1;
-  rec.onresult = (e) => onResult(e.results[0][0].transcript);
-  rec.onerror = (e) => onError(e.error);
-  rec.start();
-  return rec;
-}
+import { similarity, feedbackTier, TIER_TEXT } from "../score.js";
+import { supportsSpeech, supportsRecognition, speak, listen } from "../speech.js";
 
 // 목차 — 심리테스트 목록(renderPsychList)과 같은 카드 목록 패턴을 그대로 쓴다. 챕터가
 // 하나뿐이어도 나중에 늘어날 자리를 미리 잡아둔다(데이터에서 자동 생성이라 챕터를
