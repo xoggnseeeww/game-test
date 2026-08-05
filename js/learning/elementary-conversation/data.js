@@ -20,19 +20,22 @@
 //
 // 학년은 저학년(1~2)/중학년(3~4)/고학년(5~6) 3단계로 나누되, **실제로 만든 학년만
 // GRADES에 넣는다** — 아직 안 만든 학년을 목차에 "준비중"으로 미리 보여주지 않는다(이
-// 저장소 관례: 빈 기능을 화면에 먼저 노출하지 않는다). 지금은 저학년 챕터 4개(학교 가는
-// 날·교실에서·쉬는 시간·좋아하는 것), 중학년 챕터 4개(수업과 과제·친구 관계·방과 후
-// 생활·우리 동네), 고학년 챕터 4개(의견 나누기·꿈과 진로·요즘 이슈·여행과 경험)까지
-// 만들었다(D-77, D-78, D-79) — 챕터마다 문장 개수는 기본 10·중급 6·심화 4(총 20개)로,
-// 기초 영어회화의 최종 목표(단계별 30개)보다 적게 시작한다. 메커니즘(문법 태그·반복·
-// produce)이 저학년 챕터 하나(학교 가는 날)에서 실제로 동작하는 걸 먼저 확인한 뒤
-// (D-75, D-76) 같은 틀로 나머지 학년을 채웠다 — 문법은 챕터마다 하나씩 안 늘린다(예:
-// 좋아하는 것·우리 동네·여행과 경험 챕터는 새 문법 없이 기존 문법만 재사용). 학년마다
-// 문법 목록(`*_GRAMMAR_POINTS`)이 따로 있고, id는 그 학년 배열 안에서만 유효하다 —
-// 두 학년이 같은 개념(예: 일반동사 현재형)을 각자 새 id로 다시 정의해도 괜찮다(아래
-// MIDDLE_GRAMMAR_POINTS의 G7이 LOWER의 G2와 겹치는 개념이지만 별개 id인 이유). 3개
-// 학년이 다 찼으니, 다음은 4학년 이상 세분화나 진짜 다중 턴 대화형 도구(§3-7) 같은
-// 그다음 단계.
+// 저장소 관례: 빈 기능을 화면에 먼저 노출하지 않는다). 지금은 저학년 챕터 5개(학교 가는
+// 날·교실에서·쉬는 시간·좋아하는 것·체육 시간), 중학년 챕터 5개(수업과 과제·친구 관계·
+// 방과 후 생활·우리 동네·학교 행사), 고학년 챕터 5개(의견 나누기·꿈과 진로·요즘 이슈·
+// 여행과 경험·협동과 리더십)까지 만들었다(D-77~D-80) — 챕터마다 문장 개수는 기본 10·
+// 중급 6·심화 4(총 20개)로, 기초 영어회화의 최종 목표(단계별 30개)보다 적게 시작한다.
+// 메커니즘(문법 태그·반복·produce)이 저학년 챕터 하나(학교 가는 날)에서 실제로 동작하는
+// 걸 먼저 확인한 뒤(D-75, D-76) 같은 틀로 나머지를 채웠다 — 문법은 챕터마다 하나씩 안
+// 늘린다(예: 좋아하는 것·우리 동네·여행과 경험·체육 시간 챕터는 새 문법 없이 기존
+// 문법만 재사용). 학년마다 문법 목록(`*_GRAMMAR_POINTS`)이 따로 있고, id는 그 학년
+// 배열 안에서만 유효하다 — 두 학년이 같은 개념(예: 일반동사 현재형)을 각자 새 id로
+// 다시 정의해도 괜찮다(아래 MIDDLE_GRAMMAR_POINTS의 G7이 LOWER의 G2와 겹치는 개념이지만
+// 별개 id인 이유). 새 문법 id는 학년과 무관하게 전체에서 이어 붙인다(G16은 MIDDLE에,
+// G17은 HIGH에 있지만 번호는 지금까지 나온 것 중 가장 큰 다음 번호를 그대로 썼다) —
+// 어느 학년이 먼저 새 챕터를 받을지 모르니, 학년별로 번호 구간을 미리 나눠두지 않는다.
+// D-80(각 학년에 챕터 하나씩 더 추가) 이후에도 여전히 다중 턴 대화형 도구(§3-7)는
+// 시작 안 했다 — 챕터를 계속 늘리는 이번 방향과는 별개로 남아 있는 다음 갈림길.
 //
 // 문장에는 여전히 `level`이 있다(기본/중급/심화, basic-conversation과 같은 의미) — 학년
 // 트랙 위에 기존 3단계 레벨 선택을 그대로 얹는다.
@@ -317,6 +320,74 @@ const FAVORITES_CHAPTER = {
   ],
 };
 
+// 체육 시간도 좋아하는 것과 같은 이유로 새 문법을 도입하지 않는다 — G1~G6을 새 소재
+// (운동·팀 경기)로 재사용만 한다(D-80).
+const PE_CLASS_CHAPTER = {
+  id: "pe-class",
+  title: "체육 시간",
+  emoji: "🏃",
+  sentences: [
+    { id: "time-for-pe", text: "It's time for PE.", ko: "체육 시간이에요.", grammar: "G1" },
+    { id: "wear-my-gym-clothes", text: "I wear my gym clothes.", ko: "저는 체육복을 입어요.", grammar: "G2" },
+    { id: "run-in-the-gym", text: "We run in the gym.", ko: "우리는 체육관에서 달려요.", grammar: "G2" },
+    { id: "on-the-blue-team", text: "I am on the blue team.", ko: "저는 파란팀이에요.", grammar: "G1" },
+    { id: "play-dodgeball", text: "We play dodgeball.", ko: "우리는 피구를 해요.", grammar: "G2" },
+    { id: "ball-is-fast", text: "The ball is fast.", ko: "공이 빨라요.", grammar: "G1" },
+    { id: "i-jump-rope", text: "I jump rope.", ko: "저는 줄넘기를 해요.", grammar: "G2" },
+    { id: "stretch-before-we-start", text: "I stretch before we start.", ko: "저는 시작하기 전에 스트레칭해요.", grammar: "G2" },
+    { id: "my-team-is-strong", text: "My team is strong.", ko: "우리 팀은 강해요.", grammar: "G1" },
+    { id: "drink-water-after-pe", text: "I drink water after PE.", ko: "저는 체육 끝나고 물을 마셔요.", grammar: "G2" },
+
+    { id: "can-i-be-team-captain", text: "Can I be the team captain?", ko: "제가 팀 주장 해도 돼요?", grammar: "G3", level: "intermediate" },
+    { id: "should-warm-up-first", text: "We should warm up first.", ko: "먼저 준비운동을 해야 해요.", grammar: "G5", level: "intermediate" },
+    { id: "played-soccer-last-pe-class", text: "We played soccer last PE class.", ko: "지난 체육 시간에 축구했어요.", grammar: "G6", level: "intermediate" },
+    { id: "can-you-catch-the-ball", text: "Can you catch the ball?", ko: "공 잡을 수 있어요?", grammar: "G3", level: "intermediate" },
+    {
+      id: "what-game-did-you-play-yesterday",
+      text: "What game did you play in PE yesterday?",
+      ko: "어제 체육 시간에 무슨 게임 했어요?",
+      grammar: "G6",
+      level: "intermediate",
+      type: "produce",
+      hint: "We played ___.",
+      sample: ["We played dodgeball.", "We played soccer."],
+    },
+    {
+      id: "what-should-we-do-before-running",
+      text: "What should we do before we start running?",
+      ko: "달리기 전에 뭘 해야 해요?",
+      grammar: "G5",
+      level: "intermediate",
+      type: "produce",
+      hint: "We should ___.",
+      sample: ["We should stretch.", "We should warm up."],
+    },
+
+    { id: "team-won-because-worked-together", text: "My team won because we worked together.", ko: "우리 팀이 함께 해서 이겼어요.", grammar: "G2", level: "advanced" },
+    { id: "shouldnt-push-my-friends", text: "I shouldn't push my friends.", ko: "친구들을 밀면 안 돼요.", grammar: "G5", level: "advanced" },
+    {
+      id: "why-do-you-like-pe",
+      text: "Why do you like or not like PE?",
+      ko: "체육 시간이 왜 좋아요, 아니면 왜 싫어요?",
+      grammar: "G2",
+      level: "advanced",
+      type: "produce",
+      hint: "I like/don't like PE because ___.",
+      sample: ["I like PE because I can run.", "I don't like PE because I'm not fast."],
+    },
+    {
+      id: "tell-me-about-winning-or-losing",
+      text: "Tell me about a time you won or lost a game.",
+      ko: "게임에서 이기거나 졌던 얘기 해줄래요?",
+      grammar: "G6",
+      level: "advanced",
+      type: "produce",
+      hint: "I ___ and it was fun.",
+      sample: ["We won and it was fun.", "We lost, but it was still fun."],
+    },
+  ],
+};
+
 // 중학년 문법 순서. LOWER_GRAMMAR_POINTS와 별개 배열이라 id가 겹쳐도 실제로는 충돌하지
 // 않지만(각 학년의 grammarPoints 안에서만 유효), 헷갈리지 않게 저학년 이어서 G7부터
 // 붙였다. G7이 저학년 G2(일반동사 현재형)와 개념은 겹치는데, 그건 의도된 것이다 —
@@ -329,6 +400,7 @@ export const MIDDLE_GRAMMAR_POINTS = [
   { id: "G9", label: "미래형 (will / be going to)" },
   { id: "G10", label: "비교급 (-er, more than)" },
   { id: "G11", label: "현재진행형 (be + -ing)" },
+  { id: "G16", label: "과거진행형 (was/were + -ing)" },
 ];
 
 const SCHOOLWORK_CHAPTER = {
@@ -597,7 +669,73 @@ const NEIGHBORHOOD_CHAPTER = {
   ],
 };
 
-// 고학년 문법 순서. 저학년(G1~G6)·중학년(G7~G11)과 별개 배열이라 번호만 이어 붙였다
+const SCHOOL_EVENTS_CHAPTER = {
+  id: "school-events",
+  title: "학교 행사",
+  emoji: "🎉",
+  sentences: [
+    { id: "today-is-field-trip-day", text: "Today is field trip day.", ko: "오늘은 소풍 가는 날이에요.", grammar: "G7" },
+    { id: "go-to-the-museum", text: "We go to the museum.", ko: "우리는 박물관에 가요.", grammar: "G7" },
+    { id: "sports-day-is-fun", text: "Sports day is fun.", ko: "운동회는 재밌어요.", grammar: "G7" },
+    { id: "join-the-relay-race", text: "I join the relay race.", ko: "저는 이어달리기에 참가해요.", grammar: "G7" },
+    { id: "festival-is-next-month", text: "The festival is next month.", ko: "축제가 다음 달이에요.", grammar: "G7" },
+    { id: "make-a-poster-for-event", text: "We make a poster for the event.", ko: "우리는 행사 포스터를 만들어요.", grammar: "G7" },
+    { id: "bring-a-lunch-box", text: "I bring a lunch box.", ko: "저는 도시락을 가져가요.", grammar: "G7" },
+    { id: "whole-school-joins-event", text: "The whole school joins the event.", ko: "학교 전체가 행사에 참여해요.", grammar: "G7" },
+    { id: "take-a-bus-to-the-museum", text: "We take a bus to the museum.", ko: "우리는 박물관까지 버스를 타요.", grammar: "G7" },
+    { id: "excited-for-the-trip", text: "I am excited for the trip.", ko: "저는 소풍이 기대돼요.", grammar: "G7" },
+
+    { id: "was-watching-the-race-when-rain", text: "I was watching the race when it started to rain.", ko: "경주를 보고 있는데 비가 오기 시작했어요.", grammar: "G16", level: "intermediate" },
+    { id: "were-making-posters-all-afternoon", text: "We were making posters all afternoon.", ko: "우리는 오후 내내 포스터를 만들고 있었어요.", grammar: "G16", level: "intermediate" },
+    { id: "have-to-practice-for-relay-race", text: "I have to practice for the relay race.", ko: "이어달리기 연습해야 해요.", grammar: "G8", level: "intermediate" },
+    { id: "will-have-a-party-after-festival", text: "We will have a party after the festival.", ko: "축제 끝나고 파티할 거예요.", grammar: "G9", level: "intermediate" },
+    {
+      id: "what-were-you-doing-when-event-started",
+      text: "What were you doing when the event started?",
+      ko: "행사가 시작했을 때 뭐 하고 있었어요?",
+      grammar: "G16",
+      level: "intermediate",
+      type: "produce",
+      hint: "I was ___ing.",
+      sample: ["I was talking to my friend.", "I was eating lunch."],
+    },
+    {
+      id: "what-will-you-do-at-the-festival",
+      text: "What will you do at the school festival?",
+      ko: "학교 축제에서 뭐 할 거예요?",
+      grammar: "G9",
+      level: "intermediate",
+      type: "produce",
+      hint: "I will ___.",
+      sample: ["I will sing on stage.", "I will visit the food booths."],
+    },
+
+    { id: "nervous-because-running-first", text: "I was so nervous because I was running first.", ko: "제가 먼저 뛰어서 정말 긴장됐어요.", grammar: "G16", level: "advanced" },
+    { id: "everyone-has-to-wear-same-color", text: "Everyone has to wear the same color shirt.", ko: "다 같은 색 티셔츠를 입어야 해요.", grammar: "G8", level: "advanced" },
+    {
+      id: "what-was-happening-during-favorite-event",
+      text: "What was happening during your favorite school event?",
+      ko: "제일 좋아하는 학교 행사에서 무슨 일이 있었어요?",
+      grammar: "G16",
+      level: "advanced",
+      type: "produce",
+      hint: "I was ___ing when ___.",
+      sample: ["I was cheering when my team won.", "I was dancing when the music started."],
+    },
+    {
+      id: "what-are-you-going-to-do-to-prepare",
+      text: "What are you going to do to prepare for the next event?",
+      ko: "다음 행사를 준비하려면 뭘 할 거예요?",
+      grammar: "G9",
+      level: "advanced",
+      type: "produce",
+      hint: "I am going to ___.",
+      sample: ["I am going to practice more.", "I am going to help make decorations."],
+    },
+  ],
+};
+
+// 고학년 문법 순서. 저학년(G1~G6)·중학년(G7~G11, G16)과 별개 배열이라 번호만 이어 붙였다
 // (같은 이유는 MIDDLE_GRAMMAR_POINTS 주석 참고). 중학년의 의무·미래·비교·진행형에서
 // 한 단 더 나아가 의견·조건·관계절처럼 원어민 초등 고학년이 실제로 쓰는 복문 구조로
 // 넘어간다.
@@ -606,6 +744,7 @@ export const HIGH_GRAMMAR_POINTS = [
   { id: "G13", label: "최상급 (the most, -est)" },
   { id: "G14", label: "조건문 (if + 현재형, will + 동사원형)" },
   { id: "G15", label: "관계대명사 who/that (사람·사물 설명)" },
+  { id: "G17", label: "used to (과거 습관·상태 회상)" },
 ];
 
 const OPINIONS_CHAPTER = {
@@ -874,6 +1013,72 @@ const TRAVEL_CHAPTER = {
   ],
 };
 
+const TEAMWORK_CHAPTER = {
+  id: "teamwork",
+  title: "협동과 리더십",
+  emoji: "🏆",
+  sentences: [
+    { id: "work-well-in-a-group", text: "I work well in a group.", ko: "저는 모둠에서 잘해요.", grammar: "G12" },
+    { id: "listen-to-others-ideas", text: "I listen to others' ideas.", ko: "저는 다른 사람 의견을 들어요.", grammar: "G12" },
+    { id: "team-shares-the-work", text: "Our team shares the work.", ko: "우리 팀은 일을 나눠서 해요.", grammar: "G12" },
+    { id: "leader-this-time", text: "I am the leader this time.", ko: "이번엔 제가 리더예요.", grammar: "G12" },
+    { id: "everyone-has-a-role", text: "Everyone has a role in the group.", ko: "모둠에서 모두 역할이 있어요.", grammar: "G12" },
+    { id: "encourage-my-teammates", text: "I encourage my teammates.", ko: "저는 팀원들을 응원해요.", grammar: "G12" },
+    { id: "solve-problems-together", text: "We solve problems together.", ko: "우리는 문제를 같이 해결해요.", grammar: "G12" },
+    { id: "take-responsibility-for-my-part", text: "I take responsibility for my part.", ko: "저는 제 몫에 책임을 져요.", grammar: "G12" },
+    { id: "good-leaders-listen-first", text: "Good leaders listen first.", ko: "좋은 리더는 먼저 들어요.", grammar: "G12" },
+    { id: "respect-different-opinions", text: "I respect different opinions.", ko: "저는 다른 의견을 존중해요.", grammar: "G12" },
+
+    { id: "used-to-be-shy-in-groups", text: "I used to be shy in groups.", ko: "저는 예전에 모둠에서 수줍었어요.", grammar: "G17", level: "intermediate" },
+    { id: "used-to-let-others-decide", text: "I used to let others decide everything.", ko: "예전엔 다른 사람들이 다 결정하게 뒀어요.", grammar: "G17", level: "intermediate" },
+    { id: "leader-is-most-important-skill", text: "I think being a good leader is the most important skill.", ko: "좋은 리더가 되는 게 제일 중요한 능력인 것 같아요.", grammar: "G13", level: "intermediate" },
+    { id: "if-work-together-finish-faster", text: "If we work together, we will finish faster.", ko: "같이 하면 더 빨리 끝낼 거예요.", grammar: "G14", level: "intermediate" },
+    {
+      id: "what-did-you-use-to-be-like",
+      text: "What did you use to be like before you joined a team?",
+      ko: "팀에 들어가기 전엔 어땠어요?",
+      grammar: "G17",
+      level: "intermediate",
+      type: "produce",
+      hint: "I used to ___.",
+      sample: ["I used to work alone.", "I used to be quiet in groups."],
+    },
+    {
+      id: "what-will-happen-if-everyone-shares-ideas",
+      text: "What will happen if everyone shares their ideas?",
+      ko: "모두 의견을 나누면 무슨 일이 생길까요?",
+      grammar: "G14",
+      level: "intermediate",
+      type: "produce",
+      hint: "If everyone shares ideas, we will ___.",
+      sample: ["If everyone shares ideas, we will find better solutions.", "We will understand each other more."],
+    },
+
+    { id: "used-to-think-leadership-meant-in-charge", text: "I used to think leadership meant being in charge.", ko: "예전엔 리더십이 책임자가 되는 거라고 생각했어요.", grammar: "G17", level: "advanced" },
+    { id: "good-team-supports-each-other", text: "A good team is one that supports each other.", ko: "좋은 팀은 서로 응원해주는 팀이에요.", grammar: "G15", level: "advanced" },
+    {
+      id: "why-is-teamwork-important",
+      text: "Why is teamwork important?",
+      ko: "팀워크가 왜 중요해요?",
+      grammar: "G12",
+      level: "advanced",
+      type: "produce",
+      hint: "Teamwork is important because ___.",
+      sample: ["Teamwork is important because we can do more together.", "Because everyone brings different strengths."],
+    },
+    {
+      id: "how-have-you-changed-as-a-leader",
+      text: "How have you changed as a leader?",
+      ko: "리더로서 어떻게 변했어요?",
+      grammar: "G17",
+      level: "advanced",
+      type: "produce",
+      hint: "I used to ___, but now I ___.",
+      sample: ["I used to be quiet, but now I speak up.", "I used to work alone, but now I ask for help."],
+    },
+  ],
+};
+
 // 학년 트랙 — 실제로 만든 학년만 넣는다(위 헤더 설명 참고).
 export const GRADES = [
   {
@@ -881,20 +1086,20 @@ export const GRADES = [
     label: "저학년 (1~2학년)",
     emoji: "🎒",
     grammarPoints: LOWER_GRAMMAR_POINTS,
-    chapters: [SCHOOL_DAY_CHAPTER, CLASSROOM_CHAPTER, RECESS_CHAPTER, FAVORITES_CHAPTER],
+    chapters: [SCHOOL_DAY_CHAPTER, CLASSROOM_CHAPTER, RECESS_CHAPTER, FAVORITES_CHAPTER, PE_CLASS_CHAPTER],
   },
   {
     id: "middle",
     label: "중학년 (3~4학년)",
     emoji: "📖",
     grammarPoints: MIDDLE_GRAMMAR_POINTS,
-    chapters: [SCHOOLWORK_CHAPTER, FRIENDSHIP_CHAPTER, AFTER_SCHOOL_CHAPTER, NEIGHBORHOOD_CHAPTER],
+    chapters: [SCHOOLWORK_CHAPTER, FRIENDSHIP_CHAPTER, AFTER_SCHOOL_CHAPTER, NEIGHBORHOOD_CHAPTER, SCHOOL_EVENTS_CHAPTER],
   },
   {
     id: "high",
     label: "고학년 (5~6학년)",
     emoji: "🎓",
     grammarPoints: HIGH_GRAMMAR_POINTS,
-    chapters: [OPINIONS_CHAPTER, DREAMS_CHAPTER, CURRENT_ISSUES_CHAPTER, TRAVEL_CHAPTER],
+    chapters: [OPINIONS_CHAPTER, DREAMS_CHAPTER, CURRENT_ISSUES_CHAPTER, TRAVEL_CHAPTER, TEAMWORK_CHAPTER],
   },
 ];
