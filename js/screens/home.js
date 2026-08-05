@@ -203,6 +203,12 @@ export function renderMyPage() {
   function renderLearning() {
     const entries = Object.entries(state.learning);
     const total = entries.reduce((sum, [, ch]) => sum + ch.index, 0);
+    // weak는 elementary-conversation처럼 "헷갈렸던 문장" 자가진단이 있는 도구만 채운다
+    // (D-75 후속) — 그 챕터 완료 화면을 그냥 나가버리면 복습 진입로가 사라지는 문제라,
+    // 도구에 무관하게 총합만 여기 한 번 더 보여준다. 개별 도구를 import하지 않고
+    // state.learning 모양(weak가 있으면 { [문장id]: true })만 본다 — renderLearning의
+    // "챕터 제목은 안 본다" 원칙과 같다.
+    const weakTotal = entries.reduce((sum, [, ch]) => sum + Object.keys(ch.weak || {}).length, 0);
     learningEl.innerHTML = entries.length === 0
       ? `<div class="empty-state">
            <div class="emoji">📚</div>
@@ -210,6 +216,7 @@ export function renderMyPage() {
          </div>
          <div class="cta"><button class="cta-btn" id="mypage-go-learning">학습하러 가기</button></div>`
       : `<p>진행 중인 챕터 ${entries.length}개 · 완료한 문장 총 ${total}개</p>
+         ${weakTotal > 0 ? `<p>🔁 헷갈렸던 문장 ${weakTotal}개가 남아 있어요 — 해당 단계를 한 번 더 끝까지 풀면 "헷갈렸던 문장만 복습하기"가 다시 떠요.</p>` : ""}
          <p>${currentEmail ? "로그인 상태라 진행 상황이 계정에 저장돼요." : "로그인하면 진행 상황이 기기를 바꿔도 이어져요."}</p>
          <div class="cta"><button class="cta-btn" id="mypage-go-learning">이어하기</button></div>`;
     learningEl.querySelector("#mypage-go-learning").addEventListener("click", () => go("learning-list"));

@@ -14,7 +14,9 @@
 //    채점은 암기·발음 훈련이지 "새 문장을 만드는 능력"을 안 본다. `type: "produce"` 문장을
 //    섞어서, 정답 문장을 읽어주는 대신 **질문만 던지고** 아이가 스스로 문장을 만들어
 //    답하게 한다. 하나의 정답으로 채점할 수 없으니 유사도 대신 예시 답안(`sample`)을
-//    보여주고 스스로 판단하게 한다(screens.js의 produce 흐름).
+//    보여주고 스스로 판단하게 한다(screens.js의 produce 흐름). 아무 참고 없이 백지에서
+//    시작하면 얼어붙는 아이가 있을 수 있어, 시도 전에 문장 시작 조각인 `hint`(예: "I bring
+//    ___.")를 먼저 보여준다 — 정답은 아니고 어디서부터 말을 시작하면 될지 감만 준다.
 //
 // 학년은 저학년(1~2)/중학년(3~4)/고학년(5~6) 3단계로 나누되, **실제로 만든 학년만
 // GRADES에 넣는다** — 아직 안 만든 학년을 목차에 "준비중"으로 미리 보여주지 않는다(이
@@ -65,6 +67,7 @@ const SCHOOL_DAY_CHAPTER = {
       grammar: "G2",
       level: "intermediate",
       type: "produce",
+      hint: "I bring ___.",
       sample: ["I bring my backpack and my pencil case.", "I bring my water bottle."],
     },
     {
@@ -74,6 +77,7 @@ const SCHOOL_DAY_CHAPTER = {
       grammar: "G4",
       level: "intermediate",
       type: "produce",
+      hint: "There is ___.",
       sample: ["There is a big board.", "There is my desk."],
     },
 
@@ -86,6 +90,7 @@ const SCHOOL_DAY_CHAPTER = {
       grammar: "G2",
       level: "advanced",
       type: "produce",
+      hint: "I like/don't like school because ___.",
       sample: ["I like school because it's fun.", "I don't like school because I wake up early."],
     },
     {
@@ -95,6 +100,7 @@ const SCHOOL_DAY_CHAPTER = {
       grammar: "G4",
       level: "advanced",
       type: "produce",
+      hint: "There are ___. / I have ___.",
       sample: ["There are pencils and an eraser.", "I have two pencils."],
     },
   ],

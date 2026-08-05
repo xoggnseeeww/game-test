@@ -28,6 +28,9 @@ export const elementaryConversationScreens = [
     title: "초등 영어회화 | 과몰입구역",
     render: renderElementaryGrades,
     theme: "learning",
+    // 학년이 하나뿐일 땐 고를 게 없는 화면이라 클릭만 하나 더 느는 마찰이다 — 학년이
+    // 늘어나면(길이 !== 1) 이 guard가 저절로 꺼져서 다시 학년 선택 화면이 뜬다.
+    guard: () => (GRADES.length === 1 ? `learning-elementary-${GRADES[0].id}` : null),
   },
   ...GRADES.map((grade) => ({
     id: `learning-elementary-${grade.id}`,

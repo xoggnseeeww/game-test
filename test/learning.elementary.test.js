@@ -85,3 +85,20 @@ test('type이 "produce"인 문장은 sample 예시 답안이 최소 1개 있다'
     }
   }
 });
+
+// D-75 후속: 아무 참고 없이 백지에서 답하면 얼어붙는 아이가 있을 수 있어, 시도 전에
+// 보여주는 문장 시작 조각(hint)이 필요하다 — 없으면 produce 카드가 사실상 순수 반복
+// 카드보다 어려운데 도움은 하나도 없는 화면이 된다.
+test('type이 "produce"인 문장은 시도 전에 보여줄 hint가 있다', () => {
+  for (const grade of GRADES) {
+    for (const ch of grade.chapters) {
+      for (const s of ch.sentences) {
+        if (s.type !== "produce") continue;
+        assert.ok(
+          typeof s.hint === "string" && s.hint.length > 0,
+          `produce 문장 "${s.id}"에 hint가 없다`
+        );
+      }
+    }
+  }
+});

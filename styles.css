@@ -2179,3 +2179,20 @@ button.meta-chip {
   text-align: center;
   color: #3A3844;
 }
+
+/* 초등 영어회화(D-75 후속) — 카드마다 "지금 뭘 배우는지" 한 줄, produce 카드는 시도 전
+   문장 시작 조각(hint)도 한 줄 더. .learning-warn과 톤은 비슷하지만 경고가 아니라
+   안내라 색을 살짝 accent 쪽으로 뒀다. */
+.learning-grammar-focus {
+  text-align: center;
+  font-size: 12px;
+  color: var(--accent-ink);
+  margin: 10px 20px 0;
+}
+.learning-hint {
+  text-align: center;
+  font-size: 13px;
+  color: #6B6875;
+  margin: 6px 20px 0;
+}
+.learning-hint b { color: #3A3844; }

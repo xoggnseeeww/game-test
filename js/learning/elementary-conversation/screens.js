@@ -54,10 +54,13 @@ export function renderElementaryGrades() {
 }
 
 export function renderElementaryChapters(grade) {
+  // 학년이 하나뿐이면 "learning-elementary"로 돌아가도 guard가 곧장 여기로 되튕긴다
+  // (index.js) — 뒤로가기가 안 먹는 것처럼 보이므로, 그럴 땐 아예 학습 목록으로 보낸다.
+  const backTarget = GRADES.length === 1 ? "learning-list" : "learning-elementary";
   app.appendChild(el(`
     <div>
       <div class="back-row">
-        <button class="back-btn" data-nav="learning-elementary">‹</button>
+        <button class="back-btn" data-nav="${backTarget}">‹</button>
         <div class="back-title">${grade.label}</div>
       </div>
       <div class="section-title">${grade.emoji} 목차</div>
@@ -185,6 +188,13 @@ export function renderElementaryChapter(grade, chapter, level) {
     showCard();
   }
 
+  // 문법 태그(grammar)는 원래 콘텐츠 저작 시점의 내부 장치(반복 규칙 검사용)라 학습자
+  // 화면엔 안 보였다 — "지금 뭘 배우는지" 의식하는 게 공부를 쉽게 만든다는 지적(D-75
+  // 후속)에 따라 카드에 한 줄 노출한다.
+  function grammarLabel(card) {
+    return grade.grammarPoints.find((g) => g.id === card.grammar)?.label ?? card.grammar;
+  }
+
   function showCard() {
     if (st.index >= N) return showDone();
     const card = sentences[st.index];
@@ -203,6 +213,7 @@ export function renderElementaryChapter(grade, chapter, level) {
           ${supportsSpeech() ? `<button class="ko-listen-btn" id="learning-listen-ko" aria-label="한국어 뜻 듣기">🔊</button>` : ""}
         </p>
       </div>
+      <p class="learning-grammar-focus">🔤 오늘의 문법: ${grammarLabel(card)}</p>
       ${!supportsSpeech()
         ? `<p class="learning-warn">이 브라우저는 음성 재생을 지원하지 않아요.</p>`
         : `<div class="learning-listen">
@@ -260,7 +271,9 @@ export function renderElementaryChapter(grade, chapter, level) {
   // produce 카드: 정답 문장을 읽어주지 않는다 — 질문을 던지고 아이가 스스로 영어 문장을
   // 만들어 답하게 한 뒤, 예시 답안(sample)과 스스로 비교하게 한다. 유사도 채점은 안 한다
   // (정답이 하나가 아니라서 Levenshtein으로 잴 대상이 없다) — 자가평가(잘했다/다시 연습)만
-  // weak 목록에 반영한다.
+  // weak 목록에 반영한다. 아무 참고 없이 백지에서 시작하면 얼어붙는 아이가 있을 수 있어,
+  // 시도 전에 문장 시작 조각(hint)을 먼저 보여준다 — 정답은 아니고 어디서부터 말을
+  // 시작하면 될지 감만 준다(D-75 후속).
   function showProduceCard(card) {
     cardEl.innerHTML = `
       <div class="cover">
@@ -271,6 +284,8 @@ export function renderElementaryChapter(grade, chapter, level) {
           ${supportsSpeech() ? `<button class="ko-listen-btn" id="learning-listen-ko" aria-label="한국어 뜻 듣기">🔊</button>` : ""}
         </p>
       </div>
+      <p class="learning-grammar-focus">🔤 오늘의 문법: ${grammarLabel(card)}</p>
+      <p class="learning-hint">💡 이렇게 시작해보세요: <b>${card.hint}</b></p>
       ${!supportsSpeech()
         ? `<p class="learning-warn">이 브라우저는 음성 재생을 지원하지 않아요.</p>`
         : `<div class="learning-listen">
