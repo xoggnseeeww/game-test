@@ -21,12 +21,16 @@
 // 학년은 저학년(1~2)/중학년(3~4)/고학년(5~6) 3단계로 나누되, **실제로 만든 학년만
 // GRADES에 넣는다** — 아직 안 만든 학년을 목차에 "준비중"으로 미리 보여주지 않는다(이
 // 저장소 관례: 빈 기능을 화면에 먼저 노출하지 않는다). 지금은 저학년 챕터 4개(학교 가는
-// 날·교실에서·쉬는 시간·좋아하는 것)를 만들었다 — 챕터마다 문장 개수는 기본 10·중급
-// 6·심화 4(총 20개)로, 기초 영어회화의 최종 목표(단계별 30개)보다 적게 시작한다.
-// 메커니즘(문법 태그·반복·produce)이 챕터 하나(학교 가는 날)에서 실제로 동작하는 걸
-// 먼저 확인한 뒤(D-75, D-76) 같은 틀로 나머지 세 챕터를 채웠다 — 문법은 챕터마다 하나씩
-// 안 늘린다(예: 좋아하는 것 챕터는 새 문법 없이 기존 G1~G6만 재사용, 아래 주석 참고).
-// 다음은 중학년·고학년.
+// 날·교실에서·쉬는 시간·좋아하는 것)와 중학년 챕터 4개(수업과 과제·친구 관계·방과 후
+// 생활·우리 동네)를 만들었다(D-77, D-78) — 챕터마다 문장 개수는 기본 10·중급 6·심화
+// 4(총 20개)로, 기초 영어회화의 최종 목표(단계별 30개)보다 적게 시작한다. 메커니즘
+// (문법 태그·반복·produce)이 저학년 챕터 하나(학교 가는 날)에서 실제로 동작하는 걸
+// 먼저 확인한 뒤(D-75, D-76) 같은 틀로 저학년 나머지·중학년을 채웠다 — 문법은 챕터마다
+// 하나씩 안 늘린다(예: 좋아하는 것·우리 동네 챕터는 새 문법 없이 기존 문법만 재사용).
+// 학년마다 문법 목록(`*_GRAMMAR_POINTS`)이 따로 있고, id는 그 학년 배열 안에서만
+// 유효하다 — 두 학년이 같은 개념(예: 일반동사 현재형)을 각자 새 id로 다시 정의해도
+// 괜찮다(아래 MIDDLE_GRAMMAR_POINTS의 G7이 LOWER의 G2와 겹치는 개념이지만 별개 id인
+// 이유). 다음은 고학년.
 //
 // 문장에는 여전히 `level`이 있다(기본/중급/심화, basic-conversation과 같은 의미) — 학년
 // 트랙 위에 기존 3단계 레벨 선택을 그대로 얹는다.
@@ -311,7 +315,287 @@ const FAVORITES_CHAPTER = {
   ],
 };
 
-// 학년 트랙 — 실제로 만든 학년만 넣는다(위 헤더 설명 참고). 중학년/고학년은 그 학년의
+// 중학년 문법 순서. LOWER_GRAMMAR_POINTS와 별개 배열이라 id가 겹쳐도 실제로는 충돌하지
+// 않지만(각 학년의 grammarPoints 안에서만 유효), 헷갈리지 않게 저학년 이어서 G7부터
+// 붙였다. G7이 저학년 G2(일반동사 현재형)와 개념은 겹치는데, 그건 의도된 것이다 —
+// 중학년 시작 시점에도 기본 현재형 문장이 여전히 나오기 때문에, 저학년 문법을 그대로
+// 참조하지 않고 이 학년 안에서 다시 정의했다(학년 트랙이 독립적이어야 한다는 게 D-75의
+// 전제).
+export const MIDDLE_GRAMMAR_POINTS = [
+  { id: "G7", label: "현재형 문장 복습 (be동사·일반동사)" },
+  { id: "G8", label: "조동사 have to / must (의무)" },
+  { id: "G9", label: "미래형 (will / be going to)" },
+  { id: "G10", label: "비교급 (-er, more than)" },
+  { id: "G11", label: "현재진행형 (be + -ing)" },
+];
+
+const SCHOOLWORK_CHAPTER = {
+  id: "schoolwork",
+  title: "수업과 과제",
+  emoji: "📚",
+  sentences: [
+    { id: "lots-of-homework-today", text: "I have a lot of homework today.", ko: "오늘 숙제가 많아요.", grammar: "G7" },
+    { id: "test-is-tomorrow", text: "The test is tomorrow.", ko: "시험이 내일이에요.", grammar: "G7" },
+    { id: "i-study-every-day", text: "I study every day.", ko: "저는 매일 공부해요.", grammar: "G7" },
+    { id: "group-has-four-people", text: "My group has four people.", ko: "우리 모둠은 네 명이에요.", grammar: "G7" },
+    { id: "i-need-more-time", text: "I need more time.", ko: "시간이 더 필요해요.", grammar: "G7" },
+    { id: "project-is-difficult", text: "The project is difficult.", ko: "이 프로젝트는 어려워요.", grammar: "G7" },
+    { id: "i-check-my-answers", text: "I check my answers.", ko: "저는 답을 확인해요.", grammar: "G7" },
+    { id: "we-work-together", text: "We work together.", ko: "우리는 같이 작업해요.", grammar: "G7" },
+    { id: "presentation-is-next-week", text: "The presentation is next week.", ko: "발표가 다음 주예요.", grammar: "G7" },
+    { id: "i-take-notes-in-class", text: "I take notes in class.", ko: "저는 수업 중에 필기해요.", grammar: "G7" },
+
+    { id: "have-to-finish-homework-tonight", text: "I have to finish my homework tonight.", ko: "오늘 밤까지 숙제를 끝내야 해요.", grammar: "G8", level: "intermediate" },
+    { id: "must-work-quietly", text: "We must work quietly during the test.", ko: "시험 중에는 조용히 해야 해요.", grammar: "G8", level: "intermediate" },
+    { id: "do-i-have-to-do-this-alone", text: "Do I have to do this alone?", ko: "이거 혼자 해야 해요?", grammar: "G8", level: "intermediate" },
+    { id: "group-has-to-present-first", text: "My group has to present first.", ko: "우리 모둠이 먼저 발표해야 해요.", grammar: "G8", level: "intermediate" },
+    {
+      id: "what-do-you-have-to-do-before-the-test",
+      text: "What do you have to do before the test?",
+      ko: "시험 전에 뭘 해야 해요?",
+      grammar: "G8",
+      level: "intermediate",
+      type: "produce",
+      hint: "I have to ___.",
+      sample: ["I have to study.", "I have to review my notes."],
+    },
+    {
+      id: "whats-your-project-about",
+      text: "What's your project about?",
+      ko: "프로젝트가 뭐에 관한 거예요?",
+      grammar: "G7",
+      level: "intermediate",
+      type: "produce",
+      hint: "My project is about ___.",
+      sample: ["My project is about animals.", "My project is about space."],
+    },
+
+    { id: "practice-more-because-nervous", text: "I have to practice more because I'm nervous.", ko: "긴장돼서 더 연습해야 해요.", grammar: "G8", level: "advanced" },
+    { id: "everyone-in-group-has-to-help", text: "Everyone in my group has to help.", ko: "우리 모둠 사람들 다 도와야 해요.", grammar: "G8", level: "advanced" },
+    {
+      id: "why-do-you-have-to-study-so-much",
+      text: "Why do you have to study so much this week?",
+      ko: "이번 주에 왜 이렇게 공부를 많이 해야 해요?",
+      grammar: "G8",
+      level: "advanced",
+      type: "produce",
+      hint: "I have to study because ___.",
+      sample: ["I have to study because I have a big test.", "Because I want to do well."],
+    },
+    {
+      id: "hardest-part-of-your-project",
+      text: "What was the hardest part of your project?",
+      ko: "프로젝트에서 제일 어려웠던 부분이 뭐예요?",
+      grammar: "G7",
+      level: "advanced",
+      type: "produce",
+      hint: "The hardest part was ___.",
+      sample: ["The hardest part was finding information.", "The hardest part was the presentation."],
+    },
+  ],
+};
+
+const FRIENDSHIP_CHAPTER = {
+  id: "friendship",
+  title: "친구 관계",
+  emoji: "🤝",
+  sentences: [
+    { id: "have-two-close-friends", text: "I have two close friends.", ko: "저는 친한 친구가 두 명 있어요.", grammar: "G7" },
+    { id: "eat-lunch-together", text: "We eat lunch together.", ko: "우리는 같이 점심을 먹어요.", grammar: "G7" },
+    { id: "friend-is-funny", text: "My friend is funny.", ko: "제 친구는 웃겨요.", grammar: "G7" },
+    { id: "sit-next-to-each-other", text: "We sit next to each other.", ko: "우리는 서로 옆에 앉아요.", grammar: "G7" },
+    { id: "i-trust-my-friends", text: "I trust my friends.", ko: "저는 친구들을 믿어요.", grammar: "G7" },
+    { id: "we-help-each-other", text: "We help each other.", ko: "우리는 서로 도와줘요.", grammar: "G7" },
+    { id: "best-friend-lives-near-me", text: "My best friend lives near me.", ko: "제일 친한 친구가 저희 집 근처에 살아요.", grammar: "G7" },
+    { id: "i-invite-my-friends-over", text: "I invite my friends over.", ko: "저는 친구들을 초대해요.", grammar: "G7" },
+    { id: "we-share-secrets", text: "We share secrets.", ko: "우리는 비밀을 나눠요.", grammar: "G7" },
+    { id: "friends-support-me", text: "My friends support me.", ko: "제 친구들이 저를 응원해줘요.", grammar: "G7" },
+
+    { id: "will-invite-her-to-my-birthday", text: "I will invite her to my birthday party.", ko: "걔를 제 생일 파티에 초대할 거예요.", grammar: "G9", level: "intermediate" },
+    { id: "going-to-hang-out-this-weekend", text: "We are going to hang out this weekend.", ko: "우리 이번 주말에 놀 거예요.", grammar: "G9", level: "intermediate" },
+    { id: "have-to-say-sorry-first", text: "I have to say sorry first.", ko: "제가 먼저 사과해야 해요.", grammar: "G8", level: "intermediate" },
+    { id: "will-you-still-be-my-friend", text: "Will you still be my friend?", ko: "그래도 계속 제 친구 할 거예요?", grammar: "G9", level: "intermediate" },
+    {
+      id: "what-will-you-do-to-make-up",
+      text: "What will you do to make up with a friend?",
+      ko: "친구랑 화해하려면 뭘 할 거예요?",
+      grammar: "G9",
+      level: "intermediate",
+      type: "produce",
+      hint: "I will ___.",
+      sample: ["I will say sorry.", "I will give them a gift."],
+    },
+    {
+      id: "what-do-you-have-to-do-to-be-a-good-friend",
+      text: "What do you have to do to be a good friend?",
+      ko: "좋은 친구가 되려면 뭘 해야 해요?",
+      grammar: "G8",
+      level: "intermediate",
+      type: "produce",
+      hint: "You have to ___.",
+      sample: ["You have to listen.", "You have to be kind."],
+    },
+
+    { id: "will-apologize-because-i-was-wrong", text: "I will apologize because I was wrong.", ko: "제가 잘못해서 사과할 거예요.", grammar: "G9", level: "advanced" },
+    { id: "friends-have-to-trust-each-other", text: "Friends have to trust each other.", ko: "친구는 서로 믿어야 해요.", grammar: "G8", level: "advanced" },
+    {
+      id: "what-will-you-do-if-you-fight",
+      text: "What will you do if you have a fight with a friend?",
+      ko: "친구랑 싸우면 뭘 할 거예요?",
+      grammar: "G9",
+      level: "advanced",
+      type: "produce",
+      hint: "I will ___.",
+      sample: ["I will talk to them.", "I will give us both some time."],
+    },
+    {
+      id: "why-are-friends-important-to-you",
+      text: "Why are friends important to you?",
+      ko: "친구가 왜 중요해요?",
+      grammar: "G7",
+      level: "advanced",
+      type: "produce",
+      hint: "Friends are important because ___.",
+      sample: ["Friends are important because they support me.", "Because I have fun with them."],
+    },
+  ],
+};
+
+const AFTER_SCHOOL_CHAPTER = {
+  id: "after-school",
+  title: "방과 후 생활",
+  emoji: "🎨",
+  sentences: [
+    { id: "go-to-a-math-academy", text: "I go to a math academy after school.", ko: "저는 방과 후에 수학 학원에 가요.", grammar: "G7" },
+    { id: "do-my-homework-first", text: "I do my homework first.", ko: "저는 숙제부터 해요.", grammar: "G7" },
+    { id: "i-practice-taekwondo", text: "I practice taekwondo.", ko: "저는 태권도를 연습해요.", grammar: "G7" },
+    { id: "watch-videos-online", text: "I watch videos online.", ko: "저는 온라인 영상을 봐요.", grammar: "G7" },
+    { id: "my-schedule-is-busy", text: "My schedule is busy.", ko: "제 일정은 바빠요.", grammar: "G7" },
+    { id: "i-take-a-break-first", text: "I take a break first.", ko: "저는 먼저 쉬어요.", grammar: "G7" },
+    { id: "i-play-video-games", text: "I play video games.", ko: "저는 비디오 게임을 해요.", grammar: "G7" },
+    { id: "i-read-comic-books", text: "I read comic books.", ko: "저는 만화책을 읽어요.", grammar: "G7" },
+    { id: "i-practice-the-violin", text: "I practice the violin.", ko: "저는 바이올린을 연습해요.", grammar: "G7" },
+    { id: "free-time-on-fridays", text: "I have free time on Fridays.", ko: "저는 금요일에 자유 시간이 있어요.", grammar: "G7" },
+
+    { id: "doing-homework-right-now", text: "I am doing my homework right now.", ko: "저 지금 숙제하고 있어요.", grammar: "G11", level: "intermediate" },
+    { id: "like-taekwondo-more-than-piano", text: "I like taekwondo more than piano.", ko: "저는 피아노보다 태권도가 더 좋아요.", grammar: "G10", level: "intermediate" },
+    { id: "games-are-more-fun-than-homework", text: "Games are more fun than homework.", ko: "게임이 숙제보다 더 재밌어요.", grammar: "G10", level: "intermediate" },
+    { id: "watching-a-video-now", text: "I am watching a video now.", ko: "저 지금 영상 보고 있어요.", grammar: "G11", level: "intermediate" },
+    {
+      id: "what-are-you-doing-right-now",
+      text: "What are you doing right now?",
+      ko: "지금 뭐 하고 있어요?",
+      grammar: "G11",
+      level: "intermediate",
+      type: "produce",
+      hint: "I am ___ing.",
+      sample: ["I am doing my homework.", "I am reading a book."],
+    },
+    {
+      id: "which-do-you-like-more-games-or-reading",
+      text: "Which do you like more, video games or reading?",
+      ko: "비디오 게임이랑 독서 중에 뭐가 더 좋아요?",
+      grammar: "G10",
+      level: "intermediate",
+      type: "produce",
+      hint: "I like ___ more than ___.",
+      sample: ["I like video games more than reading.", "I like reading more than video games."],
+    },
+
+    { id: "finish-homework-before-games", text: "I have to finish my homework before I play games.", ko: "게임하기 전에 숙제를 끝내야 해요.", grammar: "G8", level: "advanced" },
+    { id: "practice-more-to-improve", text: "I will practice more because I want to improve.", ko: "더 잘하고 싶어서 더 연습할 거예요.", grammar: "G9", level: "advanced" },
+    {
+      id: "what-are-you-going-to-do-after-school",
+      text: "What are you going to do after school today?",
+      ko: "오늘 방과 후에 뭐 할 거예요?",
+      grammar: "G9",
+      level: "advanced",
+      type: "produce",
+      hint: "I am going to ___.",
+      sample: ["I am going to go to my academy.", "I am going to play with my friends."],
+    },
+    {
+      id: "screen-time-or-hobbies-more-important",
+      text: "Do you think screen time or hobbies are more important?",
+      ko: "스크린 타임이랑 취미 중에 뭐가 더 중요한 것 같아요?",
+      grammar: "G10",
+      level: "advanced",
+      type: "produce",
+      hint: "I think ___ is more important.",
+      sample: ["I think hobbies are more important.", "I think screen time is fine in small amounts."],
+    },
+  ],
+};
+
+// 우리 동네 챕터도 좋아하는 것(저학년)과 같은 이유로 새 문법을 도입하지 않는다 — G7~G11을
+// 새 소재(동네·심부름)로 재사용만 한다.
+const NEIGHBORHOOD_CHAPTER = {
+  id: "neighborhood",
+  title: "우리 동네",
+  emoji: "🏘️",
+  sentences: [
+    { id: "house-is-near-the-park", text: "My house is near the park.", ko: "저희 집은 공원 근처예요.", grammar: "G7" },
+    { id: "i-walk-to-the-store", text: "I walk to the store.", ko: "저는 가게까지 걸어가요.", grammar: "G7" },
+    { id: "bus-stop-is-close", text: "The bus stop is close.", ko: "버스 정류장이 가까워요.", grammar: "G7" },
+    { id: "buy-snacks-at-the-store", text: "I buy snacks at the store.", ko: "저는 가게에서 간식을 사요.", grammar: "G7" },
+    { id: "neighborhood-is-quiet", text: "My neighborhood is quiet.", ko: "저희 동네는 조용해요.", grammar: "G7" },
+    { id: "i-know-my-neighbors", text: "I know my neighbors.", ko: "저는 이웃들을 알아요.", grammar: "G7" },
+    { id: "library-is-nearby", text: "The library is nearby.", ko: "도서관이 근처에 있어요.", grammar: "G7" },
+    { id: "run-errands-for-my-mom", text: "I run errands for my mom.", ko: "저는 엄마 심부름을 해요.", grammar: "G7" },
+    { id: "take-the-bus-to-school", text: "I take the bus to school.", ko: "저는 버스 타고 학교에 가요.", grammar: "G7" },
+    { id: "market-is-busy-on-weekends", text: "The market is busy on weekends.", ko: "시장은 주말에 붐벼요.", grammar: "G7" },
+
+    { id: "have-to-buy-milk-for-mom", text: "I have to buy milk for my mom.", ko: "엄마를 위해 우유를 사야 해요.", grammar: "G8", level: "intermediate" },
+    { id: "will-take-the-bus-tomorrow", text: "I will take the bus tomorrow.", ko: "내일 버스 탈 거예요.", grammar: "G9", level: "intermediate" },
+    { id: "new-store-is-bigger-than-old", text: "The new store is bigger than the old one.", ko: "새 가게가 옛날 가게보다 더 커요.", grammar: "G10", level: "intermediate" },
+    { id: "walking-to-the-store-now", text: "I am walking to the store now.", ko: "지금 가게로 걸어가고 있어요.", grammar: "G11", level: "intermediate" },
+    {
+      id: "what-do-you-have-to-do-for-family",
+      text: "What do you have to do for your family this week?",
+      ko: "이번 주에 가족을 위해 뭘 해야 해요?",
+      grammar: "G8",
+      level: "intermediate",
+      type: "produce",
+      hint: "I have to ___.",
+      sample: ["I have to buy groceries.", "I have to walk the dog."],
+    },
+    {
+      id: "what-will-you-buy-at-the-store",
+      text: "What will you buy at the store?",
+      ko: "가게에서 뭘 살 거예요?",
+      grammar: "G9",
+      level: "intermediate",
+      type: "produce",
+      hint: "I will buy ___.",
+      sample: ["I will buy some snacks.", "I will buy milk and bread."],
+    },
+
+    { id: "take-the-bus-because-faster", text: "I take the bus because it's faster than walking.", ko: "걷는 것보다 빨라서 버스를 타요.", grammar: "G10", level: "advanced" },
+    { id: "running-an-errand-because-mom-asked", text: "I am running an errand because my mom asked me to.", ko: "엄마가 부탁해서 심부름하고 있어요.", grammar: "G11", level: "advanced" },
+    {
+      id: "what-do-you-like-about-your-neighborhood",
+      text: "What do you like about your neighborhood?",
+      ko: "우리 동네에서 뭐가 좋아요?",
+      grammar: "G7",
+      level: "advanced",
+      type: "produce",
+      hint: "I like that ___.",
+      sample: ["I like that it's quiet.", "I like that the park is close."],
+    },
+    {
+      id: "what-do-you-want-in-your-neighborhood",
+      text: "What do you want in your neighborhood?",
+      ko: "동네에 뭐가 있으면 좋겠어요?",
+      grammar: "G7",
+      level: "advanced",
+      type: "produce",
+      hint: "I want ___.",
+      sample: ["I want a new park.", "I want a bigger library."],
+    },
+  ],
+};
+
+// 학년 트랙 — 실제로 만든 학년만 넣는다(위 헤더 설명 참고). 고학년은 그 학년의
 // GRAMMAR_POINTS·챕터가 준비되면 여기 항목을 추가한다(레지스트리를 새로 만들 필요
 // 없음 — index.js가 GRADES를 순회해 화면을 자동 생성한다).
 export const GRADES = [
@@ -321,5 +605,12 @@ export const GRADES = [
     emoji: "🎒",
     grammarPoints: LOWER_GRAMMAR_POINTS,
     chapters: [SCHOOL_DAY_CHAPTER, CLASSROOM_CHAPTER, RECESS_CHAPTER, FAVORITES_CHAPTER],
+  },
+  {
+    id: "middle",
+    label: "중학년 (3~4학년)",
+    emoji: "📖",
+    grammarPoints: MIDDLE_GRAMMAR_POINTS,
+    chapters: [SCHOOLWORK_CHAPTER, FRIENDSHIP_CHAPTER, AFTER_SCHOOL_CHAPTER, NEIGHBORHOOD_CHAPTER],
   },
 ];
