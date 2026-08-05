@@ -2,7 +2,7 @@
 import { app, go, onLeave, listTests, listGames, listLearning } from "../core/router.js";
 import { el, bindNav } from "../core/dom.js";
 import { adSlotMarkup } from "../core/ads.js";
-import { currentEmail, isAdmin, logout, onAuthChange, renderSignInButton } from "../core/auth.js";
+import { currentEmail, currentName, isAdmin, logout, onAuthChange, renderSignInButton } from "../core/auth.js";
 import { state } from "../core/state.js";
 
 // 하단 배너(bannerBottom)는 폰 화면에서 뷰포트 맨 아래에 고정된다(.home-ad-dock,
@@ -183,7 +183,8 @@ export function renderMyPage() {
     if (currentEmail) {
       accountEl.appendChild(el(`
         <div class="hamburger-account">
-          <div class="hamburger-email">${currentEmail}${isAdmin() ? " · 관리자" : ""}</div>
+          <div class="hamburger-email">${currentName || currentEmail}${isAdmin() ? " · 관리자" : ""}</div>
+          ${currentName ? `<div class="hamburger-email-sub">${currentEmail}</div>` : ""}
           <button class="hamburger-logout" id="mypage-logout">로그아웃</button>
         </div>
       `));

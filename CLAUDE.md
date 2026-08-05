@@ -48,11 +48,13 @@
   있다 — Cloudflare Pages Functions(`functions/api/couple-code/`) + KV, `wrangler.jsonc`로 바인딩.
   이 예외가 생기면서 개인정보처리방침(`/privacy`, 홈 하단 링크)을 신설했다 — 실제로 저장·처리하는
   것만 적는다. 아직 안 하는 걸 미리 적어두면 나중에 그 기능이 생겼을 때 방침이 먼저 거짓말이 된다.
-  **② 로그인 이메일**(`localStorage["gt_user_email"]`, `js/core/auth.js`) — 일반 방문자
-  전부에게 열려 있다(D-68). `js/core/cloud-auth.js`가 data-pantry.com과 같은 Supabase
-  Auth(Google·카카오 OAuth) 세션을 재사용할 뿐, 이 레포 자체엔 별도 계정 백엔드가 없다.
-  `isAdmin()`(같은 파일)만 이메일이 `ADMIN_EMAIL`과 같은지 별도로 판별해 부부 체크 같은
-  출시 전 도구 게이트(D-56)에 쓴다 — 로그인 자체와 관리자 판별은 별개다.
+  **② 로그인 이메일·이름**(`localStorage["gt_user_email"]`·`["gt_user_name"]`,
+  `js/core/auth.js`) — 일반 방문자 전부에게 열려 있다(D-68). `js/core/cloud-auth.js`가
+  data-pantry.com과 같은 Supabase Auth(Google·카카오 OAuth) 세션을 재사용할 뿐, 이 레포
+  자체엔 별도 계정 백엔드가 없다. 이름은 Google 계정의 `user_metadata`에서 가져오며
+  없으면 이메일로 대체 표시한다(D-71). `isAdmin()`(같은 파일)만 이메일이 `ADMIN_EMAIL`과
+  같은지 별도로 판별해 부부 체크 같은 출시 전 도구 게이트(D-56)에 쓴다 — 로그인 자체와
+  관리자 판별은 별개다.
   **③ 학습 진행률**(Supabase `learning_progress` 테이블, RLS로 본인 행만 접근, D-68) —
   로그인한 사용자의 `state.learning`을 저장한다. `js/learning/cloud.js`가 로그인 시 병합,
   진행이 바뀔 때마다 업서트. 로그인하지 않았거나 CDN이 막혀 있으면 이 앱의 다른 콘텐츠처럼

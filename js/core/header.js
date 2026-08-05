@@ -3,7 +3,7 @@
 // 지워도) 살아남게 한다 — showModal()과 같은 이유(router.js 참고).
 import { el, goHome } from "./dom.js";
 import { go } from "./router.js";
-import { currentEmail, isAdmin, initAuth, logout, onAuthChange, renderSignInButton } from "./auth.js";
+import { currentEmail, currentName, isAdmin, initAuth, logout, onAuthChange, renderSignInButton } from "./auth.js";
 
 export function initHeader() {
   const root = el(`
@@ -49,7 +49,8 @@ export function initHeader() {
     if (currentEmail) {
       accountBox.appendChild(el(`
         <div class="hamburger-account">
-          <div class="hamburger-email">${currentEmail}${isAdmin() ? " · 관리자" : ""}</div>
+          <div class="hamburger-email">${currentName || currentEmail}${isAdmin() ? " · 관리자" : ""}</div>
+          ${currentName ? `<div class="hamburger-email-sub">${currentEmail}</div>` : ""}
           <button class="hamburger-logout">로그아웃</button>
         </div>
       `));

@@ -172,6 +172,13 @@ body {
   word-break: break-all;
 }
 
+.hamburger-email-sub {
+  font-size: 11px;
+  color: #8A8790;
+  word-break: break-all;
+  margin-top: -6px;
+}
+
 .hamburger-logout {
   background: #F1EFEA;
   color: #75727B;

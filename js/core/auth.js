@@ -7,10 +7,11 @@ import { loadCloudAuth } from "./cloud-auth-loader.js";
 
 const ADMIN_EMAIL = "xogns022@gmail.com";
 const STORAGE_KEY = "gt_user_email";
+const NAME_STORAGE_KEY = "gt_user_name";
 
-function readStoredEmail() {
+function readStored(key) {
   try {
-    return localStorage.getItem(STORAGE_KEY);
+    return localStorage.getItem(key);
   } catch (e) {
     console.error(e);
     return null;
@@ -20,17 +21,24 @@ function readStoredEmail() {
 // NumPath 마을(village.js)과 같은 패턴(D-54) — 로컬 캐시를 우선 신뢰하고, Supabase 세션을
 // 확인할 수 있으면(CDN 연결됨) 그걸로 맞춰 고친다. 오프라인·CDN 차단 상태에서도 직전
 // 로그인 상태를 그대로 유지한다.
-export let currentEmail = readStoredEmail();
+export let currentEmail = readStored(STORAGE_KEY);
+// Google 계정의 표시 이름(user_metadata.full_name/name) — 로그인 UI에 이메일 대신
+// 이름을 보여달라는 요청(D-71)으로 추가. 구글이 이름을 안 주는 계정도 있어 폴백은
+// 항상 currentEmail이다.
+export let currentName = readStored(NAME_STORAGE_KEY);
 
 export function isAdmin() {
   return currentEmail === ADMIN_EMAIL;
 }
 
-function setCurrentEmail(email) {
+function setCurrentUser(email, name) {
   currentEmail = email;
+  currentName = name;
   try {
     if (email) localStorage.setItem(STORAGE_KEY, email);
     else localStorage.removeItem(STORAGE_KEY);
+    if (name) localStorage.setItem(NAME_STORAGE_KEY, name);
+    else localStorage.removeItem(NAME_STORAGE_KEY);
   } catch (e) {
     console.error(e);
   }
@@ -54,7 +62,8 @@ export function initAuth() {
     if (!cloud) return;
     const sync = () => {
       const user = cloud.getCachedUser();
-      setCurrentEmail(user ? user.email : null);
+      const name = user && (user.user_metadata?.full_name || user.user_metadata?.name);
+      setCurrentUser(user ? user.email : null, name || null);
       for (const fn of changeListeners) fn();
     };
     sync();
@@ -63,7 +72,7 @@ export function initAuth() {
 }
 
 export function logout() {
-  setCurrentEmail(null);
+  setCurrentUser(null, null);
   loadCloudAuth().then((cloud) => cloud && cloud.signOut().catch((err) => console.error("로그아웃 실패", err)));
 }
 
