@@ -72,7 +72,7 @@ export function renderBasicConversationIntro() {
   bindNav(app);
 }
 
-// 챕터를 누르면 먼저 단계(기본/중급/심화)를 고른다(D-71) — 심화로 바로 이어지던 흐름이
+// 챕터를 누르면 먼저 단계(기본/중급/심화)를 고른다(D-73) — 심화로 바로 이어지던 흐름이
 // 갑자기 어려워진다는 지적에 중급을 끼워 넣으면서, 세 단계를 한 번에 죽 이어 풀기보다
 // 원하는 단계만 골라 반복할 수 있게 했다.
 export function renderLevelSelect(chapter) {

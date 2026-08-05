@@ -204,6 +204,28 @@ onLeave(() => cancelAnimationFrame(raf));
   읽어 `<div class="ad-slot ${cssClass}">`를 만드는 구조라, 새 위치를 추가해도 CSS를 중복 정의할 필요가 없다.
 - **일반 원칙**: **한 화면(페이지)에 같은 크기의 광고를 두 개 이상 넣을 때는 반드시 서로 다른 단위 코드를 쓴다.**
   AdFit 관리자 페이지에서 같은 크기로 광고 단위를 새로 하나 더 만들면 된다 — 코드 쪽에서 "복제"로 흉내 낼 수 없다.
+
+### E-12. `oauth-redirect-not-allowlisted` — Supabase 로그에는 로그인 성공인데 앱은 로그인 안 된 것처럼 보인다
+`signInWithOAuth`가 이 사이트(`fun.data-pantry.com`)에서 시작해 Google 계정 선택까지 정상 진행되고,
+Supabase 대시보드/`get_logs`(`auth` 서비스)에도 `Login` 이벤트가 실제 계정으로 성공(`status: 302`, 에러 없음)
+기록되는데, 정작 브라우저는 로그인 상태를 못 받는 증상(D-71에서 발견).
+
+- **원인**: `signInWithOAuth`의 `redirectTo`(예: `${location.origin}/`)가 Supabase 프로젝트의
+  **Authentication → URL Configuration → Redirect URLs 허용 목록**에 없으면, GoTrue는 에러를 내지 않고
+  로그인 자체는 그대로 처리한 뒤 **최종 리다이렉트만 등록된 Site URL로 조용히 바꿔치기**한다. 이 레포는
+  data-pantry.com과 같은 Supabase 프로젝트를 재사용하는데, Site URL이 원래 `data-pantry.com`으로 등록돼
+  있으면 `fun.data-pantry.com`에서 로그인해도 세션이 `data-pantry.com` 쪽 origin의 localStorage에 실려서
+  이 사이트는 영원히 로그인 안 된 것처럼 보인다.
+- **왜 늦게 발견됐나**: 이 실패는 클라이언트 콘솔에도, `npm test`/`scripts/verify.cjs`에도 안 잡힌다 —
+  헤드리스 검증은 처음부터 OAuth 리다이렉트를 재현하지 못해 `localStorage`를 직접 채워 로그인 상태를
+  흉내내는 우회로만 써왔다(D-55·D-56·D-58 공통 한계). 실기기로 "진짜 버튼 클릭 → 계정 선택 → 결과"
+  전체 왕복을 확인해야만 드러난다 — D-56 도입 당시 이미 "확인 필요"로 남겨뒀던 항목이 실제로 여기서 터졌다.
+- **진단법**: 클라이언트 쪽 증상(버튼 무반응 등, D-58)과 구분하려면 Supabase MCP의
+  `get_logs(service: "auth")`로 해당 시각의 로그인 이벤트가 실제 성공했는지부터 본다. 성공 기록이 있는데
+  앱만 로그인 안 된 상태라면 클라이언트 버그가 아니라 리다이렉트 허용 목록 문제일 가능성이 크다.
+- **해결**: Supabase 대시보드에서 실제 서비스하는 도메인(`https://fun.data-pantry.com/`, 필요하면
+  와일드카드 `https://fun.data-pantry.com/**`)을 Redirect URLs에 추가한다 — 대시보드 전용 설정이라
+  이 저장소의 코드나 MCP 도구로는 고칠 수 없다.
 - **검증**: 자동화된 검사는 아직 없다(다른 unit 코드를 쓰는지는 실제 AdFit 계정 없이는 재현이 안 된다).
   대신 `.ad-slot.banner ins`의 `data-ad-unit` 값이 같은 화면 안에서 서로 달라야 한다는 걸 코드 리뷰 시 확인한다 —
   `grep -n 'adSlotMarkup("banner' js/` 결과에 `"banner"`(위치 구분 없는 옛 이름)가 남아있으면 회귀다.

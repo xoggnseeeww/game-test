@@ -7,10 +7,11 @@ import { loadCloudAuth } from "./cloud-auth-loader.js";
 
 const ADMIN_EMAIL = "xogns022@gmail.com";
 const STORAGE_KEY = "gt_user_email";
+const NAME_STORAGE_KEY = "gt_user_name";
 
-function readStoredEmail() {
+function readStored(key) {
   try {
-    return localStorage.getItem(STORAGE_KEY);
+    return localStorage.getItem(key);
   } catch (e) {
     console.error(e);
     return null;
@@ -20,27 +21,37 @@ function readStoredEmail() {
 // NumPath 마을(village.js)과 같은 패턴(D-54) — 로컬 캐시를 우선 신뢰하고, Supabase 세션을
 // 확인할 수 있으면(CDN 연결됨) 그걸로 맞춰 고친다. 오프라인·CDN 차단 상태에서도 직전
 // 로그인 상태를 그대로 유지한다.
-export let currentEmail = readStoredEmail();
+export let currentEmail = readStored(STORAGE_KEY);
+// Google 계정의 표시 이름(user_metadata.full_name/name) — 로그인 UI에 이메일 대신
+// 이름을 보여달라는 요청(D-71)으로 추가. 구글이 이름을 안 주는 계정도 있어 폴백은
+// 항상 currentEmail이다.
+export let currentName = readStored(NAME_STORAGE_KEY);
 
 export function isAdmin() {
   return currentEmail === ADMIN_EMAIL;
 }
 
-function setCurrentEmail(email) {
+function setCurrentUser(email, name) {
   currentEmail = email;
+  currentName = name;
   try {
     if (email) localStorage.setItem(STORAGE_KEY, email);
     else localStorage.removeItem(STORAGE_KEY);
+    if (name) localStorage.setItem(NAME_STORAGE_KEY, name);
+    else localStorage.removeItem(NAME_STORAGE_KEY);
   } catch (e) {
     console.error(e);
   }
 }
 
-let onChange = null;
-
-// 로그인/로그아웃으로 상태가 바뀔 때마다 UI(햄버거 메뉴)를 다시 그리도록 알려준다.
+// 로그인/로그아웃으로 상태가 바뀔 때마다 구독자들(햄버거 메뉴, 마이페이지)에게 알려준다.
+// cloud-auth.js의 pub-sub과 같은 이유로 Set을 쓴다 — 구독자가 하나뿐이던 시절엔 변수
+// 하나로 충분했지만, 마이페이지(D-70)가 두 번째로 구독하면서 마지막 등록만 살아남는
+// 버그가 될 뻔했다.
+const changeListeners = new Set();
 export function onAuthChange(fn) {
-  onChange = fn;
+  changeListeners.add(fn);
+  return () => changeListeners.delete(fn);
 }
 
 // 부팅 시 한 번 불러 지금 로그인된 계정을 확인한다 — 사이트 전체가 같은 Supabase 세션을
@@ -51,8 +62,9 @@ export function initAuth() {
     if (!cloud) return;
     const sync = () => {
       const user = cloud.getCachedUser();
-      setCurrentEmail(user ? user.email : null);
-      if (onChange) onChange();
+      const name = user && (user.user_metadata?.full_name || user.user_metadata?.name);
+      setCurrentUser(user ? user.email : null, name || null);
+      for (const fn of changeListeners) fn();
     };
     sync();
     cloud.onAuthChange(sync);
@@ -60,7 +72,7 @@ export function initAuth() {
 }
 
 export function logout() {
-  setCurrentEmail(null);
+  setCurrentUser(null, null);
   loadCloudAuth().then((cloud) => cloud && cloud.signOut().catch((err) => console.error("로그아웃 실패", err)));
 }
 

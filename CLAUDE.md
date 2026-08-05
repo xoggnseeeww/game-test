@@ -48,11 +48,13 @@
   있다 — Cloudflare Pages Functions(`functions/api/couple-code/`) + KV, `wrangler.jsonc`로 바인딩.
   이 예외가 생기면서 개인정보처리방침(`/privacy`, 홈 하단 링크)을 신설했다 — 실제로 저장·처리하는
   것만 적는다. 아직 안 하는 걸 미리 적어두면 나중에 그 기능이 생겼을 때 방침이 먼저 거짓말이 된다.
-  **② 로그인 이메일**(`localStorage["gt_user_email"]`, `js/core/auth.js`) — 일반 방문자
-  전부에게 열려 있다(D-68). `js/core/cloud-auth.js`가 data-pantry.com과 같은 Supabase
-  Auth(Google·카카오 OAuth) 세션을 재사용할 뿐, 이 레포 자체엔 별도 계정 백엔드가 없다.
-  `isAdmin()`(같은 파일)만 이메일이 `ADMIN_EMAIL`과 같은지 별도로 판별해 부부 체크 같은
-  출시 전 도구 게이트(D-56)에 쓴다 — 로그인 자체와 관리자 판별은 별개다.
+  **② 로그인 이메일·이름**(`localStorage["gt_user_email"]`·`["gt_user_name"]`,
+  `js/core/auth.js`) — 일반 방문자 전부에게 열려 있다(D-68). `js/core/cloud-auth.js`가
+  data-pantry.com과 같은 Supabase Auth(Google·카카오 OAuth) 세션을 재사용할 뿐, 이 레포
+  자체엔 별도 계정 백엔드가 없다. 이름은 Google 계정의 `user_metadata`에서 가져오며
+  없으면 이메일로 대체 표시한다(D-71). `isAdmin()`(같은 파일)만 이메일이 `ADMIN_EMAIL`과
+  같은지 별도로 판별해 부부 체크 같은 출시 전 도구 게이트(D-56)에 쓴다 — 로그인 자체와
+  관리자 판별은 별개다.
   **③ 학습 진행률**(Supabase `learning_progress` 테이블, RLS로 본인 행만 접근, D-68) —
   로그인한 사용자의 `state.learning`을 저장한다. `js/learning/cloud.js`가 로그인 시 병합,
   진행이 바뀔 때마다 업서트. 로그인하지 않았거나 CDN이 막혀 있으면 이 앱의 다른 콘텐츠처럼
@@ -71,8 +73,8 @@
 
 ## 기술 스택
 빌드 없는 정적 SPA. 브라우저 네이티브 ES 모듈(`<script type="module">`), 런타임 의존성 0(npm 설치
-기준 — 브라우저가 직접 불러오는 CDN 모듈은 있다). 외부 CDN 의존: 폰트 하나 + 우상단 관리자
-로그인용 Supabase JS(`js/core/cloud-auth.js`, D-56). **동적 import로만** 연결돼 있어 CDN이
+기준 — 브라우저가 직접 불러오는 CDN 모듈은 있다). 외부 CDN 의존: 폰트 하나 + 우상단 로그인용
+Supabase JS(`js/core/cloud-auth.js`, D-56, D-68부터 일반 방문자에게도 열림). **동적 import로만** 연결돼 있어 CDN이
 막혀도 로그인 관련 기능만 빠지고 나머지 앱은 정상 동작한다(`cloud-auth-loader.js` 참고). 라우팅은
 History API 직접 구현 + **레지스트리 방식 라우터**. 상태는 메모리 내 단일 `state` 객체(새로고침하면
 날아감) — 로그인 이메일만 예외로 `localStorage`에 남는다(위 항목 참고).
@@ -86,11 +88,14 @@ og-shells/             테스트·게임 진입 화면 3곳의 정적 OG 셸(og-
 assets/                favicon(svg) · apple-touch-icon(png) · og-image*.png(1200×630, 홈+테스트/게임별)
 js/main.js            부팅: 화면·테스트·게임·학습 콘텐츠를 라우터에 등록 + initHeader()
 js/core/              router(레지스트리·guard·teardown·게임 레지스트리) · state · dom · share · util · ads ·
-                      cloud-auth(관리자 로그인용 Supabase Auth 클라이언트, D-56 — cloud-auth-loader로만
-                      동적 import) · auth(관리자 이메일 판별, cloud-auth 재사용) · header(우상단 햄버거 메뉴)
+                      cloud-auth(공유 Supabase Auth 클라이언트, D-56 — cloud-auth-loader로만
+                      동적 import) · auth(일반 로그인 + isAdmin() 별도 판별, D-68, cloud-auth 재사용,
+                      onAuthChange는 구독자 여럿을 받는 Set 기반) · header(우상단 햄버거 메뉴 —
+                      로그인 시 점 배지, 마이페이지 이동, D-70)
 js/screens/home.js    홈(카테고리 카드 3개: 심리테스트/미니게임/학습) · 심리테스트 목록(등록된
                       테스트에서 자동 생성) · 미니게임 목록(등록된 게임에서 자동 생성) ·
-                      학습 목록(등록된 학습 도구에서 자동 생성) · 개인정보처리방침
+                      학습 목록(등록된 학습 도구에서 자동 생성) · 개인정보처리방침 ·
+                      마이페이지(로그인 상태·학습 진행 집계, D-70 — 개별 학습 도구는 import 안 함)
 js/tests/<id>/        테스트 1개 = 폴더 1개: data · score · screens · index(디스크립터)
                       현재 adhd(+반응속도 게임), disc(+딜레마 게임),
                       couple(+assemble · match — 문항지 조립과 부부 매칭이 따로 검증돼야 해서 분리).
@@ -107,11 +112,11 @@ js/learning/<toolId>/ 학습 카테고리 안의 독립 도구 1개 = 폴더 1�
                       챕터 중 붙일 자리가 있는지 먼저 본다. 현재 basic-conversation(기초
                       영어회화, 7세 이하 대상) 하나, 그 안 챕터는 인사/기분 표현·하루
                       일과(아침+밥+목욕/잠자리 통합)·가족·자기소개·놀이터에서(놀이+날씨
-                      통합) 4개, 총 362문장(기본 122 + 중급 120 + 심화 120, D-72) — 일상대화
+                      통합) 4개, 총 362문장(기본 122 + 중급 120 + 심화 120, D-74) — 일상대화
                       위주, 어린이 애니메이션 참고(D-65). 각 챕터는 기본(입문 생존 표현) →
                       중급(짧은 질문·요청) → 심화(의견·이유·비교·협상이 들어간 원어민 7세
                       수준 문장, `level: "intermediate"`/`"advanced"`)로 이어지는 3단계
-                      구성이다(D-70, D-71) — 단계별로 대략 30문장씩(D-72). 단계용으로 새
+                      구성이다(D-72, D-73) — 단계별로 대략 30문장씩(D-74). 단계용으로 새
                       챕터를 또 만들지 않는다. 챕터를
                       누르면 단계를 고르는 화면이 먼저 뜬다. 진짜 다중 턴 대화형 학습은 이
                       앱의 "문장 하나 듣고 따라 말하기" 구조와 안 맞아 별도 도구로 나중에

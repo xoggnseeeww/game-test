@@ -32,8 +32,12 @@ js/core/
                         그대로 쓴다. 로그인한 이메일을 currentEmail로 추적하고, isAdmin()이
                         ADMIN_EMAIL과 같은지만 별도로 판별한다(서버 검증 없음, "출시 예정" 게이트용).
                         localStorage(`gt_user_email`)에 이메일만 보관, isAdmin()/logout()/
-                        renderSignInButton() 제공
-  header.js             #app 밖(body)에 붙는 전역 우상단 햄버거 메뉴 — 로그인 상태 표시·로그인/로그아웃
+                        renderSignInButton() 제공. onAuthChange()는 구독자가 여럿(header.js +
+                        screens/home.js의 마이페이지)이라 Set 기반 pub-sub이다(D-70) — 단일
+                        콜백 변수였다면 나중 구독이 먼저 것을 덮어썼다
+  header.js             #app 밖(body)에 붙는 전역 우상단 햄버거 메뉴 — 로그인 상태 표시·로그인/로그아웃·
+                        마이페이지 이동(D-70). 로그인 시 버튼 자체에 점 배지(`.logged-in`)를 남겨
+                        메뉴를 열어보지 않아도 로그인 여부를 알 수 있다
   share.js              공유 URL · navigator.share · 결과 카드 캔버스
   util.js               shuffle · normalizePath · roundRect
   ads.js                카카오 AdFit — adSlotMarkup()(단위 코드 단일 소스) · adGateMarkup()(전면 게이트 마크업) · refreshAds()(로더 태그 재실행)
@@ -60,7 +64,7 @@ js/learning/<toolId>/   학습 카테고리 안의 독립 도구 1개 = 폴더 1
                         자동 생성한다
   data.js               챕터 목차(각 챕터 = { id, title, emoji, sentences }) — 단일 소스.
                         문장은 기본 → 중급(`level: "intermediate"`) → 심화
-                        (`level: "advanced"`) 3단계로 이어진다(D-70, D-71). 챕터를 누르면
+                        (`level: "advanced"`) 3단계로 이어진다(D-72, D-73). 챕터를 누르면
                         먼저 단계를 고르는 화면이 뜬다. 문장 카드 위 마스코트 일러스트는
                         D-64에서 뺐다(실물로 보니 별로였다) — 이미지가 필요해지면 그때
                         별도 에셋으로 다시 넣는다
@@ -123,7 +127,7 @@ js/learning/cloud.js     학습 진행률(state.learning)을 Supabase에 동기�
 `basic-conversation`)를 등록하면 학습 목록(`/learning`)에 카드로 나온다. **도구 안의
 챕터(목차)·단계(레벨)는 여기 등록하지 않는다** — `registerScreens()`로 화면만 늘어날 뿐,
 챕터 자체는 목차 화면(§3 `learning-basic-conversation`)이 그 도구의 `CHAPTERS` 데이터에서,
-챕터별 단계 선택·연습 화면은 `CHAPTERS`와 `LEVEL_LABELS`를 곱해(D-71) `index.js`가 직접
+챕터별 단계 선택·연습 화면은 `CHAPTERS`와 `LEVEL_LABELS`를 곱해(D-73) `index.js`가 직접
 만든다. 처음엔(D-60) 챕터 하나(`greeting`)를 도구인 것처럼 최상위에 바로 등록했다가,
 사용자가 "학습 카테고리 안에 다른 공부 도구도 넣을 거다, 지금 건 그 안의 목차 항목 하나여야
 한다"고 바로잡아서(D-63) 지금 모양(도구만 레지스트리, 챕터는 도구 내부)이 됐다.
@@ -136,6 +140,8 @@ js/learning/cloud.js     학습 진행률(state.learning)을 Supabase에 동기�
 | `/test` | `psych-list` | — | — |
 | `/game` | `game-list` | — | — |
 | `/learning` | `learning-list` | — | — |
+| `/privacy` | `privacy` | — | — |
+| `/mypage` | `mypage` | — | — (D-70, 로그인 상태·학습 진행률 요약) |
 | `/learning/basic-conversation` | `learning-basic-conversation` | learning | — |
 | `/learning/basic-conversation/greeting` | `learning-basic-conversation-greeting` | learning | — |
 | `/learning/basic-conversation/greeting/basic` | `learning-basic-conversation-greeting-basic` | learning | — |
@@ -184,14 +190,14 @@ js/learning/cloud.js     학습 진행률(state.learning)을 Supabase에 동기�
 **학습은 다른 카테고리처럼 3단 구조지만, 맨 안쪽 단위가 "결과"가 아니라 "챕터 × 단계"다** —
 홈 → 학습 목록(도구 카드) → 도구의 목차(챕터 카드) → 챕터의 단계 선택(기본/중급/심화) →
 문장 연습. 지금은 도구가 `basic-conversation`(기초 영어회화, 7세 이하 대상) 하나, 그 안
-챕터는 4개(총 362문장, 기본 122 + 중급 120 + 심화 120, D-72)다 — 인사/기분 표현, 하루
+챕터는 4개(총 362문장, 기본 122 + 중급 120 + 심화 120, D-74)다 — 인사/기분 표현, 하루
 일과(아침+식사+목욕/잠자리 통합), 가족·자기소개, 놀이터에서(놀이+날씨 통합). 단어 나열이
 아니라 일상대화 위주로 구성했고(어린이 애니메이션 참고, D-65), 시간순으로 이어지거나
 소재가 겹치는 상황은 챕터 하나로 묶는다(D-66) — 처음엔 8개로 더 잘게 나눴다가 통합했다.
 챕터 안에는 같은 문장 틀에 단어만 바꾼 반복(패턴 드릴, 예 "I like ~"·"This is my ~")도
 섞여 있다(D-67). 챕터마다 기본(입문 생존 표현) → 중급(짧은 질문·요청) → 심화(원어민 7세
-수준의 의견·이유·비교·협상 문장, `level: "advanced"`)로 이어지는 3단계 구성이다(D-70,
-D-71) — 단계별로 새 챕터를 만들지 않고 같은 챕터 데이터 안에서 `level` 필드로만 나눈다.
+수준의 의견·이유·비교·협상 문장, `level: "advanced"`)로 이어지는 3단계 구성이다(D-72,
+D-73) — 단계별로 새 챕터를 만들지 않고 같은 챕터 데이터 안에서 `level` 필드로만 나눈다.
 챕터를 클릭하면 단계 선택 화면이 먼저 뜨고, 각 단계는 진행 상태가 서로 독립적이다. 문장
 카드의 한국어 해석 옆에 🔊 버튼이 있어 `speechSynthesis`를 `lang: "ko-KR"`로 다시 불러
 한국어도 읽어준다(D-69) — 한글을 아직 못 읽는 어린이가 뜻을 들을 수 있게. 광고 슬롯은
