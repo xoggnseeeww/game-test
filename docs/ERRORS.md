@@ -227,6 +227,27 @@ Supabase 대시보드/`get_logs`(`auth` 서비스)에도 `Login` 이벤트가 �
   와일드카드 `https://fun.data-pantry.com/**`)을 Redirect URLs에 추가한다 — 대시보드 전용 설정이라
   이 저장소의 코드나 MCP 도구로는 고칠 수 없다.
 - **검증**: 자동화된 검사는 아직 없다(다른 unit 코드를 쓰는지는 실제 AdFit 계정 없이는 재현이 안 된다).
+
+### E-13. `router-strips-oauth-hash` — Redirect URLs를 고쳐도 여전히 로그인이 안 된다
+E-12를 고친 뒤에도(Redirect URLs 허용 목록에 정확한 도메인을 추가한 뒤에도) 로그인이 그대로 안
+되는 증상(D-72에서 발견). E-12와 증상이 같아 보이지만 원인은 완전히 다르다 — 둘 다 확인해야 한다.
+
+- **원인**: `js/core/cloud-auth.js`의 `createClient()`가 `flowType`을 지정하지 않아 supabase-js
+  기본값 `implicit` 플로우를 쓴다 — OAuth 토큰이 `?code=`가 아니라 `#access_token=...` **URL 해시**로
+  돌아온다. 이 클라이언트는 CDN 실패 격리를 위해 동적 import로만 연결되는데, `js/main.js`는 그 import를
+  시작만 시켜두고 곧바로 동기로 `router.js`의 `start()` → `setScreen(..., {replace:true})`를 호출한다.
+  그 안의 `history.replaceState(state, "", path)`가 `location.search`만 이어 붙이고 `location.hash`를
+  빼먹은 채 URL을 즉시 덮어써서, 동적 import가 끝나 Supabase 클라이언트가 `detectSessionInUrl`로
+  해시를 읽으려 할 때는 이미 토큰이 사라진 뒤다.
+- **진단법**: E-12와 마찬가지로 서버 로그인은 성공(`get_logs`)하는데 브라우저만 로그인이 안 된
+  것처럼 보인다 — 다만 Redirect URLs를 이미 고쳤는데도 재현되면 이쪽을 의심한다. 로그인 버튼을 누른
+  직후(리다이렉트 완료 시점) 주소창에 `#access_token=`이 잠깐이라도 보였는지, 새로고침 없이 바로
+  사라졌는지를 확인하면 구분된다.
+- **해결**: `router.js`의 `setScreen()`이 부팅/popstate 시 쓰는 `replaceState` 호출에서 `location.hash`를
+  보존한다(`path + location.hash`). 평상시엔 해시가 비어 있어 동작이 그대로다.
+- **검증**: `#access_token=...`을 실은 주소로 직접 접속해 부팅 후에도 `location.hash`가 남아 있는지
+  Playwright로 확인(`npm test`/`scripts/verify.cjs`는 실제 OAuth 리다이렉트를 재현 못 해 못 잡는다,
+  E-12와 같은 한계).
   대신 `.ad-slot.banner ins`의 `data-ad-unit` 값이 같은 화면 안에서 서로 달라야 한다는 걸 코드 리뷰 시 확인한다 —
   `grep -n 'adSlotMarkup("banner' js/` 결과에 `"banner"`(위치 구분 없는 옛 이름)가 남아있으면 회귀다.
 

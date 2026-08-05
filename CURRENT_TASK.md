@@ -3,7 +3,21 @@
 > 이 파일은 1~2k 토큰 이하를 유지한다 — "언젠가 할 일"이 아니라 "지금 유효한 작업"만.
 
 ## 현재 작업
-2026-08-05: **로그인 UI에 이름 표시 + 실기기 로그인 무반응 원인 진단**(D-71). 두 요청이
+2026-08-05(2): **라우터 부팅 `replaceState`가 OAuth 콜백 해시를 지우던 버그 수정**(D-72). 사용자가
+D-71 요청대로 Supabase 대시보드 Redirect URLs를 고친 뒤 "콜백이 없어서 그런가?"라고 재질문 — 코드를
+다시 추적해 E-12(리다이렉트 허용 목록)와는 별개인 두 번째 버그를 찾았다. `cloud-auth.js`가
+`flowType` 미지정으로 supabase-js 기본값인 `implicit` 플로우를 쓰는데(토큰이 `#access_token=...`
+해시로 옴), `js/main.js`가 이 클라이언트를 동적 import로 띄우는 동안 곧바로 동기로 `router.js`의
+`start()`가 `history.replaceState`를 호출하면서 `location.hash`를 빼먹고 URL을 덮어써버렸다 —
+Supabase 클라이언트가 뜨기도 전에 토큰이 URL에서 사라지는 경쟁 상태. `router.js`의 `setScreen()`
+안 `replaceState` 호출 두 곳에 `location.hash`를 이어 붙여 수정. `npm test` 141/141(라우팅은 순수
+JS 테스트 범위 밖이라 예상대로 무수정 통과), Playwright로 `#access_token=FAKE...` 주소 접속 후
+부팅해도 해시가 안 지워지는 것 직접 확인(실제 Google OAuth 왕복은 이 샌드박스에서 여전히 재현
+불가, D-55 한계). 상세는 `docs/decisions/2027-h2.md` D-72, 오류 패턴은 `docs/ERRORS.md` E-13.
+**배포 후 확인 필요**: 실기기에서 Google 로그인 왕복 전체(버튼 클릭 → 계정 선택 → 로그인 상태 반영)
+재확인.
+
+이전(2026-08-05): **로그인 UI에 이름 표시 + 실기기 로그인 무반응 원인 진단**(D-71). 두 요청이
 같은 턴에 왔다. (1) "로그인이 됐으면 구글로로그인버튼위치에 사용자 이름이 떠야지" →
 `js/core/auth.js`에 `currentName`(Google `user_metadata.full_name`/`name`, `gt_user_name`
 캐싱) 추가, 헤더 계정 박스·마이페이지가 `currentName || currentEmail`을 메인 줄로,

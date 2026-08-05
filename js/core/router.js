@@ -172,7 +172,11 @@ export function setScreen(screen, { push = false, replace = false } = {}) {
   // 있도록 history.state만 채워둔다.
   if (def.dynamicPath) {
     if (replace && !history.state) {
-      history.replaceState({ screen: resolved }, "", location.pathname + location.search);
+      // location.hash를 보존한다 — OAuth 암묵적 흐름(implicit flow)의 액세스 토큰이 여기
+      // 담겨 온다(cloud-auth.js). 이 replaceState가 부팅 시 동기로 먼저 실행되고 Supabase
+      // 클라이언트는 동적 import라 나중에 뜨는데, 여기서 해시를 지우면 클라이언트가 뜨기 전에
+      // 토큰이 사라져 로그인이 조용히 실패한다.
+      history.replaceState({ screen: resolved }, "", location.pathname + location.search + location.hash);
     }
     return;
   }
@@ -181,7 +185,7 @@ export function setScreen(screen, { push = false, replace = false } = {}) {
   if (push && normalizePath(location.pathname) !== def.path) {
     history.pushState({ screen: resolved }, "", path);
   } else if (replace && (normalizePath(location.pathname) !== def.path || !history.state)) {
-    history.replaceState({ screen: resolved }, "", path);
+    history.replaceState({ screen: resolved }, "", path + location.hash);
   }
 }
 
