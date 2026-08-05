@@ -2,8 +2,8 @@
 // 학습 목록(/learning)에 카드로 노출된다 — 학습 카테고리 안에 다른 공부 도구가 늘어날
 // 자리다. 도구 내부는 챕터(목차) 하나하나가 문장 연습 화면이라, CHAPTERS 배열에서
 // 화면을 자동 생성한다(챕터 추가 시 이 파일을 고칠 필요 없음).
-import { CHAPTERS } from "./data.js";
-import { renderBasicConversationIntro, renderChapter } from "./screens.js";
+import { CHAPTERS, LEVEL_LABELS } from "./data.js";
+import { renderBasicConversationIntro, renderLevelSelect, renderChapter } from "./screens.js";
 
 export const basicConversation = {
   id: "basic-conversation",
@@ -28,7 +28,16 @@ export const basicConversationScreens = [
     id: `learning-basic-conversation-${ch.id}`,
     path: `/learning/basic-conversation/${ch.id}`,
     title: `${ch.title} | 과몰입구역`,
-    render: () => renderChapter(ch),
+    render: () => renderLevelSelect(ch),
     theme: "learning",
   })),
+  ...CHAPTERS.flatMap((ch) =>
+    Object.keys(LEVEL_LABELS).map((level) => ({
+      id: `learning-basic-conversation-${ch.id}-${level}`,
+      path: `/learning/basic-conversation/${ch.id}/${level}`,
+      title: `${ch.title} · ${LEVEL_LABELS[level]} | 과몰입구역`,
+      render: () => renderChapter(ch, level),
+      theme: "learning",
+    }))
+  ),
 ];

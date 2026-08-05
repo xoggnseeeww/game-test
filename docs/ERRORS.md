@@ -230,7 +230,7 @@ Supabase 대시보드/`get_logs`(`auth` 서비스)에도 `Login` 이벤트가 �
 
 ### E-13. `router-strips-oauth-hash` — Redirect URLs를 고쳐도 여전히 로그인이 안 된다
 E-12를 고친 뒤에도(Redirect URLs 허용 목록에 정확한 도메인을 추가한 뒤에도) 로그인이 그대로 안
-되는 증상(D-72에서 발견). E-12와 증상이 같아 보이지만 원인은 완전히 다르다 — 둘 다 확인해야 한다.
+되는 증상(D-75에서 발견). E-12와 증상이 같아 보이지만 원인은 완전히 다르다 — 둘 다 확인해야 한다.
 
 - **원인**: `js/core/cloud-auth.js`의 `createClient()`가 `flowType`을 지정하지 않아 supabase-js
   기본값 `implicit` 플로우를 쓴다 — OAuth 토큰이 `?code=`가 아니라 `#access_token=...` **URL 해시**로
