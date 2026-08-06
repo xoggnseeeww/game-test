@@ -227,7 +227,7 @@ my ~"·"I want ~"·"Let's play ~" 같은 문장 틀에 단어만 바꿔 반복�
   구조가 필요해서, 기존 도구를 무리하게 확장하면 두 모델이 한 폴더에 뒤섞인다. 확정 아님,
   실제로 만들 때 화면 구조부터 다시 설계.
 
-### 3-8. 초등 영어회화 (elementary-conversation, D-78~D-84)
+### 3-8. 초등 영어회화 (elementary-conversation, D-78~D-85)
 - **왜 만들었나**: 초등학생 버전 목차(학년 3단계 × 상황별 챕터 4개)를 먼저 제안했더니
   사용자가 "실제로 저 카테고리대로 공부하면 언어 실력향상이 도움이 되게끔 짜여져있다고
   생각해?"라고 되물었다. 정직한 답은 "아니다"였다 — 문법 진행이 없고, 반복(recycling)이
@@ -312,6 +312,14 @@ my ~"·"I want ~"·"Let's play ~" 같은 문장 틀에 단어만 바꿔 반복�
   getVoices()`에서 `localService`가 아닌(네트워크) 음성을 우선 선택 — 기기 내장 로컬
   음성보다 자연스러운 경우가 많아서다. `speak()`가 두 학습 도구 공용이라 이 개선은
   자동으로 둘 다에 적용된다. 상세는 `docs/decisions/2029-h1.md` D-84.
+- **문장 자연스러움 전수 검토 + produce 예시 답안 보강(D-85)**: 외부 첨삭 도구가
+  "I shouldn't spend too much time on games."를 "원어민이라면 playing games라고
+  쓴다"고 지적한 걸 계기로 300문장(elementary) + 362문장(basic-conversation)을 전부
+  훑었다 — 실제로 고친 건 3곳뿐(on games → playing games 1건, "like or not like" →
+  "like or dislike" 2건), 나머지는 이미 자연스럽다고 판단해 그대로 뒀다. produce
+  문장 60개 전부 `sample`에 실제 대화체에 가까운 축약형 답안("Just my backpack,
+  really." 같은 Just/Probably/Honestly 시작 표현)을 하나씩 더 추가 — repeat 문장은
+  채점이 문장 하나 기준이라 대안 표현을 새 필드로 넣지 않았다(D-84와 같은 제약).
 - **UX 마찰 4건 수정(D-79)**: D-78 직후 사용자가 "구조적으로 공부가 정말 쉽게된다고
   말할수있나?"라고 물어서 정직하게 짚은 네 가지를 그대로 고쳤다.
   1. **학년 선택 화면이 순수 마찰이었다** — 학년이 저학년 하나뿐인데 고를 게 없는

@@ -81,7 +81,7 @@ const SCHOOL_DAY_CHAPTER = {
       level: "intermediate",
       type: "produce",
       hint: "I bring ___.",
-      sample: ["I bring my backpack and my pencil case.", "I bring my water bottle."],
+      sample: ["I bring my backpack and my pencil case.", "I bring my water bottle.", "Just my backpack, really."],
     },
     {
       id: "one-thing-in-your-classroom",
@@ -91,20 +91,20 @@ const SCHOOL_DAY_CHAPTER = {
       level: "intermediate",
       type: "produce",
       hint: "There is ___.",
-      sample: ["There is a big board.", "There is my desk."],
+      sample: ["There is a big board.", "There is my desk.", "We have a reading corner."],
     },
 
     { id: "like-school-because-friends", text: "I like school because I can see my friends.", ko: "저는 친구들을 볼 수 있어서 학교가 좋아요.", grammar: "G3", level: "advanced" },
     { id: "no-clock-in-my-classroom", text: "There isn't a clock in my classroom.", ko: "제 교실에는 시계가 없어요.", grammar: "G4", level: "advanced" },
     {
       id: "why-do-you-like-school",
-      text: "Why do you like or not like going to school?",
+      text: "Why do you like or dislike going to school?",
       ko: "학교 가는 게 왜 좋아요, 아니면 왜 싫어요?",
       grammar: "G2",
       level: "advanced",
       type: "produce",
-      hint: "I like/don't like school because ___.",
-      sample: ["I like school because it's fun.", "I don't like school because I wake up early."],
+      hint: "I like/dislike school because ___.",
+      sample: ["I like school because it's fun.", "I don't like school because I wake up early.", "Honestly, I like school because we get to learn new things."],
     },
     {
       id: "whats-in-your-pencil-case",
@@ -114,7 +114,7 @@ const SCHOOL_DAY_CHAPTER = {
       level: "advanced",
       type: "produce",
       hint: "There are ___. / I have ___.",
-      sample: ["There are pencils and an eraser.", "I have two pencils."],
+      sample: ["There are pencils and an eraser.", "I have two pencils.", "Just some pencils and a ruler."],
     },
   ],
 };
@@ -147,7 +147,7 @@ const CLASSROOM_CHAPTER = {
       level: "intermediate",
       type: "produce",
       hint: "We should ___.",
-      sample: ["We should sit down.", "We should be quiet."],
+      sample: ["We should sit down.", "We should be quiet.", "I think we should get our books ready."],
     },
     {
       id: "tell-me-about-your-teacher",
@@ -157,7 +157,7 @@ const CLASSROOM_CHAPTER = {
       level: "intermediate",
       type: "produce",
       hint: "My teacher is ___.",
-      sample: ["My teacher is kind.", "My teacher is funny."],
+      sample: ["My teacher is kind.", "My teacher is funny.", "My teacher always smiles."],
     },
 
     { id: "shouldnt-talk-during-class", text: "I shouldn't talk during class.", ko: "수업 중엔 말하면 안 돼요.", grammar: "G5", level: "advanced" },
@@ -170,7 +170,7 @@ const CLASSROOM_CHAPTER = {
       level: "advanced",
       type: "produce",
       hint: "We should listen because ___.",
-      sample: ["We should listen because we learn a lot.", "Because it's polite."],
+      sample: ["We should listen because we learn a lot.", "Because it's polite.", "So we don't miss anything important."],
     },
     {
       id: "one-classroom-rule-you-follow",
@@ -180,7 +180,7 @@ const CLASSROOM_CHAPTER = {
       level: "advanced",
       type: "produce",
       hint: "I should ___.",
-      sample: ["I should raise my hand.", "I shouldn't run in the classroom."],
+      sample: ["I should raise my hand.", "I shouldn't run in the classroom.", "I always listen when someone else is talking."],
     },
   ],
 };
@@ -213,7 +213,7 @@ const RECESS_CHAPTER = {
       level: "intermediate",
       type: "produce",
       hint: "I played ___.",
-      sample: ["I played tag.", "I played soccer."],
+      sample: ["I played tag.", "I played soccer.", "Just hide and seek, mostly."],
     },
     {
       id: "can-i-join-your-game",
@@ -223,7 +223,7 @@ const RECESS_CHAPTER = {
       level: "intermediate",
       type: "produce",
       hint: "Can I ___?",
-      sample: ["Can I join?", "Can I play too?"],
+      sample: ["Can I join?", "Can I play too?", "Is it okay if I join?"],
     },
 
     { id: "had-so-much-fun-at-recess", text: "We had so much fun at recess yesterday.", ko: "어제 쉬는 시간에 정말 재밌었어요.", grammar: "G6", level: "advanced" },
@@ -236,7 +236,7 @@ const RECESS_CHAPTER = {
       level: "advanced",
       type: "produce",
       hint: "My favorite thing is ___.",
-      sample: ["My favorite thing is playing tag.", "I like playing on the swings."],
+      sample: ["My favorite thing is playing tag.", "I like playing on the swings.", "Honestly, just running around with friends."],
     },
     {
       id: "tell-me-about-a-fun-recess",
@@ -246,7 +246,7 @@ const RECESS_CHAPTER = {
       level: "advanced",
       type: "produce",
       hint: "I ___ and it was fun.",
-      sample: ["I played soccer and it was fun.", "I went on the slide and it was fun."],
+      sample: ["I played soccer and it was fun.", "I went on the slide and it was fun.", "We built a huge sandcastle and it was awesome."],
     },
   ],
 };
@@ -282,7 +282,7 @@ const FAVORITES_CHAPTER = {
       level: "intermediate",
       type: "produce",
       hint: "My favorite subject is ___ because ___.",
-      sample: ["My favorite subject is art because I like drawing.", "My favorite subject is math because it's fun."],
+      sample: ["My favorite subject is art because I like drawing.", "My favorite subject is math because it's fun.", "Probably PE, because I love moving around."],
     },
     {
       id: "what-did-you-do-last-weekend",
@@ -292,11 +292,11 @@ const FAVORITES_CHAPTER = {
       level: "intermediate",
       type: "produce",
       hint: "I ___.",
-      sample: ["I played with my friends.", "I watched a movie."],
+      sample: ["I played with my friends.", "I watched a movie.", "Not much, just relaxed at home."],
     },
 
     { id: "play-piano-because-i-like-music", text: "I play the piano because I like music.", ko: "음악을 좋아해서 피아노를 쳐요.", grammar: "G2", level: "advanced" },
-    { id: "shouldnt-spend-too-much-time-on-games", text: "I shouldn't spend too much time on games.", ko: "게임을 너무 오래 하면 안 돼요.", grammar: "G5", level: "advanced" },
+    { id: "shouldnt-spend-too-much-time-playing-games", text: "I shouldn't spend too much time playing games.", ko: "게임을 너무 오래 하면 안 돼요.", grammar: "G5", level: "advanced" },
     {
       id: "why-do-you-like-your-hobby",
       text: "Why do you like your hobby?",
@@ -305,7 +305,7 @@ const FAVORITES_CHAPTER = {
       level: "advanced",
       type: "produce",
       hint: "I like it because ___.",
-      sample: ["I like it because it's fun.", "I like it because I'm good at it."],
+      sample: ["I like it because it's fun.", "I like it because I'm good at it.", "It just makes me happy."],
     },
     {
       id: "what-new-hobby-do-you-want-to-try",
@@ -315,7 +315,7 @@ const FAVORITES_CHAPTER = {
       level: "advanced",
       type: "produce",
       hint: "I want to try ___.",
-      sample: ["I want to try swimming.", "I want to try painting."],
+      sample: ["I want to try swimming.", "I want to try painting.", "Maybe skateboarding."],
     },
   ],
 };
@@ -350,7 +350,7 @@ const PE_CLASS_CHAPTER = {
       level: "intermediate",
       type: "produce",
       hint: "We played ___.",
-      sample: ["We played dodgeball.", "We played soccer."],
+      sample: ["We played dodgeball.", "We played soccer.", "Just tag, like usual."],
     },
     {
       id: "what-should-we-do-before-running",
@@ -360,20 +360,20 @@ const PE_CLASS_CHAPTER = {
       level: "intermediate",
       type: "produce",
       hint: "We should ___.",
-      sample: ["We should stretch.", "We should warm up."],
+      sample: ["We should stretch.", "We should warm up.", "Probably some stretching first."],
     },
 
     { id: "team-won-because-worked-together", text: "My team won because we worked together.", ko: "우리 팀이 함께 해서 이겼어요.", grammar: "G2", level: "advanced" },
     { id: "shouldnt-push-my-friends", text: "I shouldn't push my friends.", ko: "친구들을 밀면 안 돼요.", grammar: "G5", level: "advanced" },
     {
       id: "why-do-you-like-pe",
-      text: "Why do you like or not like PE?",
+      text: "Why do you like or dislike PE?",
       ko: "체육 시간이 왜 좋아요, 아니면 왜 싫어요?",
       grammar: "G2",
       level: "advanced",
       type: "produce",
-      hint: "I like/don't like PE because ___.",
-      sample: ["I like PE because I can run.", "I don't like PE because I'm not fast."],
+      hint: "I like/dislike PE because ___.",
+      sample: ["I like PE because I can run.", "I don't like PE because I'm not fast.", "It's the only time we get to move around a lot."],
     },
     {
       id: "tell-me-about-winning-or-losing",
@@ -383,7 +383,7 @@ const PE_CLASS_CHAPTER = {
       level: "advanced",
       type: "produce",
       hint: "I ___ and it was fun.",
-      sample: ["We won and it was fun.", "We lost, but it was still fun."],
+      sample: ["We won and it was fun.", "We lost, but it was still fun.", "It was close, but we had a blast either way."],
     },
   ],
 };
@@ -431,7 +431,7 @@ const SCHOOLWORK_CHAPTER = {
       level: "intermediate",
       type: "produce",
       hint: "I have to ___.",
-      sample: ["I have to study.", "I have to review my notes."],
+      sample: ["I have to study.", "I have to review my notes.", "Mostly just go over my notes again."],
     },
     {
       id: "whats-your-project-about",
@@ -441,7 +441,7 @@ const SCHOOLWORK_CHAPTER = {
       level: "intermediate",
       type: "produce",
       hint: "My project is about ___.",
-      sample: ["My project is about animals.", "My project is about space."],
+      sample: ["My project is about animals.", "My project is about space.", "It's basically about how plants grow."],
     },
 
     { id: "practice-more-because-nervous", text: "I have to practice more because I'm nervous.", ko: "긴장돼서 더 연습해야 해요.", grammar: "G8", level: "advanced" },
@@ -454,7 +454,7 @@ const SCHOOLWORK_CHAPTER = {
       level: "advanced",
       type: "produce",
       hint: "I have to study because ___.",
-      sample: ["I have to study because I have a big test.", "Because I want to do well."],
+      sample: ["I have to study because I have a big test.", "Because I want to do well.", "I guess I just want to do my best."],
     },
     {
       id: "hardest-part-of-your-project",
@@ -464,7 +464,7 @@ const SCHOOLWORK_CHAPTER = {
       level: "advanced",
       type: "produce",
       hint: "The hardest part was ___.",
-      sample: ["The hardest part was finding information.", "The hardest part was the presentation."],
+      sample: ["The hardest part was finding information.", "The hardest part was the presentation.", "Definitely the writing part."],
     },
   ],
 };
@@ -497,7 +497,7 @@ const FRIENDSHIP_CHAPTER = {
       level: "intermediate",
       type: "produce",
       hint: "I will ___.",
-      sample: ["I will say sorry.", "I will give them a gift."],
+      sample: ["I will say sorry.", "I will give them a gift.", "Probably just talk it out."],
     },
     {
       id: "what-do-you-have-to-do-to-be-a-good-friend",
@@ -507,7 +507,7 @@ const FRIENDSHIP_CHAPTER = {
       level: "intermediate",
       type: "produce",
       hint: "You have to ___.",
-      sample: ["You have to listen.", "You have to be kind."],
+      sample: ["You have to listen.", "You have to be kind.", "Mostly just be there for them."],
     },
 
     { id: "will-apologize-because-i-was-wrong", text: "I will apologize because I was wrong.", ko: "제가 잘못해서 사과할 거예요.", grammar: "G9", level: "advanced" },
@@ -520,7 +520,7 @@ const FRIENDSHIP_CHAPTER = {
       level: "advanced",
       type: "produce",
       hint: "I will ___.",
-      sample: ["I will talk to them.", "I will give us both some time."],
+      sample: ["I will talk to them.", "I will give us both some time.", "I'd probably wait a bit, then talk."],
     },
     {
       id: "why-are-friends-important-to-you",
@@ -530,7 +530,7 @@ const FRIENDSHIP_CHAPTER = {
       level: "advanced",
       type: "produce",
       hint: "Friends are important because ___.",
-      sample: ["Friends are important because they support me.", "Because I have fun with them."],
+      sample: ["Friends are important because they support me.", "Because I have fun with them.", "They just make everything more fun."],
     },
   ],
 };
@@ -563,7 +563,7 @@ const AFTER_SCHOOL_CHAPTER = {
       level: "intermediate",
       type: "produce",
       hint: "I am ___ing.",
-      sample: ["I am doing my homework.", "I am reading a book."],
+      sample: ["I am doing my homework.", "I am reading a book.", "Nothing much, just chatting with you."],
     },
     {
       id: "which-do-you-like-more-games-or-reading",
@@ -573,7 +573,7 @@ const AFTER_SCHOOL_CHAPTER = {
       level: "intermediate",
       type: "produce",
       hint: "I like ___ more than ___.",
-      sample: ["I like video games more than reading.", "I like reading more than video games."],
+      sample: ["I like video games more than reading.", "I like reading more than video games.", "Honestly, it depends on my mood."],
     },
 
     { id: "finish-homework-before-games", text: "I have to finish my homework before I play games.", ko: "게임하기 전에 숙제를 끝내야 해요.", grammar: "G8", level: "advanced" },
@@ -586,7 +586,7 @@ const AFTER_SCHOOL_CHAPTER = {
       level: "advanced",
       type: "produce",
       hint: "I am going to ___.",
-      sample: ["I am going to go to my academy.", "I am going to play with my friends."],
+      sample: ["I am going to go to my academy.", "I am going to play with my friends.", "Probably just relax for a bit."],
     },
     {
       id: "screen-time-or-hobbies-more-important",
@@ -596,7 +596,7 @@ const AFTER_SCHOOL_CHAPTER = {
       level: "advanced",
       type: "produce",
       hint: "I think ___ is more important.",
-      sample: ["I think hobbies are more important.", "I think screen time is fine in small amounts."],
+      sample: ["I think hobbies are more important.", "I think screen time is fine in small amounts.", "I think it depends on the day."],
     },
   ],
 };
@@ -631,7 +631,7 @@ const NEIGHBORHOOD_CHAPTER = {
       level: "intermediate",
       type: "produce",
       hint: "I have to ___.",
-      sample: ["I have to buy groceries.", "I have to walk the dog."],
+      sample: ["I have to buy groceries.", "I have to walk the dog.", "Mostly just help clean up."],
     },
     {
       id: "what-will-you-buy-at-the-store",
@@ -641,7 +641,7 @@ const NEIGHBORHOOD_CHAPTER = {
       level: "intermediate",
       type: "produce",
       hint: "I will buy ___.",
-      sample: ["I will buy some snacks.", "I will buy milk and bread."],
+      sample: ["I will buy some snacks.", "I will buy milk and bread.", "Probably just some fruit."],
     },
 
     { id: "take-the-bus-because-faster", text: "I take the bus because it's faster than walking.", ko: "걷는 것보다 빨라서 버스를 타요.", grammar: "G10", level: "advanced" },
@@ -654,7 +654,7 @@ const NEIGHBORHOOD_CHAPTER = {
       level: "advanced",
       type: "produce",
       hint: "I like that ___.",
-      sample: ["I like that it's quiet.", "I like that the park is close."],
+      sample: ["I like that it's quiet.", "I like that the park is close.", "Honestly, everyone is really friendly."],
     },
     {
       id: "what-do-you-want-in-your-neighborhood",
@@ -664,7 +664,7 @@ const NEIGHBORHOOD_CHAPTER = {
       level: "advanced",
       type: "produce",
       hint: "I want ___.",
-      sample: ["I want a new park.", "I want a bigger library."],
+      sample: ["I want a new park.", "I want a bigger library.", "Maybe a skate park."],
     },
   ],
 };
@@ -697,7 +697,7 @@ const SCHOOL_EVENTS_CHAPTER = {
       level: "intermediate",
       type: "produce",
       hint: "I was ___ing.",
-      sample: ["I was talking to my friend.", "I was eating lunch."],
+      sample: ["I was talking to my friend.", "I was eating lunch.", "Just chatting with my classmates."],
     },
     {
       id: "what-will-you-do-at-the-festival",
@@ -707,7 +707,7 @@ const SCHOOL_EVENTS_CHAPTER = {
       level: "intermediate",
       type: "produce",
       hint: "I will ___.",
-      sample: ["I will sing on stage.", "I will visit the food booths."],
+      sample: ["I will sing on stage.", "I will visit the food booths.", "Probably try all the food."],
     },
 
     { id: "nervous-because-running-first", text: "I was so nervous because I was running first.", ko: "제가 먼저 뛰어서 정말 긴장됐어요.", grammar: "G16", level: "advanced" },
@@ -720,7 +720,7 @@ const SCHOOL_EVENTS_CHAPTER = {
       level: "advanced",
       type: "produce",
       hint: "I was ___ing when ___.",
-      sample: ["I was cheering when my team won.", "I was dancing when the music started."],
+      sample: ["I was cheering when my team won.", "I was dancing when the music started.", "Everyone was cheering so loud."],
     },
     {
       id: "what-are-you-going-to-do-to-prepare",
@@ -730,7 +730,7 @@ const SCHOOL_EVENTS_CHAPTER = {
       level: "advanced",
       type: "produce",
       hint: "I am going to ___.",
-      sample: ["I am going to practice more.", "I am going to help make decorations."],
+      sample: ["I am going to practice more.", "I am going to help make decorations.", "Mostly just practice a bit more."],
     },
   ],
 };
@@ -775,7 +775,7 @@ const OPINIONS_CHAPTER = {
       level: "intermediate",
       type: "produce",
       hint: "The best movie is ___.",
-      sample: ["The best movie is Frozen.", "The best movie is the one about space."],
+      sample: ["The best movie is Frozen.", "The best movie is the one about space.", "Honestly, I can't pick just one."],
     },
     {
       id: "agree-or-disagree-with-friend",
@@ -785,7 +785,7 @@ const OPINIONS_CHAPTER = {
       level: "intermediate",
       type: "produce",
       hint: "I agree/disagree because ___.",
-      sample: ["I agree because it makes sense.", "I disagree because I think differently."],
+      sample: ["I agree because it makes sense.", "I disagree because I think differently.", "I kind of agree, but not completely."],
     },
 
     { id: "most-important-thing-to-know", text: "I think this is the most important thing to know.", ko: "이게 알아야 할 것 중에 제일 중요한 것 같아요.", grammar: "G13", level: "advanced" },
@@ -798,7 +798,7 @@ const OPINIONS_CHAPTER = {
       level: "advanced",
       type: "produce",
       hint: "I think homework is ___.",
-      sample: ["I think homework is helpful.", "I think homework is too much sometimes."],
+      sample: ["I think homework is helpful.", "I think homework is too much sometimes.", "Honestly, it depends on how much there is."],
     },
     {
       id: "most-difficult-decision",
@@ -808,7 +808,7 @@ const OPINIONS_CHAPTER = {
       level: "advanced",
       type: "produce",
       hint: "The most difficult decision was ___.",
-      sample: ["The most difficult decision was choosing a hobby.", "The most difficult decision was picking a book to read."],
+      sample: ["The most difficult decision was choosing a hobby.", "The most difficult decision was picking a book to read.", "Probably deciding what to focus on."],
     },
   ],
 };
@@ -841,7 +841,7 @@ const DREAMS_CHAPTER = {
       level: "intermediate",
       type: "produce",
       hint: "If I want to become a scientist, I will ___.",
-      sample: ["If I want to become a scientist, I will study hard.", "I will read a lot of science books."],
+      sample: ["If I want to become a scientist, I will study hard.", "I will read a lot of science books.", "I'll probably ask a lot of questions."],
     },
     {
       id: "dream-job-and-why",
@@ -851,7 +851,7 @@ const DREAMS_CHAPTER = {
       level: "intermediate",
       type: "produce",
       hint: "My dream job is ___ because ___.",
-      sample: ["My dream job is a vet because I love animals.", "My dream job is an artist because I love drawing."],
+      sample: ["My dream job is a vet because I love animals.", "My dream job is an artist because I love drawing.", "Honestly, I haven't decided yet, but maybe a teacher."],
     },
 
     { id: "if-dont-give-up-reach-goal", text: "If I don't give up, I will reach my goal.", ko: "포기하지 않으면 목표를 이룰 거예요.", grammar: "G14", level: "advanced" },
@@ -864,7 +864,7 @@ const DREAMS_CHAPTER = {
       level: "advanced",
       type: "produce",
       hint: "If I could have any job, I would be ___.",
-      sample: ["If I could have any job, I would be an astronaut.", "I would be a game designer."],
+      sample: ["If I could have any job, I would be an astronaut.", "I would be a game designer.", "Probably a chef."],
     },
     {
       id: "steps-to-reach-your-dream",
@@ -874,7 +874,7 @@ const DREAMS_CHAPTER = {
       level: "advanced",
       type: "produce",
       hint: "I will ___.",
-      sample: ["I will study hard and practice every day.", "I will ask my teacher for help."],
+      sample: ["I will study hard and practice every day.", "I will ask my teacher for help.", "I'll just take it one step at a time."],
     },
   ],
 };
@@ -907,7 +907,7 @@ const CURRENT_ISSUES_CHAPTER = {
       level: "intermediate",
       type: "produce",
       hint: "A rule that keeps me safe is ___.",
-      sample: ["A rule that keeps me safe is not sharing my address.", "I don't talk to strangers online."],
+      sample: ["A rule that keeps me safe is not sharing my address.", "I don't talk to strangers online.", "Never meet up with someone you only know online."],
     },
     {
       id: "what-can-you-do-to-help-environment",
@@ -917,7 +917,7 @@ const CURRENT_ISSUES_CHAPTER = {
       level: "intermediate",
       type: "produce",
       hint: "I can ___.",
-      sample: ["I can recycle more.", "I can save water and electricity."],
+      sample: ["I can recycle more.", "I can save water and electricity.", "Just use less plastic."],
     },
 
     { id: "people-who-waste-water-hurt-environment", text: "People who waste water hurt the environment.", ko: "물을 낭비하는 사람들은 환경에 안 좋은 영향을 줘요.", grammar: "G15", level: "advanced" },
@@ -930,7 +930,7 @@ const CURRENT_ISSUES_CHAPTER = {
       level: "advanced",
       type: "produce",
       hint: "The most important problem is ___.",
-      sample: ["The most important problem is plastic pollution.", "The most important problem is climate change."],
+      sample: ["The most important problem is plastic pollution.", "The most important problem is climate change.", "Honestly, I think it's pollution."],
     },
     {
       id: "why-important-to-be-kind-online",
@@ -940,7 +940,7 @@ const CURRENT_ISSUES_CHAPTER = {
       level: "advanced",
       type: "produce",
       hint: "It's important because ___.",
-      sample: ["It's important because words can hurt people.", "Because everyone deserves respect."],
+      sample: ["It's important because words can hurt people.", "Because everyone deserves respect.", "Because you never really know who's reading it."],
     },
   ],
 };
@@ -975,7 +975,7 @@ const TRAVEL_CHAPTER = {
       level: "intermediate",
       type: "produce",
       hint: "The most memorable trip was ___.",
-      sample: ["The most memorable trip was to the beach.", "The most memorable trip was visiting my grandparents."],
+      sample: ["The most memorable trip was to the beach.", "The most memorable trip was visiting my grandparents.", "Honestly, probably our trip to the mountains."],
     },
     {
       id: "if-you-could-travel-anywhere",
@@ -985,7 +985,7 @@ const TRAVEL_CHAPTER = {
       level: "intermediate",
       type: "produce",
       hint: "If I could travel anywhere, I would go to ___.",
-      sample: ["If I could travel anywhere, I would go to Japan.", "I would go to Australia."],
+      sample: ["If I could travel anywhere, I would go to Japan.", "I would go to Australia.", "Maybe Italy, for the food."],
     },
 
     { id: "learned-from-people-who-live-differently", text: "I learned a lot from people who live differently.", ko: "다르게 사는 사람들에게서 많이 배웠어요.", grammar: "G15", level: "advanced" },
@@ -998,7 +998,7 @@ const TRAVEL_CHAPTER = {
       level: "advanced",
       type: "produce",
       hint: "I think traveling is important because ___.",
-      sample: ["I think traveling is important because you learn new things.", "Because you meet different people."],
+      sample: ["I think traveling is important because you learn new things.", "Because you meet different people.", "It kind of opens your mind."],
     },
     {
       id: "experience-you-want-to-have-someday",
@@ -1008,7 +1008,7 @@ const TRAVEL_CHAPTER = {
       level: "advanced",
       type: "produce",
       hint: "Someday I want to ___.",
-      sample: ["Someday I want to visit every continent.", "Someday I want to learn a new language."],
+      sample: ["Someday I want to visit every continent.", "Someday I want to learn a new language.", "Maybe try scuba diving."],
     },
   ],
 };
@@ -1041,7 +1041,7 @@ const TEAMWORK_CHAPTER = {
       level: "intermediate",
       type: "produce",
       hint: "I used to ___.",
-      sample: ["I used to work alone.", "I used to be quiet in groups."],
+      sample: ["I used to work alone.", "I used to be quiet in groups.", "I used to get nervous talking in groups."],
     },
     {
       id: "what-will-happen-if-everyone-shares-ideas",
@@ -1051,7 +1051,7 @@ const TEAMWORK_CHAPTER = {
       level: "intermediate",
       type: "produce",
       hint: "If everyone shares ideas, we will ___.",
-      sample: ["If everyone shares ideas, we will find better solutions.", "We will understand each other more."],
+      sample: ["If everyone shares ideas, we will find better solutions.", "We will understand each other more.", "I think we'll come up with something better."],
     },
 
     { id: "used-to-think-leadership-meant-in-charge", text: "I used to think leadership meant being in charge.", ko: "예전엔 리더십이 책임자가 되는 거라고 생각했어요.", grammar: "G17", level: "advanced" },
@@ -1064,7 +1064,7 @@ const TEAMWORK_CHAPTER = {
       level: "advanced",
       type: "produce",
       hint: "Teamwork is important because ___.",
-      sample: ["Teamwork is important because we can do more together.", "Because everyone brings different strengths."],
+      sample: ["Teamwork is important because we can do more together.", "Because everyone brings different strengths.", "Honestly, it just makes things easier."],
     },
     {
       id: "how-have-you-changed-as-a-leader",
@@ -1074,7 +1074,7 @@ const TEAMWORK_CHAPTER = {
       level: "advanced",
       type: "produce",
       hint: "I used to ___, but now I ___.",
-      sample: ["I used to be quiet, but now I speak up.", "I used to work alone, but now I ask for help."],
+      sample: ["I used to be quiet, but now I speak up.", "I used to work alone, but now I ask for help.", "I used to avoid making decisions, but now I just go for it."],
     },
   ],
 };

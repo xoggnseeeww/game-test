@@ -3,6 +3,22 @@
 > 이 파일은 1~2k 토큰 이하를 유지한다 — "언젠가 할 일"이 아니라 "지금 유효한 작업"만.
 
 ## 현재 작업
+2026-08-06(3): **문장 자연스러움 전수 검토 + produce 예시 답안 보강**(D-85). 사용자가
+외부 첨삭 도구로 "I shouldn't spend too much time on games."(좋아하는 것 챕터, 심화)를
+확인해보니 문법은 맞지만 원어민은 "playing games"를 쓴다는 지적을 공유. "이런 문장이 더
+있으면 고치고 produce 문장엔 대안 표현도 적어주면 어떨지" 물어서, repeat 문장은 오류
+교정만(채점이 문장 하나 기준이라 대안 표현 필드를 새로 못 넣음), produce 문장은 기존
+`sample` 배열 보강으로 방향 확정("그렇게 하자"). elementary-conversation 300문장 +
+basic-conversation 362문장 전부 훑어서 실제 교정은 3곳뿐: (1) on games → playing
+games(id도 같이 변경), (2)(3) "like or not like" → "like or dislike"(학교 가는 날·체육
+시간 챕터, hint도 동일 수정). basic-conversation은 원래 아동 방송 대사 참고로 지어서
+(D-65) 이미 구어체라 고칠 게 없었다. produce 문장 60개(15챕터×4개) 전부 `sample`에
+Just/Probably/Honestly로 시작하는 짧은 구어체 답안을 세 번째로 추가. `npm test`
+147/147(로직 무변경). `node -e`로 produce 60개 전부 sample 3개, 챕터 내 id 중복
+0건 확인. 헤드리스 브라우저로 교정된 문장이 실제로 렌더되는지, 콘솔 에러 없는지 확인.
+문서 갱신: `docs/learning-architecture.md` §3-8·`docs/DECISIONS.md`
+(`docs/decisions/2029-h1.md`에 D-85 추가).
+
 2026-08-06(2): **초등 영어회화 3건 개선 — 이전 문장 이동·produce 질문 자동 재생·TTS 음성
 품질**(D-84). 실사용 피드백 세 가지: ①챕터 진입 후 다음으로만 갈 수 있고 이전 문장으로
 못 돌아감. ②질문·답변형(produce) 문제에서 질문을 소리 내어 들려주는 기능이 없음. ③듣기
