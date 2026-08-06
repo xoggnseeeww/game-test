@@ -2309,3 +2309,17 @@ button.meta-chip {
   font-family: inherit;
   cursor: pointer;
 }
+
+/* 학습 카테고리: produce 문장의 "문법 형태 자동 확인"(D-94). 자유 발화라 정답 채점은 못 하지만
+   목표 형태를 넣어 말했는지는 잴 수 있어서, 예시 답안 위에 한 줄로 알려준다.
+   못 넣었을 때도 오답이 아니라 **다음 시도 제안**으로 읽히게 색을 강하게 쓰지 않는다. */
+.learning-formcheck {
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  margin: 0 0 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+}
+.learning-formcheck.ok { color: #1B8F5C; background: rgba(31,174,106,.10); }
+.learning-formcheck.no { color: var(--accent-ink); background: var(--accent-soft); }

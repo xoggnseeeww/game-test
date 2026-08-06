@@ -209,8 +209,16 @@ export function renderElementaryChapter(grade, chapter, level) {
   // 문법 태그(grammar)는 원래 콘텐츠 저작 시점의 내부 장치(반복 규칙 검사용)라 학습자
   // 화면엔 안 보였다 — "지금 뭘 배우는지" 의식하는 게 공부를 쉽게 만든다는 지적(D-78
   // 후속)에 따라 카드에 한 줄 노출한다.
+  function grammarPoint(card) {
+    return grade.grammarPoints.find((g) => g.id === card.grammar);
+  }
+
+  // 카드에는 **아이 말(kidLabel)**을 띄운다(D-94) — "조동사"·"관계대명사"·"수동태" 같은 용어는
+  // 초등학생이 모르니, 그대로 띄우면 "지금 뭘 배우는지 알려준다"는 원래 목적이 무너진다.
+  // label(문법 용어)은 콘텐츠 저작·문서·테스트가 계속 쓴다.
   function grammarLabel(card) {
-    return grade.grammarPoints.find((g) => g.id === card.grammar)?.label ?? card.grammar;
+    const gp = grammarPoint(card);
+    return gp?.kidLabel ?? gp?.label ?? card.grammar;
   }
 
   function showCard() {
@@ -351,8 +359,18 @@ export function renderElementaryChapter(grade, chapter, level) {
           micBtn.disabled = false;
           micStatus.textContent = "";
           skipBtn.style.display = "none";
+          // 자유 발화라 유사도 채점은 못 해도, **목표 문법 형태를 넣어 말했는지**는 잴 수
+          // 있다(D-94) — produce 문장에 줄 수 있는 유일한 객관적 신호다. check가 없는
+          // 문법(형태가 뚜렷하지 않은 항목)이면 이 줄은 아예 안 나온다.
+          const gp = grammarPoint(card);
+          const usedForm = gp?.check ? gp.check.test(heard) : null;
           resultEl.innerHTML = `
             <p class="learning-heard">내가 말한 것: "${heard}"</p>
+            ${usedForm === null ? "" : `<p class="learning-formcheck ${usedForm ? "ok" : "no"}">${
+              usedForm
+                ? `✅ 오늘의 문법을 잘 넣어 말했어요! (${gp.kidLabel})`
+                : `💡 이번엔 ${gp.kidLabel}에 도전해볼까요?`
+            }</p>`}
             <p class="learning-feedback">예시 답안이에요 — 비슷하게 말했나요?</p>
             <ul class="learning-sample-list">${card.sample.map((s) => `<li>${s}</li>`).join("")}</ul>
             <div class="cta">

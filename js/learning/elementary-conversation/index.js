@@ -30,7 +30,13 @@ export const elementaryConversation = {
     const chapter = grade && grade.chapters.find((c) => c.id === m[2]);
     const sentence = chapter && chapter.sentences.find((s) => s.id === id);
     if (!sentence) return null;
-    return { text: sentence.text, ko: sentence.ko, where: `${grade.label} · ${chapter.title}`, type: sentence.type || "repeat", sample: sentence.sample, hint: sentence.hint };
+    const gp = grade.grammarPoints.find((g) => g.id === sentence.grammar);
+    return {
+      text: sentence.text, ko: sentence.ko, where: `${grade.label} · ${chapter.title}`,
+      type: sentence.type || "repeat", sample: sentence.sample, hint: sentence.hint,
+      // 복습 화면도 produce 문장에 문법 형태 확인을 붙일 수 있게 같이 넘긴다(D-94).
+      grammar: gp && { kidLabel: gp.kidLabel, check: gp.check },
+    };
   },
 };
 

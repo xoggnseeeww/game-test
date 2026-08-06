@@ -102,3 +102,58 @@ test('type이 "produce"인 문장은 시도 전에 보여줄 hint가 있다', ()
     }
   }
 });
+
+// ── B-4/B-5(D-94): 문법 항목의 아이용 표현 + 형태 자동 확인 ────────────────────
+
+test("모든 문법 항목에 학습자용 표현(kidLabel)이 있다", () => {
+  for (const grade of GRADES) {
+    for (const gp of grade.grammarPoints) {
+      assert.ok(
+        typeof gp.kidLabel === "string" && gp.kidLabel.length > 0,
+        `${grade.id}/${gp.id}에 kidLabel이 없다 — 카드에 "조동사"·"관계대명사" 같은 용어가 그대로 뜬다`
+      );
+      // 학습자 화면에 문법 용어를 그대로 띄우지 않는 게 kidLabel의 존재 이유다.
+      for (const jargon of ["조동사", "관계대명사", "수동태", "현재진행형", "과거진행형", "비교급", "최상급", "be동사"]) {
+        assert.ok(!gp.kidLabel.includes(jargon), `${grade.id}/${gp.id}의 kidLabel에 문법 용어 "${jargon}"가 남아 있다`);
+      }
+    }
+  }
+});
+
+test("check가 있는 문법 항목은 그 문법 문장에 실제로 걸린다 (정규식 오타 방지)", () => {
+  for (const grade of GRADES) {
+    for (const gp of grade.grammarPoints) {
+      if (!gp.check) continue;
+      assert.ok(gp.check instanceof RegExp, `${grade.id}/${gp.id}의 check는 정규식이어야 한다`);
+      const tagged = grade.chapters
+        .flatMap((c) => c.sentences)
+        .filter((s) => s.grammar === gp.id && s.type !== "produce");
+      const hits = tagged.filter((s) => gp.check.test(s.text));
+      assert.ok(
+        hits.length > 0,
+        `${grade.id}/${gp.id}의 check가 그 문법으로 태그된 문장 ${tagged.length}개 중 하나도 못 잡는다 — 정규식이 틀렸다`
+      );
+    }
+  }
+});
+
+test("check는 엉뚱한 문장을 잡지 않는다 (오탐으로 '안 썼다'고 하면 없느니만 못하다)", () => {
+  const cases = [
+    ["G18", "I want to eat more rice.", true],
+    ["G18", "I like rice.", false],
+    ["G17", "I used to be shy in groups.", true],
+    ["G17", "I use my phone every day.", false],
+    ["G14", "If I study hard, I will become a scientist.", true],
+    ["G14", "I will become a scientist.", false],
+    ["G19", "I always brush my teeth.", true],
+    ["G19", "I brush my teeth.", false],
+    ["G16", "I was watching the race.", true],
+    ["G16", "I watched the race.", false],
+  ];
+  const all = GRADES.flatMap((g) => g.grammarPoints);
+  for (const [id, sentence, expected] of cases) {
+    const gp = all.find((g) => g.id === id);
+    assert.ok(gp && gp.check, `${id}에 check가 있어야 한다`);
+    assert.equal(gp.check.test(sentence), expected, `${id} check가 "${sentence}"를 ${expected ? "잡아야" : "안 잡아야"} 한다`);
+  }
+});

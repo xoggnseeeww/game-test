@@ -167,7 +167,7 @@ export function renderReview() {
 
   // produce(정답이 여럿) 문장은 여기서도 유사도 채점을 안 한다 — 자가평가가 곧 일정 입력이다.
   function showProduce(item) {
-    const { text, where, sample, hint } = item.card;
+    const { text, where, sample, hint, grammar } = item.card;
     cardEl.innerHTML = `
       <div class="cover cover-you">
         <div class="tag">복습 · 질문</div>
@@ -198,8 +198,15 @@ export function renderReview() {
           micBtn.disabled = false;
           micStatus.textContent = "";
           skipBtn.style.display = "none";
+          // 연습 화면과 같은 문법 형태 자동 확인(D-94).
+          const usedForm = grammar && grammar.check ? grammar.check.test(heard) : null;
           resultEl.innerHTML = `
             <p class="learning-heard">내가 말한 것: "${heard}"</p>
+            ${usedForm === null ? "" : `<p class="learning-formcheck ${usedForm ? "ok" : "no"}">${
+              usedForm
+                ? `✅ 오늘의 문법을 잘 넣어 말했어요! (${grammar.kidLabel})`
+                : `💡 이번엔 ${grammar.kidLabel}에 도전해볼까요?`
+            }</p>`}
             <p class="learning-feedback">이렇게 말할 수도 있어요 — 비슷했나요?</p>
             <ul class="learning-sample-list">${(sample || []).map((s) => `<li>${s}</li>`).join("")}</ul>
             <div class="cta">
