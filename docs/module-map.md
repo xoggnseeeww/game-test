@@ -83,6 +83,9 @@ js/learning/score.js     발음 유사도 판정 — Levenshtein 기반, DOM을 
                         복사하면 한쪽만 고치는 버그가 생긴다)
 js/learning/speech.js    TTS/STT 헬퍼(speak/listen/supportsSpeech/supportsRecognition) —
                         score.js와 같은 이유로 공용(D-78)
+js/learning/record.js    STT가 없는 브라우저(iOS Safari)의 말하기 폴백(D-95) — MediaRecorder로
+                        녹음해 되듣고 자가평가한다. 6개 호출부가 이 마크업+바인딩을 공용으로
+                        쓰고, 결과는 STT 경로와 똑같이 weak/SRS에 반영된다
 js/learning/prefs.js     연습 카드의 "받침대 치우기" 설정(D-93) — 영어 문장 가리기/뜻 접기
                         토글의 마크업·바인딩을 한 곳에 둔다(세 화면이 공용). 세션 한정
                         메모리라 state.learning에도 localStorage에도 안 넣는다

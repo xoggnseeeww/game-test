@@ -15,6 +15,7 @@ import { saveLearningProgress } from "../cloud.js";
 import { GRADES, LEVEL_LABELS } from "./data.js";
 import { scoreSpeech, TIER_TEXT } from "../score.js";
 import { supportsSpeech, supportsRecognition, speak, listen } from "../speech.js";
+import { recordFallbackMarkup, bindRecordFallback } from "../record.js";
 import { markWrong, markCorrect } from "../srs.js";
 import { practicePrefsMarkup, bindPracticePrefs, sentenceMarkup, koMarkup, bindReveal } from "../prefs.js";
 
@@ -171,9 +172,11 @@ export function renderElementaryChapter(grade, chapter, level) {
       ${weakLeft && !reviewMode
         ? `<div class="cta"><button class="cta-btn" id="learning-review-weak">🔁 헷갈렸던 문장만 복습하기</button></div>`
         : ""}
+      <div class="cta"><button class="cta-btn" id="learning-listen-quiz">🎧 듣고 뜻 맞히기</button></div>
       <div class="cta"><button class="cta-btn" id="learning-restart">처음부터 다시 놀기</button></div>
       <button class="retry-btn" id="learning-toc">단계 다시 고르기</button>
     `;
+    cardEl.querySelector("#learning-listen-quiz").addEventListener("click", () => go(`learning-elementary-${grade.id}-${chapter.id}-${level}-listen`));
     cardEl.querySelector("#learning-review-weak")?.addEventListener("click", () => {
       reviewMode = true;
       sentences = allSentences.filter((s) => st.weak[s.id]);
@@ -245,7 +248,7 @@ export function renderElementaryChapter(grade, chapter, level) {
              <button class="cta-btn" data-rate="0.75">🐢 천천히</button>
            </div>`}
       ${!supportsRecognition()
-        ? `<p class="learning-warn">이 브라우저는 음성 인식을 지원하지 않아요.</p>`
+        ? recordFallbackMarkup()
         : `<button class="btn-mic" id="learning-mic">🎤</button>
            <div class="learning-mic-status" id="learning-mic-status"></div>`}
       <div class="learning-result" id="learning-result"></div>
@@ -264,7 +267,14 @@ export function renderElementaryChapter(grade, chapter, level) {
     cardEl.querySelector("#learning-prev")?.addEventListener("click", prev);
 
     const micBtn = cardEl.querySelector("#learning-mic");
-    if (!micBtn) return;
+    // STT가 없으면(iOS Safari) 녹음-되듣기 폴백으로 대체한다(D-95). 자가평가 결과만
+    // 여기서 받아 STT 경로와 똑같이 처리한다.
+    if (!micBtn) {
+      bindRecordFallback(cardEl, {
+        onDone: (ok) => { markWeak(card.id, !ok); advance(); },
+      });
+      return;
+    }
     const micStatus = cardEl.querySelector("#learning-mic-status");
     const resultEl = cardEl.querySelector("#learning-result");
     const skipBtn = cardEl.querySelector("#learning-skip");
@@ -325,7 +335,7 @@ export function renderElementaryChapter(grade, chapter, level) {
              <button class="cta-btn" data-rate="1">🔊 질문 듣기</button>
            </div>`}
       ${!supportsRecognition()
-        ? `<p class="learning-warn">이 브라우저는 음성 인식을 지원하지 않아요.</p>`
+        ? recordFallbackMarkup()
         : `<button class="btn-mic btn-mic-labeled" id="learning-mic">🎤 내 생각 말하기</button>
            <div class="learning-mic-status" id="learning-mic-status"></div>`}
       <div class="learning-result" id="learning-result"></div>
@@ -346,7 +356,14 @@ export function renderElementaryChapter(grade, chapter, level) {
     if (supportsSpeech()) speak(card.text, 1);
 
     const micBtn = cardEl.querySelector("#learning-mic");
-    if (!micBtn) return;
+    // STT가 없으면(iOS Safari) 녹음-되듣기 폴백으로 대체한다(D-95). 자가평가 결과만
+    // 여기서 받아 STT 경로와 똑같이 처리한다.
+    if (!micBtn) {
+      bindRecordFallback(cardEl, {
+        onDone: (ok) => { markWeak(card.id, !ok); advance(); },
+      });
+      return;
+    }
     const micStatus = cardEl.querySelector("#learning-mic-status");
     const resultEl = cardEl.querySelector("#learning-result");
     const skipBtn = cardEl.querySelector("#learning-skip");
@@ -398,4 +415,120 @@ export function renderElementaryChapter(grade, chapter, level) {
   }
 
   showCard();
+}
+
+// "듣고 뜻 맞히기"(D-95, C-2). 문장을 **글자 없이 소리로만** 들려주고 한국어 뜻 3개 중에서
+// 고르게 한다 — 지금까지의 카드는 전부 "따라 말하기"라, 들은 걸 **이해했는지**는 한 번도
+// 확인하지 않았다(가리기 토글 D-93도 산출 연습이지 이해 확인은 아니다).
+//
+// 콘텐츠를 새로 안 만든다: 오답 보기는 **같은 챕터의 다른 문장 뜻**을 가져다 쓴다. 소재가
+// 같아서 "대충 찍어도 맞는" 보기가 안 나오고, 문장을 추가할 때마다 문제도 저절로 늘어난다.
+// 채점은 틀린 것만 weak(SRS)에 넣는다 — 맞힌 걸 굳이 일정에 올릴 이유가 없다.
+export function renderElementaryListen(grade, chapter, level) {
+  const key = `elementary-${grade.id}-${chapter.id}-${level}`;
+  state.learning[key] ??= { index: 0, weak: {} };
+  const st = state.learning[key];
+  st.weak ??= {};
+
+  // 들려줄 수 있는 문장만 — produce 문장은 text가 질문이라 "뜻 맞히기"가 성립하지 않는다.
+  const quiz = chapter.sentences.filter((s) => (s.level || "basic") === level && s.type !== "produce");
+  const pool = chapter.sentences.filter((s) => s.type !== "produce");
+  let i = 0;
+  let correct = 0;
+
+  onLeave(() => window.speechSynthesis?.cancel());
+
+  app.appendChild(el(`
+    <div class="learning-screen">
+      <div class="back-row">
+        <button class="back-btn" data-nav="learning-elementary-${grade.id}-${chapter.id}-${level}">‹</button>
+        <div class="back-title" id="learning-title"></div>
+      </div>
+      <div id="learning-card"></div>
+    </div>
+  `));
+  bindNav(app);
+  const titleEl = app.querySelector("#learning-title");
+  const cardEl = app.querySelector("#learning-card");
+
+  // 오답 2개 + 정답 1개를 섞는다. 같은 뜻이 두 번 나오지 않게 ko 기준으로 거른다.
+  function options(answer) {
+    const others = pool.filter((s) => s.ko !== answer.ko);
+    const picked = [];
+    while (picked.length < 2 && others.length) {
+      picked.push(others.splice(Math.floor(Math.random() * others.length), 1)[0]);
+    }
+    return [answer, ...picked].sort(() => Math.random() - 0.5);
+  }
+
+  function show() {
+    if (i >= quiz.length) {
+      titleEl.textContent = `${chapter.title} · 듣기`;
+      cardEl.innerHTML = `
+        <div class="empty-state">
+          <div class="emoji">${correct === quiz.length ? "🎉" : "👂"}</div>
+          <div class="msg">${quiz.length}개 중 ${correct}개를 맞혔어요!</div>
+        </div>
+        ${correct < quiz.length ? `<p class="learning-hint">틀린 문장은 복습 목록에 담아뒀어요.</p>` : ""}
+        <div class="cta"><button class="cta-btn" id="learning-again">다시 풀기</button></div>
+        <button class="retry-btn" id="learning-toc">연습으로 돌아가기</button>
+      `;
+      cardEl.querySelector("#learning-again").addEventListener("click", () => { i = 0; correct = 0; show(); });
+      cardEl.querySelector("#learning-toc").addEventListener("click", () => go(`learning-elementary-${grade.id}-${chapter.id}-${level}`));
+      return;
+    }
+    const card = quiz[i];
+    titleEl.textContent = `${chapter.title} · 듣기 (${i + 1}/${quiz.length})`;
+    cardEl.innerHTML = `
+      <div class="cover">
+        <div class="tag">듣고 뜻 맞히기</div>
+        <h2 class="masked">🎧</h2>
+      </div>
+      <div class="learning-listen">
+        <button class="cta-btn" data-rate="1">🔊 다시 듣기</button>
+        <button class="cta-btn" data-rate="0.75">🐢 천천히</button>
+      </div>
+      <div class="test-list">
+        ${options(card).map((o) => `
+          <button class="test-card listen-choice" data-ko="${o.ko}">
+            <div class="body"><div class="name">${o.ko}</div></div>
+          </button>
+        `).join("")}
+      </div>
+      <div class="learning-result" id="learning-result"></div>
+    `;
+    cardEl.querySelectorAll(".learning-listen .cta-btn").forEach((btn) => {
+      btn.addEventListener("click", () => speak(card.text, Number(btn.dataset.rate)));
+    });
+    const resultEl = cardEl.querySelector("#learning-result");
+    cardEl.querySelectorAll(".listen-choice").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const ok = btn.dataset.ko === card.ko;
+        if (ok) correct += 1;
+        else markWeak(card.id, true);
+        saveLearningProgress();
+        cardEl.querySelectorAll(".listen-choice").forEach((b) => {
+          b.disabled = true;
+          if (b.dataset.ko === card.ko) b.classList.add("choice-ok");
+          else if (b === btn) b.classList.add("choice-no");
+        });
+        resultEl.innerHTML = `
+          <p class="learning-heard">${card.text}</p>
+          <p class="learning-feedback tier-${ok ? "perfect" : "retry"}">${ok ? "맞았어요!" : "다시 들어볼까요?"}</p>
+          <div class="cta"><button class="cta-btn" id="learning-next">${i + 1 < quiz.length ? "다음 문제" : "완료!"}</button></div>
+        `;
+        resultEl.querySelector("#learning-next").addEventListener("click", () => { i += 1; show(); });
+      });
+    });
+
+    // 문제는 소리가 먼저다 — 들려주지 않으면 고를 근거가 없다.
+    if (supportsSpeech()) speak(card.text, 1);
+  }
+
+  // 이 화면 안에서만 쓰는 weak 기록(연습 화면의 markWeak와 같은 SRS 형식).
+  function markWeak(id) {
+    st.weak[id] = markWrong(st.weak[id]);
+  }
+
+  show();
 }

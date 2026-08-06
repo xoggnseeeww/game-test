@@ -8,6 +8,7 @@ import {
   renderElementaryChapters,
   renderElementaryLevelSelect,
   renderElementaryChapter,
+  renderElementaryListen,
 } from "./screens.js";
 
 export const elementaryConversation = {
@@ -74,6 +75,19 @@ export const elementaryConversationScreens = [
         path: `/learning/elementary/${grade.id}/${chapter.id}/${level}`,
         title: `${chapter.title} · ${LEVEL_LABELS[level]} | 과몰입구역`,
         render: () => renderElementaryChapter(grade, chapter, level),
+        theme: "learning",
+      }))
+    )
+  ),
+  // 듣고 뜻 맞히기(D-95) — 단계 완료 화면에서만 들어간다. 콘텐츠가 아니라 같은 문장을
+  // 다른 방식으로 묻는 화면이라 목차에는 안 올린다.
+  ...GRADES.flatMap((grade) =>
+    grade.chapters.flatMap((chapter) =>
+      Object.keys(LEVEL_LABELS).map((level) => ({
+        id: `learning-elementary-${grade.id}-${chapter.id}-${level}-listen`,
+        path: `/learning/elementary/${grade.id}/${chapter.id}/${level}/listen`,
+        title: `${chapter.title} · 듣기 | 과몰입구역`,
+        render: () => renderElementaryListen(grade, chapter, level),
         theme: "learning",
       }))
     )

@@ -2323,3 +2323,17 @@ button.meta-chip {
 }
 .learning-formcheck.ok { color: #1B8F5C; background: rgba(31,174,106,.10); }
 .learning-formcheck.no { color: var(--accent-ink); background: var(--accent-soft); }
+
+/* 음성 인식이 없는 브라우저(iOS Safari)의 녹음-되듣기 폴백(D-95). 기본 <audio> 컨트롤을
+   그대로 쓴다 — 재생/정지/탐색을 직접 만들 이유가 없다. */
+.learning-audio {
+  display: block;
+  width: calc(100% - 40px);
+  margin: 10px 20px 4px;
+}
+
+/* 듣고 뜻 맞히기(D-95)의 보기 카드. 고른 뒤 정답/오답을 색으로만 알린다. */
+.listen-choice { text-align: left; }
+.listen-choice:disabled { opacity: 1; }
+.listen-choice.choice-ok { box-shadow: inset 0 0 0 2px #1FAE6A; }
+.listen-choice.choice-no { box-shadow: inset 0 0 0 2px #C8384F; }

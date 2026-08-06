@@ -11,6 +11,7 @@ import { state } from "../../core/state.js";
 import { saveLearningProgress } from "../cloud.js";
 import { SCENES } from "./data.js";
 import { supportsSpeech, supportsRecognition, speak, listen } from "../speech.js";
+import { recordFallbackMarkup, bindRecordFallback } from "../record.js";
 import { markWrong, markCorrect } from "../srs.js";
 
 export function renderDialogueScenes() {
@@ -182,7 +183,7 @@ export function renderDialogueScene(scene) {
       </div>
       <p class="learning-hint">💡 이렇게 시작해보세요: <b>${turn.hint}</b></p>
       ${!supportsRecognition()
-        ? `<p class="learning-warn">이 브라우저는 음성 인식을 지원하지 않아요.</p>`
+        ? recordFallbackMarkup()
         : `<button class="btn-mic btn-mic-labeled" id="learning-mic">🎤 내 차례 말하기</button>
            <div class="learning-mic-status" id="learning-mic-status"></div>`}
       <div class="learning-result" id="learning-result"></div>
@@ -194,7 +195,14 @@ export function renderDialogueScene(scene) {
     cardEl.querySelector("#learning-prev")?.addEventListener("click", prev);
 
     const micBtn = cardEl.querySelector("#learning-mic");
-    if (!micBtn) return;
+    // STT가 없으면(iOS Safari) 녹음-되듣기 폴백으로 대체한다(D-95). 자가평가 결과만
+    // 여기서 받아 STT 경로와 똑같이 처리한다.
+    if (!micBtn) {
+      bindRecordFallback(cardEl, {
+        onDone: (ok) => { markWeak(st.index, !ok); advance(); },
+      });
+      return;
+    }
     const micStatus = cardEl.querySelector("#learning-mic-status");
     const resultEl = cardEl.querySelector("#learning-result");
     const skipBtn = cardEl.querySelector("#learning-skip");

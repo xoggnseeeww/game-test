@@ -8,6 +8,7 @@ import { saveLearningProgress } from "../cloud.js";
 import { CHAPTERS, LEVEL_LABELS } from "./data.js";
 import { scoreSpeech, TIER_TEXT } from "../score.js";
 import { supportsSpeech, supportsRecognition, speak, listen } from "../speech.js";
+import { recordFallbackMarkup, bindRecordFallback } from "../record.js";
 import { practicePrefsMarkup, bindPracticePrefs, sentenceMarkup, koMarkup, bindReveal } from "../prefs.js";
 
 // 목차 — 심리테스트 목록(renderPsychList)과 같은 카드 목록 패턴을 그대로 쓴다. 챕터가
@@ -139,7 +140,7 @@ export function renderChapter(chapter, level) {
              <button class="cta-btn" data-rate="0.75">🐢 천천히</button>
            </div>`}
       ${!supportsRecognition()
-        ? `<p class="learning-warn">이 브라우저는 음성 인식을 지원하지 않아요.</p>`
+        ? recordFallbackMarkup()
         : `<button class="btn-mic" id="learning-mic">🎤</button>
            <div class="learning-mic-status" id="learning-mic-status"></div>`}
       <div class="learning-result" id="learning-result"></div>
@@ -172,7 +173,14 @@ export function renderChapter(chapter, level) {
     });
 
     const micBtn = cardEl.querySelector("#learning-mic");
-    if (!micBtn) return;
+    // STT가 없으면(iOS Safari) 녹음-되듣기 폴백으로 대체한다(D-95). 자가평가 결과만
+    // 여기서 받아 STT 경로와 똑같이 처리한다.
+    if (!micBtn) {
+      bindRecordFallback(cardEl, {
+        onDone: () => { state.learning[key].index += 1; saveLearningProgress(); showCard(); },
+      });
+      return;
+    }
     const micStatus = cardEl.querySelector("#learning-mic-status");
     const resultEl = cardEl.querySelector("#learning-result");
     const skipBtn = cardEl.querySelector("#learning-skip");
