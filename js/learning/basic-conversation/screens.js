@@ -8,6 +8,7 @@ import { saveLearningProgress } from "../cloud.js";
 import { CHAPTERS, LEVEL_LABELS } from "./data.js";
 import { scoreSpeech, TIER_TEXT } from "../score.js";
 import { supportsSpeech, supportsRecognition, speak, listen } from "../speech.js";
+import { practicePrefsMarkup, bindPracticePrefs, sentenceMarkup, koMarkup, bindReveal } from "../prefs.js";
 
 // 목차 — 심리테스트 목록(renderPsychList)과 같은 카드 목록 패턴을 그대로 쓴다. 챕터가
 // 하나뿐이어도 나중에 늘어날 자리를 미리 잡아둔다(데이터에서 자동 생성이라 챕터를
@@ -127,12 +128,10 @@ export function renderChapter(chapter, level) {
     cardEl.innerHTML = `
       <div class="cover">
         ${level !== "basic" ? `<div class="tag">${LEVEL_LABELS[level]}</div>` : ""}
-        <h2>${card.text}</h2>
-        <p class="cover-ko">
-          ${card.ko}
-          ${supportsSpeech() ? `<button class="ko-listen-btn" id="learning-listen-ko" aria-label="한국어 뜻 듣기">🔊</button>` : ""}
-        </p>
+        ${sentenceMarkup(card.text)}
+        ${koMarkup(card.ko, supportsSpeech())}
       </div>
+      ${practicePrefsMarkup()}
       ${!supportsSpeech()
         ? `<p class="learning-warn">이 브라우저는 음성 재생을 지원하지 않아요.</p>`
         : `<div class="learning-listen">
@@ -159,7 +158,11 @@ export function renderChapter(chapter, level) {
     });
 
     // 한글을 아직 못 읽는 어린이도 뜻을 알 수 있게 — 한국어 해석도 읽어준다.
-    cardEl.querySelector("#learning-listen-ko")?.addEventListener("click", () => speak(card.ko, 1, "ko-KR"));
+    const listenKo = () => speak(card.ko, 1, "ko-KR");
+    cardEl.querySelector("#learning-listen-ko")?.addEventListener("click", listenKo);
+    // 가리기/접기 토글 — 누르면 카드를 다시 그린다(설정은 세션 내내 유지된다).
+    bindPracticePrefs(cardEl, showCard);
+    bindReveal(cardEl, { text: card.text, ko: card.ko, withListenBtn: supportsSpeech(), onListenKo: listenKo });
 
     // 이미 아는 문장이면 듣기/말하기 없이 바로 다음으로 — 강제로 3단계를 다 거치게 하지 않는다.
     cardEl.querySelector("#learning-skip").addEventListener("click", () => {

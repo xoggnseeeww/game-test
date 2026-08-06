@@ -83,6 +83,9 @@ js/learning/score.js     발음 유사도 판정 — Levenshtein 기반, DOM을 
                         복사하면 한쪽만 고치는 버그가 생긴다)
 js/learning/speech.js    TTS/STT 헬퍼(speak/listen/supportsSpeech/supportsRecognition) —
                         score.js와 같은 이유로 공용(D-78)
+js/learning/prefs.js     연습 카드의 "받침대 치우기" 설정(D-93) — 영어 문장 가리기/뜻 접기
+                        토글의 마크업·바인딩을 한 곳에 둔다(세 화면이 공용). 세션 한정
+                        메모리라 state.learning에도 localStorage에도 안 넣는다
 js/learning/srs.js       간격 반복(SRS) 스케줄(D-92) — DOM·state를 모르는 순수 함수라
                         node --test로 검증된다. `weak`의 값이 불리언에서 `{ due, step }`으로
                         바뀌었지만 **키는 그대로**라 기존에 weak를 읽던 코드는 무변경

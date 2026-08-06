@@ -2260,3 +2260,52 @@ button.meta-chip {
   border-radius: 5px;
   padding: 1px 4px;
 }
+
+/* 학습 카테고리: "받침대 치우기" 토글(D-93) — 영어 문장 가리기 / 뜻 접기.
+   카드 바로 아래 작은 칩 두 개로 둔다. 켜져 있을 때만 색이 들어와 지금 뭘 가리고 있는지
+   한눈에 보인다. 강제로 가리지 않고 학습자가 켜고 끈다(D-61과 같은 이유). */
+.practice-prefs {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  padding: 0 20px;
+  margin-top: 12px;
+}
+.pref-toggle {
+  flex: 1;
+  background: #F1EFEA;
+  color: #75727B;
+  border: none;
+  border-radius: 999px;
+  padding: 9px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+}
+.pref-toggle.on {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+
+/* 가려진 영어 문장 — 눌러서 그 카드에서만 잠깐 확인할 수 있다(설정은 안 바뀐다). */
+.cover h2.masked {
+  opacity: .75;
+  font-size: 19px;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* 접힌 뜻 자리의 "뜻 보기" 버튼. .cover 안 흰 글자 위라 반투명 흰 배경을 쓴다
+   (.ko-listen-btn과 같은 이유). */
+.ko-fold-btn {
+  background: rgba(255,255,255,.22);
+  color: inherit;
+  border: none;
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+}

@@ -14,6 +14,7 @@ import { saveLearningProgress } from "./cloud.js";
 import { scoreSpeech, TIER_TEXT } from "./score.js";
 import { supportsSpeech, supportsRecognition, speak, listen } from "./speech.js";
 import { collectDue, markCorrect, markWrong } from "./srs.js";
+import { practicePrefsMarkup, bindPracticePrefs, sentenceMarkup, koMarkup, bindReveal } from "./prefs.js";
 
 // 등록된 도구들에게 차례로 물어 첫 번째로 답하는 도구의 결과를 쓴다. 아무도 못 알아보면
 // null — 콘텐츠에서 사라진 옛 문장이거나 형식이 바뀐 key다(그런 항목은 목록에서 조용히 뺀다).
@@ -99,12 +100,10 @@ export function renderReview() {
     cardEl.innerHTML = `
       <div class="cover">
         <div class="tag">복습</div>
-        <h2>${text}</h2>
-        <p class="cover-ko">
-          ${ko}
-          ${supportsSpeech() ? `<button class="ko-listen-btn" id="learning-listen-ko" aria-label="한국어 뜻 듣기">🔊</button>` : ""}
-        </p>
+        ${sentenceMarkup(text)}
+        ${koMarkup(ko, supportsSpeech())}
       </div>
+      ${practicePrefsMarkup()}
       <p class="learning-grammar-focus">📍 ${where}</p>
       ${!supportsSpeech()
         ? `<p class="learning-warn">이 브라우저는 음성 재생을 지원하지 않아요.</p>`
@@ -123,7 +122,10 @@ export function renderReview() {
     cardEl.querySelectorAll(".learning-listen .cta-btn").forEach((btn) => {
       btn.addEventListener("click", () => speak(text, Number(btn.dataset.rate)));
     });
-    cardEl.querySelector("#learning-listen-ko")?.addEventListener("click", () => speak(ko, 1, "ko-KR"));
+    const listenKo = () => speak(ko, 1, "ko-KR");
+    cardEl.querySelector("#learning-listen-ko")?.addEventListener("click", listenKo);
+    bindPracticePrefs(cardEl, show);
+    bindReveal(cardEl, { text, ko, withListenBtn: supportsSpeech(), onListenKo: listenKo });
     // 건너뛰기는 일정을 건드리지 않는다 — 안 풀었으니 맞힌 것도 틀린 것도 아니다.
     cardEl.querySelector("#learning-skip").addEventListener("click", advance);
 

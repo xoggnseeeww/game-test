@@ -16,6 +16,7 @@ import { GRADES, LEVEL_LABELS } from "./data.js";
 import { scoreSpeech, TIER_TEXT } from "../score.js";
 import { supportsSpeech, supportsRecognition, speak, listen } from "../speech.js";
 import { markWrong, markCorrect } from "../srs.js";
+import { practicePrefsMarkup, bindPracticePrefs, sentenceMarkup, koMarkup, bindReveal } from "../prefs.js";
 
 function levelCounts(sentences) {
   return Object.keys(LEVEL_LABELS)
@@ -224,12 +225,10 @@ export function renderElementaryChapter(grade, chapter, level) {
     cardEl.innerHTML = `
       <div class="cover">
         ${level !== "basic" ? `<div class="tag">${LEVEL_LABELS[level]}</div>` : ""}
-        <h2>${card.text}</h2>
-        <p class="cover-ko">
-          ${card.ko}
-          ${supportsSpeech() ? `<button class="ko-listen-btn" id="learning-listen-ko" aria-label="한국어 뜻 듣기">🔊</button>` : ""}
-        </p>
+        ${sentenceMarkup(card.text)}
+        ${koMarkup(card.ko, supportsSpeech())}
       </div>
+      ${practicePrefsMarkup()}
       <p class="learning-grammar-focus">🔤 오늘의 문법: ${grammarLabel(card)}</p>
       ${!supportsSpeech()
         ? `<p class="learning-warn">이 브라우저는 음성 재생을 지원하지 않아요.</p>`
@@ -249,7 +248,10 @@ export function renderElementaryChapter(grade, chapter, level) {
     cardEl.querySelectorAll(".learning-listen .cta-btn").forEach((btn) => {
       btn.addEventListener("click", () => speak(card.text, Number(btn.dataset.rate)));
     });
-    cardEl.querySelector("#learning-listen-ko")?.addEventListener("click", () => speak(card.ko, 1, "ko-KR"));
+    const listenKo = () => speak(card.ko, 1, "ko-KR");
+    cardEl.querySelector("#learning-listen-ko")?.addEventListener("click", listenKo);
+    bindPracticePrefs(cardEl, showCard);
+    bindReveal(cardEl, { text: card.text, ko: card.ko, withListenBtn: supportsSpeech(), onListenKo: listenKo });
     cardEl.querySelector("#learning-skip").addEventListener("click", advance);
     cardEl.querySelector("#learning-prev")?.addEventListener("click", prev);
 
