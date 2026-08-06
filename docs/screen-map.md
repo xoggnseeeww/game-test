@@ -28,6 +28,7 @@
 | `/learning/elementary/lower` | `learning-elementary-lower` | learning | — |
 | `/learning/elementary/lower/school-day` | `learning-elementary-lower-school-day` | learning | — |
 | `/learning/elementary/lower/school-day/basic` | `learning-elementary-lower-school-day-basic` | learning | — |
+| `/learning/review` | `learning-review` | learning | — (D-92, 오늘 복습 — 도구를 가로지르는 화면이라 registerLearning은 안 한다) |
 | `/learning/dialogue` | `learning-dialogue` | learning | — |
 | `/learning/dialogue/make-plans` | `learning-dialogue-make-plans` | learning | — |
 | `/test/adhd` | `test-intro` | — | — |

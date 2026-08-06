@@ -1,5 +1,6 @@
 // 홈 · 심리테스트 목록 · 미니게임 목록.
 import { app, go, onLeave, listTests, listGames, listLearning } from "../core/router.js";
+import { collectDue, countPending } from "../learning/srs.js";
 import { el, bindNav } from "../core/dom.js";
 import { adSlotMarkup } from "../core/ads.js";
 import { currentEmail, currentName, isAdmin, logout, onAuthChange, renderSignInButton } from "../core/auth.js";
@@ -122,6 +123,9 @@ export function renderGameList() {
 // 영어회화)의 내부 챕터(목차)는 여기 안 나온다 — 그건 그 도구 화면 안에서 보여준다.
 export function renderLearningList() {
   const tools = listLearning();
+  // 오늘 복습할 게 있으면 목록 맨 위에 진입로를 띄운다(D-92) — 도구를 import하지 않고
+  // state.learning 모양만 보는 srs.js의 순수 함수를 쓴다(D-70 경계 그대로).
+  const dueCount = collectDue(state.learning).length;
   app.appendChild(el(`
     <div>
       <div class="back-row">
@@ -137,6 +141,18 @@ export function renderLearningList() {
         <div class="msg">준비 중인 학습이 있어요<br/>조금만 기다려주세요!</div>
       </div>`
           : `
+      ${dueCount > 0 ? `
+      <div class="section-title">🔁 오늘 복습</div>
+      <div class="test-list">
+        <button class="test-card" data-nav="learning-review">
+          <div class="icon" style="background:#E8642E;">🔁</div>
+          <div class="body">
+            <div class="name">오늘 복습할 문장</div>
+            <div class="desc">헷갈렸던 문장 ${dueCount}개가 기다리고 있어요</div>
+          </div>
+          <div class="chevron">›</div>
+        </button>
+      </div>` : ""}
       <div class="section-title">🔥 지금 인기</div>
       <div class="test-list">
         ${tools.map((t) => `
@@ -208,7 +224,8 @@ export function renderMyPage() {
     // 도구에 무관하게 총합만 여기 한 번 더 보여준다. 개별 도구를 import하지 않고
     // state.learning 모양(weak가 있으면 { [문장id]: true })만 본다 — renderLearning의
     // "챕터 제목은 안 본다" 원칙과 같다.
-    const weakTotal = entries.reduce((sum, [, ch]) => sum + Object.keys(ch.weak || {}).length, 0);
+    const weakTotal = countPending(state.learning);
+    const dueNow = collectDue(state.learning).length;
     learningEl.innerHTML = entries.length === 0
       ? `<div class="empty-state">
            <div class="emoji">📚</div>
@@ -216,10 +233,14 @@ export function renderMyPage() {
          </div>
          <div class="cta"><button class="cta-btn" id="mypage-go-learning">학습하러 가기</button></div>`
       : `<p>진행 중인 챕터 ${entries.length}개 · 완료한 문장 총 ${total}개</p>
-         ${weakTotal > 0 ? `<p>🔁 헷갈렸던 문장 ${weakTotal}개가 남아 있어요 — 해당 단계를 한 번 더 끝까지 풀면 "헷갈렸던 문장만 복습하기"가 다시 떠요.</p>` : ""}
+         ${weakTotal > 0 ? `<p>🔁 복습 목록에 문장 ${weakTotal}개가 있어요${dueNow > 0 ? ` — 그중 ${dueNow}개는 오늘 볼 차례예요.` : " — 오늘 볼 차례는 없어요. 며칠 뒤에 다시 나와요."}</p>` : ""}
+         ${dueNow > 0 ? `<div class="cta"><button class="cta-btn" id="mypage-go-review">🔁 오늘 복습 시작하기</button></div>` : ""}
          <p>${currentEmail ? "로그인 상태라 진행 상황이 계정에 저장돼요." : "로그인하면 진행 상황이 기기를 바꿔도 이어져요."}</p>
          <div class="cta"><button class="cta-btn" id="mypage-go-learning">이어하기</button></div>`;
     learningEl.querySelector("#mypage-go-learning").addEventListener("click", () => go("learning-list"));
+    // D-79에서 "복습 진입로가 그 챕터 완료 화면에만 있어 놓치면 사라진다"고 짚었던 문제의
+    // 실제 해결(D-92) — 이제 도구·챕터와 무관하게 여기서 바로 들어간다.
+    learningEl.querySelector("#mypage-go-review")?.addEventListener("click", () => go("learning-review"));
   }
 
   renderAccount();

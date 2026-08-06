@@ -15,6 +15,7 @@ import { saveLearningProgress } from "../cloud.js";
 import { GRADES, LEVEL_LABELS } from "./data.js";
 import { scoreSpeech, TIER_TEXT } from "../score.js";
 import { supportsSpeech, supportsRecognition, speak, listen } from "../speech.js";
+import { markWrong, markCorrect } from "../srs.js";
 
 function levelCounts(sentences) {
   return Object.keys(LEVEL_LABELS)
@@ -147,8 +148,14 @@ export function renderElementaryChapter(grade, chapter, level) {
   const titleEl = app.querySelector("#learning-title");
   const cardEl = app.querySelector("#learning-card");
 
+  // weak의 값은 이제 불리언이 아니라 SRS 엔트리 { due, step }다(D-92) — 키는 그대로라
+  // 아래 "헷갈렸던 문장만 복습하기"의 `st.weak[s.id]` 검사와 마이페이지 집계는 안 바뀐다.
+  // 맞히면 다음 칸으로 올리고 마지막 칸을 넘기면 지운다(졸업), 틀리면 처음으로 되돌린다.
   function markWeak(id, isWeak) {
-    if (isWeak) st.weak[id] = true;
+    if (isWeak) { st.weak[id] = markWrong(st.weak[id]); return; }
+    if (!st.weak[id]) return;  // 원래 약하지 않던 문장은 일정에 넣지 않는다
+    const next = markCorrect(st.weak[id]);
+    if (next) st.weak[id] = next;
     else delete st.weak[id];
   }
 

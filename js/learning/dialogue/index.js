@@ -14,6 +14,16 @@ export const dialogue = {
     name: "대화 연습",
     desc: `주고받는 대화를 역할극으로 · 장면 ${SCENES.length}개`,
   },
+  // 복습(SRS) 대상 해석기(D-92). 이 도구는 문장 id가 아니라 **턴 인덱스**를 weak 키로 쓴다
+  // (대화의 한 턴에는 id가 없다) — 그래서 id를 숫자로 되돌려 그 턴을 찾는다.
+  resolveReview(key, id) {
+    const scene = SCENES.find((s) => `dialogue-${s.id}` === key);
+    const turn = scene && scene.turns[Number(id)];
+    if (!turn || turn.role !== "you") return null;
+    // 내 차례는 영어 정답 문장이 없다(한국어 지시문 + 예시 답안뿐) — 복습 화면이 이걸
+    // 알아야 채점 대신 자가평가로 보여준다.
+    return { text: turn.ko, ko: turn.hint, where: `대화 연습 · ${scene.title}`, type: "produce", sample: turn.sample, hint: turn.hint };
+  },
 };
 
 export const dialogueScreens = [

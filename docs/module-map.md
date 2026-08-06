@@ -83,6 +83,12 @@ js/learning/score.js     발음 유사도 판정 — Levenshtein 기반, DOM을 
                         복사하면 한쪽만 고치는 버그가 생긴다)
 js/learning/speech.js    TTS/STT 헬퍼(speak/listen/supportsSpeech/supportsRecognition) —
                         score.js와 같은 이유로 공용(D-78)
+js/learning/srs.js       간격 반복(SRS) 스케줄(D-92) — DOM·state를 모르는 순수 함수라
+                        node --test로 검증된다. `weak`의 값이 불리언에서 `{ due, step }`으로
+                        바뀌었지만 **키는 그대로**라 기존에 weak를 읽던 코드는 무변경
+js/learning/review.js    "오늘 복습" 화면(D-92) — 전 도구를 가로질러 오늘 볼 문장만 모은다.
+                        도구를 import하지 않고 `listLearning()`의 `resolveReview(key,id)`로
+                        문장을 되돌려받는다(D-70 경계). registerLearning은 안 한다
 js/learning/cloud.js     학습 진행률(state.learning)을 Supabase에 동기화(D-68) — 도구 폴더
                         밖, 도구가 여럿이어도 공용으로 재사용한다. NumPath 마을(D-55)과 같은
                         패턴(cloud-auth-loader.js로 CDN 동적 import), 코인/마을 같은 보상

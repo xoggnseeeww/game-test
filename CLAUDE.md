@@ -174,6 +174,14 @@ js/learning/<toolId>/ 학습 카테고리 안의 독립 도구 1개 = 폴더 1�
                       버튼도 둔다(D-61). 문장 카드 위 마스코트 일러스트(D-61)는 실물로
                       보니 별로라 D-64에서 뺐다 — 이미지가 필요하면 나중에 실제 이미지
                       에셋으로 따로 넣는다
+js/learning/srs.js    간격 반복(SRS) 스케줄(D-92) — 순수 함수. `weak`의 값이 이제 불리언이
+                      아니라 `{ due, step }`이다(키는 그대로라 기존 읽기 코드는 무변경).
+                      틀리면 처음으로, 맞히면 다음 칸, 마지막 칸 넘기면 졸업(목록에서 삭제)
+js/learning/review.js "오늘 복습" 화면(`/learning/review`) — 도구별이 아니라 **전 도구를
+                      가로질러** 오늘 볼 문장만 모은다. 도구를 import하지 않고
+                      `listLearning()`의 `resolveReview(key,id)`로 문장을 되돌려받는다(D-70
+                      경계 유지). `registerLearning`은 안 한다 — 도구가 아니라 도구들의 결과를
+                      모으는 화면이라 학습 목록에 카드로 뜨면 안 된다
 functions/api/couple-code/  부부 체크 짧은 코드 발급(index.js)·조회([code].js). 유일한 백엔드 —
                       Cloudflare Pages Function + KV(COUPLE_CODES). js/tests/couple/shortcode.js를
                       그대로 가져다 쓴다(발급·조회·브라우저 검증이 같은 알파벳을 봐야 한다)
@@ -230,7 +238,7 @@ docs/design-draft.html  최초 디자인 목업. 배포·동작과 무관 (.clau
 
 - 새 테스트 추가 → `js/main.js`에 `registerTest` + `registerScreens` **둘 다**. 하나만 하면 목록 카드나 공유 URL 한쪽이 조용히 빠진다
 - 새 독립 미니게임 추가(테스트에 속하지 않는 경우) → `js/main.js`에 `registerGame` + `registerScreens` **둘 다**, `test/modules.test.js`의 화면 목록에도 새 `<id>Screens` 추가. 반응속도·딜레마처럼 테스트 하위 단계인 게임은 여기 해당 안 됨(D-4)
-- 새 학습 도구 추가(테스트에 속하지 않는 경우) → `js/main.js`에 `registerLearning` + `registerScreens` **둘 다**, `test/modules.test.js`의 화면 목록에도 새 `<tool>Screens` 추가. 미니게임 레지스트리와 완전히 같은 절차다(D-63)
+- 새 학습 도구 추가(테스트에 속하지 않는 경우) → `js/main.js`에 `registerLearning` + `registerScreens` **둘 다**, `test/modules.test.js`의 화면 목록에도 새 `<tool>Screens` 추가. 미니게임 레지스트리와 완전히 같은 절차다(D-63). 그 도구의 문장이 **복습(D-92)에도 합류하려면** 디스크립터에 `resolveReview(key, id)`를 넣는다 — 복습 화면(`js/learning/review.js`)은 안 고친다
 - 학습 도구 안에 새 챕터(목차 항목) 추가 → 그 도구의 `data.js`(`CHAPTERS` 배열)에 항목만 추가한다. 레지스트리에 새로 등록하지 않는다 — 목차 화면·화면 등록 둘 다 `CHAPTERS`에서 자동 생성된다(D-63). 다만 새 챕터부터 만들지 말고 기존 챕터에 붙일 자리가 있는지 먼저 볼 것(D-66) — 목차가 잘게 쪼개진 목록이 되지 않게 한다
 - 결과 유형 추가/삭제 → 같은 `data.js`의 슬러그 맵도 갱신 (없으면 공유 URL이 조용히 홈으로 폴백) — DISC는 `slug` 필드가 단일 소스라 자동
 - 문항 수 변경 → 해당 `score.js`의 만점 분모가 문항 수에서 파생되는지 확인 (ADHD `toPct` 분모 `16` = 축당 4문항 × 4점)

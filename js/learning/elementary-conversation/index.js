@@ -19,6 +19,19 @@ export const elementaryConversation = {
     name: "초등 영어회화",
     desc: `학년별로 배우는 실전 회화 · 학년 ${GRADES.length}단계`,
   },
+  // 복습(SRS) 대상 해석기(D-92) — state.learning의 key/문장 id를 실제 문장으로 되돌린다.
+  // 이걸 도구 쪽에 두는 이유: 복습 화면이 각 도구를 import하면 "홈·마이페이지는 학습 도구를
+  // import하지 않는다"(D-70)는 경계가 무너진다. 레지스트리에 등록된 도구가 스스로 답하게 한다.
+  // 모르는 key면 null — 다른 도구 것이거나, 콘텐츠에서 사라진 옛 문장이다.
+  resolveReview(key, id) {
+    const m = /^elementary-(.+?)-(.+)-(basic|intermediate|advanced)$/.exec(key);
+    if (!m) return null;
+    const grade = GRADES.find((g) => g.id === m[1]);
+    const chapter = grade && grade.chapters.find((c) => c.id === m[2]);
+    const sentence = chapter && chapter.sentences.find((s) => s.id === id);
+    if (!sentence) return null;
+    return { text: sentence.text, ko: sentence.ko, where: `${grade.label} · ${chapter.title}`, type: sentence.type || "repeat", sample: sentence.sample, hint: sentence.hint };
+  },
 };
 
 export const elementaryConversationScreens = [

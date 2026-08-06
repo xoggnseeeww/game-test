@@ -14,6 +14,17 @@ export const basicConversation = {
     name: "기초 영어회화 (7세 이하)",
     desc: `일상대화로 배우는 첫 영어 · 목차 ${CHAPTERS.length}개`,
   },
+  // 복습(SRS) 대상 해석기(D-92) — 자세한 이유는 elementary-conversation/index.js 참고.
+  // 이 도구의 key는 도구 접두어 없이 `${chapterId}-${level}`이다(가장 먼저 만들어진 도구라
+  // 접두어를 안 붙였고, 화면 id처럼 이미 저장된 값이라 지금 와서 못 바꾼다).
+  resolveReview(key, id) {
+    const m = /^(.+)-(basic|intermediate|advanced)$/.exec(key);
+    if (!m) return null;
+    const chapter = CHAPTERS.find((c) => c.id === m[1]);
+    const sentence = chapter && chapter.sentences.find((s) => s.id === id);
+    if (!sentence) return null;
+    return { text: sentence.text, ko: sentence.ko, where: `기초 영어회화 · ${chapter.title}`, type: "repeat" };
+  },
 };
 
 export const basicConversationScreens = [

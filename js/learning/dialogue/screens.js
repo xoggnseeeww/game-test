@@ -11,6 +11,7 @@ import { state } from "../../core/state.js";
 import { saveLearningProgress } from "../cloud.js";
 import { SCENES } from "./data.js";
 import { supportsSpeech, supportsRecognition, speak, listen } from "../speech.js";
+import { markWrong, markCorrect } from "../srs.js";
 
 export function renderDialogueScenes() {
   app.appendChild(el(`
@@ -69,8 +70,12 @@ export function renderDialogueScene(scene) {
   const titleEl = app.querySelector("#learning-title");
   const cardEl = app.querySelector("#learning-card");
 
+  // elementary-conversation과 같은 SRS 엔트리 형식(D-92).
   function markWeak(i, isWeak) {
-    if (isWeak) st.weak[i] = true;
+    if (isWeak) { st.weak[i] = markWrong(st.weak[i]); return; }
+    if (!st.weak[i]) return;
+    const next = markCorrect(st.weak[i]);
+    if (next) st.weak[i] = next;
     else delete st.weak[i];
   }
 

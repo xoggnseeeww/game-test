@@ -189,6 +189,7 @@ ADHD·DISC 채점 파이프라인 상세는 각각 `docs/adhd-architecture.md` �
 | `numpath.engine.test.js` · `numpath.generate.test.js` | 타일 모델 · 생성기 · 솔버 · 별 판정 |
 | `learning.score.test.js` | 발음 채점 — **단어 단위** 정렬·판정 구간, 축약형/숫자 정규화, 오답 단어 표시(D-91) |
 | `learning.elementary.test.js` | 문법 태그 유효성 · **반복(recycling) 규칙** · produce 문장의 hint/sample 존재 |
+| `learning.srs.test.js` | 간격 반복 스케줄(D-92) — 틀리면 처음으로·맞히면 다음 칸·마지막 칸 넘기면 졸업, 옛 `weak: true` 형식 방어. 깨져도 화면엔 표시가 안 나고 며칠 기다려야 드러나는 종류 |
 | `learning.cloud.test.js` | 진행률 병합 — 진도는 앞선 쪽, **weak는 합집합**(D-90 A-5). 조용히 깨지면 복습 목록이 사라지는데 화면엔 표시가 안 나서 테스트로 묶었다 |
 | `og-shells.test.js` | OG 셸과 카드 데이터 일치 · `_redirects` 규칙 순서(와일드카드가 항상 마지막) |
 
