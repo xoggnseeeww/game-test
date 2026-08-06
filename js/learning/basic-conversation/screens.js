@@ -188,7 +188,11 @@ export function renderChapter(chapter, level) {
             <p class="learning-heard">내가 말한 것: "${heard}"</p>
             <p class="learning-feedback tier-${tier}">${TIER_TEXT[tier]}</p>
             <div class="cta"><button class="cta-btn" id="learning-next">${st.index + 1 < N ? "다음 문장" : "완료!"}</button></div>
+            <button class="retry-btn" id="learning-again">🎤 이 문장 다시 말하기</button>
           `;
+          // 점수가 낮아도 그 자리에서 다시 시도할 길이 없던 문제(A-4) — 같은 인덱스로 카드를
+          // 다시 그리면 마이크·건너뛰기가 처음 상태로 돌아온다.
+          resultEl.querySelector("#learning-again").addEventListener("click", showCard);
           resultEl.querySelector("#learning-next").addEventListener("click", () => {
             state.learning[key].index += 1;
             saveLearningProgress();

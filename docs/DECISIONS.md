@@ -122,3 +122,4 @@
 - 각 학년 6번째 챕터 + 다중 턴 대화 도구(dialogue) 신설 → [D-87](decisions/2029-h1.md#d-87-각-학년-6번째-챕터--다중-턴-대화-도구dialogue-신설)
 - `docs/architecture.md` 분리 — 계약·절차만 남기고 인벤토리 3개를 뗌 → [D-88](decisions/2029-h1.md#d-88-docsarchitecturemd-분리--계약절차만-남기고-인벤토리-3개를-뗌)
 - 출력 규칙을 `CLAUDE.md` 최상단으로 이동 — 내용이 아니라 위치가 문제였다 → [D-89](decisions/2029-h1.md#d-89-출력-규칙을-claudemd-최상단으로-이동--내용이-아니라-위치가-문제였다)
+- 학습 도구 신뢰성 3건 — TTS/STT 충돌 · 재시도 버튼 · weak 유실 → [D-90](decisions/2029-h1.md#d-90-학습-도구-신뢰성-3건--ttsstt-충돌--재시도-버튼--weak-유실)

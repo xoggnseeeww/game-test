@@ -178,4 +178,19 @@ ADHD·DISC 채점 파이프라인 상세는 각각 `docs/adhd-architecture.md` �
 
 ## 8. 테스트 스위트
 
-`npm test` (= `node --test`, 의존성 0). 브라우저 없이 도는 것만 여기 있다.
+`npm test` (= `node --test`, 의존성 0). **브라우저 없이 도는 것만** 여기 있다 —
+라우팅·이벤트·레이아웃은 `scripts/verify.cjs`(헤드리스 브라우저)로만 잡힌다.
+
+| 파일 | 무엇을 지키나 |
+|------|---------------|
+| `modules.test.js` | 모듈 import/export 정합성 · **화면 id·경로 중복** — 새 도구/게임을 추가하면 이 파일의 화면 목록에도 넣어야 검사 대상이 된다 |
+| `copy.test.js` | 개수 하드코딩 금지(D-17) — 세 번 재발해서 문서 규칙에서 테스트로 승격됐다 |
+| `adhd.score.test.js` · `disc.score.test.js` · `couple.score/match/shortcode.test.js` | 채점 불변식 · 부부 체크 안전 장치(유형 단독 노출 금지 등) · 짧은 코드 |
+| `numpath.engine.test.js` · `numpath.generate.test.js` | 타일 모델 · 생성기 · 솔버 · 별 판정 |
+| `learning.score.test.js` | 발음 유사도(Levenshtein) 판정 구간 |
+| `learning.elementary.test.js` | 문법 태그 유효성 · **반복(recycling) 규칙** · produce 문장의 hint/sample 존재 |
+| `learning.cloud.test.js` | 진행률 병합 — 진도는 앞선 쪽, **weak는 합집합**(D-90 A-5). 조용히 깨지면 복습 목록이 사라지는데 화면엔 표시가 안 나서 테스트로 묶었다 |
+| `og-shells.test.js` | OG 셸과 카드 데이터 일치 · `_redirects` 규칙 순서(와일드카드가 항상 마지막) |
+
+> 새 검사를 추가했으면 **버그를 일부러 되살려 빨간불이 뜨는지 확인**한다 — 초록불만 보면
+> 검사가 비어 있어도 모른다(`.claude/rules/js-modules.md`).

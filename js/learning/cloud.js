@@ -9,11 +9,21 @@ let syncedForUser = null;
 
 // 챕터별로 더 진행된 쪽(index가 큰 쪽)을 남긴다 — 로그인이 여러 번 일어나도(재로그인, 다른
 // 탭) 멱등해야 한다는 게 NumPath 마을 병합(mergeVillages, D-55)과 같은 이유다.
-function mergeProgress(local, remote) {
+// export하는 이유: 이 함수만 순수 함수(DOM·CDN을 모른다)라 `node --test`로 직접 검증할 수
+// 있다 — 나머지(saveLearningProgress/initLearningSync)는 Supabase 클라이언트에 묶여 있어
+// 브라우저에서만 돈다. weak 합집합 규칙(A-5)이 조용히 깨지면 복습 목록이 사라지는데 화면엔
+// 아무 표시가 안 나므로, 여기만이라도 테스트로 묶어둔다.
+export function mergeProgress(local, remote) {
   const merged = { ...local };
   for (const [chapterId, remoteEntry] of Object.entries(remote || {})) {
     const localEntry = merged[chapterId];
-    if (!localEntry || remoteEntry.index > localEntry.index) merged[chapterId] = remoteEntry;
+    const remoteIsAhead = !localEntry || remoteEntry.index > localEntry.index;
+    // 진도(index)는 더 나간 쪽을 남기지만, weak(헷갈렸다고 표시한 문장)는 **합집합**으로
+    // 따로 남긴다 — 엔트리를 통째로 갈아끼우면 진도가 조금 뒤진 기기에서 표시해둔 복습
+    // 목록이 조용히 사라진다. weak가 아예 없는 옛 레코드(이 필드가 생기기 전 저장분)도
+    // 여기서 항상 객체로 채워지므로, 화면 쪽에서 `st.weak[id]`가 터지지 않는다.
+    const weak = { ...(localEntry && localEntry.weak), ...remoteEntry.weak };
+    merged[chapterId] = { ...(remoteIsAhead ? remoteEntry : localEntry), weak };
   }
   return merged;
 }

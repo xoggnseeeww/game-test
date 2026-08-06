@@ -36,6 +36,11 @@ export function speak(text, rate, lang = "en-US") {
 // (기획서 4-3). 실패("no-speech" 등)는 onError로 그대로 올려 화면에 보여준다 — 조용히
 // 삼키지 않는다.
 export function listen(onResult, onError) {
+  // 읽어주던 소리를 먼저 끊는다 — 안 끊으면 스피커로 나가는 앱 자기 목소리를 마이크가 그대로
+  // 주워 담아 인식 결과가 엉킨다. produce 카드(D-84)와 대화 연습의 상대 대사(D-87)가 자동
+  // 재생을 하게 되면서 "다 듣기 전에 마이크를 누르는" 경로가 흔해져 실제로 부딪히기 쉬워졌다.
+  // 모든 호출부가 이 함수를 지나므로 여기 한 줄이면 두 도구 전부 해결된다.
+  window.speechSynthesis?.cancel();
   const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   const rec = new Recognition();
   rec.lang = "en-US";

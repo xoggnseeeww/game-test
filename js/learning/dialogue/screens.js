@@ -44,6 +44,7 @@ export function renderDialogueScene(scene) {
   const key = `dialogue-${scene.id}`;
   state.learning[key] ??= { index: 0, weak: {} };
   const st = state.learning[key];
+  st.weak ??= {};  // elementary-conversation과 같은 이유(A-5) — 옛 레코드엔 weak가 없다
 
   const turns = scene.turns;
   const N = turns.length;

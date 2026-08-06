@@ -118,6 +118,9 @@ export function renderElementaryChapter(grade, chapter, level) {
   const key = `elementary-${grade.id}-${chapter.id}-${level}`;
   state.learning[key] ??= { index: 0, weak: {} };
   const st = state.learning[key];
+  // 엔트리가 이미 있으면 위 `??=`가 통째로 건너뛴다 — weak 필드가 생기기 전에 저장돼
+  // 클라우드에서 돌아온 레코드는 weak가 없어서 아래 markWeak가 터진다(A-5).
+  st.weak ??= {};
 
   const allSentences = chapter.sentences.filter((s) => (s.level || "basic") === level);
   let reviewMode = false;
@@ -264,8 +267,12 @@ export function renderElementaryChapter(grade, chapter, level) {
             <p class="learning-heard">내가 말한 것: "${heard}"</p>
             <p class="learning-feedback tier-${tier}">${TIER_TEXT[tier]}</p>
             <div class="cta"><button class="cta-btn" id="learning-next">${st.index + 1 < N ? "다음 문장" : "완료!"}</button></div>
+            <button class="retry-btn" id="learning-again">🎤 이 문장 다시 말하기</button>
           `;
           resultEl.querySelector("#learning-next").addEventListener("click", advance);
+          // 점수가 낮게 나와도 그 자리에서 다시 시도할 길이 없어 "다음"밖에 못 누르던 문제(A-4).
+          // 같은 인덱스로 카드를 다시 그리면 마이크·건너뛰기 버튼이 처음 상태로 돌아온다.
+          resultEl.querySelector("#learning-again").addEventListener("click", showCard);
         },
         (err) => {
           micBtn.disabled = false;
