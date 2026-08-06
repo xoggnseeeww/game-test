@@ -51,6 +51,7 @@ export const LOWER_GRAMMAR_POINTS = [
   { id: "G4", label: "There is/are · 위치 전치사" },
   { id: "G5", label: "조동사 should (제안·규칙)" },
   { id: "G6", label: "과거형 (규칙 -ed · went/had 등)" },
+  { id: "G18", label: "want to + 동사원형 (하고 싶다)" },
 ];
 
 const SCHOOL_DAY_CHAPTER = {
@@ -388,6 +389,75 @@ const PE_CLASS_CHAPTER = {
   ],
 };
 
+// 급식 시간은 새 문법 G18(want to)을 도입한다 — 저학년이 실제로 제일 많이 쓰는
+// "~하고 싶어요"가 G1~G6 어디에도 없어서, 좋아하는 것·체육 시간처럼 순수 재사용으로
+// 두지 않고 하나 얹었다.
+const LUNCH_CHAPTER = {
+  id: "lunch",
+  title: "급식 시간",
+  emoji: "🍚",
+  sentences: [
+    { id: "its-lunch-time", text: "It's lunch time.", ko: "점심시간이에요.", grammar: "G1" },
+    { id: "wash-my-hands-first", text: "I wash my hands first.", ko: "저는 먼저 손을 씻어요.", grammar: "G2" },
+    { id: "food-smells-good", text: "The food smells good.", ko: "음식 냄새가 좋아요.", grammar: "G1" },
+    { id: "i-carry-my-tray", text: "I carry my tray.", ko: "저는 식판을 들고 가요.", grammar: "G2" },
+    { id: "favorite-food-is-rice", text: "My favorite food is rice.", ko: "제가 제일 좋아하는 음식은 밥이에요.", grammar: "G1" },
+    { id: "i-eat-with-a-spoon", text: "I eat with a spoon.", ko: "저는 숟가락으로 먹어요.", grammar: "G2" },
+    { id: "the-soup-is-hot", text: "The soup is hot.", ko: "국이 뜨거워요.", grammar: "G1" },
+    { id: "sit-with-my-friends-at-lunch", text: "I sit with my friends.", ko: "저는 친구들이랑 앉아요.", grammar: "G2" },
+    { id: "lunch-is-delicious-today", text: "Lunch is delicious today.", ko: "오늘 점심이 맛있어요.", grammar: "G1" },
+    { id: "i-finish-my-food", text: "I finish my food.", ko: "저는 음식을 다 먹어요.", grammar: "G2" },
+
+    { id: "want-to-eat-more-rice", text: "I want to eat more rice.", ko: "밥을 더 먹고 싶어요.", grammar: "G18", level: "intermediate" },
+    { id: "want-to-try-the-salad", text: "I want to try the salad.", ko: "샐러드를 먹어보고 싶어요.", grammar: "G18", level: "intermediate" },
+    { id: "can-i-have-more-soup", text: "Can I have more soup?", ko: "국 좀 더 주실래요?", grammar: "G3", level: "intermediate" },
+    { id: "should-clean-our-table", text: "We should clean our table.", ko: "우리 식탁을 치워야 해요.", grammar: "G5", level: "intermediate" },
+    {
+      id: "what-do-you-want-to-eat-for-lunch",
+      text: "What do you want to eat for lunch?",
+      ko: "점심으로 뭘 먹고 싶어요?",
+      grammar: "G18",
+      level: "intermediate",
+      type: "produce",
+      hint: "I want to eat ___.",
+      sample: ["I want to eat curry.", "I want to eat some noodles.", "Honestly, anything but vegetables."],
+    },
+    {
+      id: "what-should-we-do-after-lunch",
+      text: "What should we do after lunch?",
+      ko: "점심 먹고 뭘 해야 해요?",
+      grammar: "G5",
+      level: "intermediate",
+      type: "produce",
+      hint: "We should ___.",
+      sample: ["We should clean up.", "We should brush our teeth.", "Probably just go outside."],
+    },
+
+    { id: "want-to-try-new-food-looks-good", text: "I want to try new food because it looks good.", ko: "맛있어 보여서 새로운 음식을 먹어보고 싶어요.", grammar: "G18", level: "advanced" },
+    { id: "ate-everything-on-my-tray", text: "I ate everything on my tray yesterday.", ko: "어제 식판에 있는 걸 다 먹었어요.", grammar: "G6", level: "advanced" },
+    {
+      id: "favorite-school-lunch-and-why",
+      text: "What's your favorite school lunch and why?",
+      ko: "제일 좋아하는 급식이 뭐고 왜 좋아해요?",
+      grammar: "G2",
+      level: "advanced",
+      type: "produce",
+      hint: "My favorite lunch is ___ because ___.",
+      sample: ["My favorite lunch is curry because it's warm.", "My favorite lunch is pizza day because everyone is happy.", "Probably fried rice, honestly."],
+    },
+    {
+      id: "tell-me-about-a-lunch-you-liked",
+      text: "Tell me about a lunch you really liked.",
+      ko: "정말 맛있었던 급식 얘기해줄래요?",
+      grammar: "G6",
+      level: "advanced",
+      type: "produce",
+      hint: "I ate ___ and it was ___.",
+      sample: ["I ate spaghetti and it was so good.", "I ate chicken and I asked for more.", "We had ice cream once and everyone cheered."],
+    },
+  ],
+};
+
 // 중학년 문법 순서. LOWER_GRAMMAR_POINTS와 별개 배열이라 id가 겹쳐도 실제로는 충돌하지
 // 않지만(각 학년의 grammarPoints 안에서만 유효), 헷갈리지 않게 저학년 이어서 G7부터
 // 붙였다. G7이 저학년 G2(일반동사 현재형)와 개념은 겹치는데, 그건 의도된 것이다 —
@@ -401,6 +471,7 @@ export const MIDDLE_GRAMMAR_POINTS = [
   { id: "G10", label: "비교급 (-er, more than)" },
   { id: "G11", label: "현재진행형 (be + -ing)" },
   { id: "G16", label: "과거진행형 (was/were + -ing)" },
+  { id: "G19", label: "빈도부사 (always/usually/sometimes/never)" },
 ];
 
 const SCHOOLWORK_CHAPTER = {
@@ -735,6 +806,74 @@ const SCHOOL_EVENTS_CHAPTER = {
   ],
 };
 
+// 건강과 습관은 새 문법 G19(빈도부사)를 도입한다 — "얼마나 자주 하는가"가 습관 얘기의
+// 핵심인데 중학년 기존 문법(G7~G11, G16)엔 그 표현이 없었다.
+const HEALTH_CHAPTER = {
+  id: "health",
+  title: "건강과 습관",
+  emoji: "💪",
+  sentences: [
+    { id: "go-to-bed-early", text: "I go to bed early.", ko: "저는 일찍 자요.", grammar: "G7" },
+    { id: "drink-a-lot-of-water", text: "I drink a lot of water.", ko: "저는 물을 많이 마셔요.", grammar: "G7" },
+    { id: "exercise-is-good-for-me", text: "Exercise is good for me.", ko: "운동은 저한테 좋아요.", grammar: "G7" },
+    { id: "eat-breakfast-every-morning", text: "I eat breakfast every morning.", ko: "저는 매일 아침을 먹어요.", grammar: "G7" },
+    { id: "my-body-needs-rest", text: "My body needs rest.", ko: "제 몸은 휴식이 필요해요.", grammar: "G7" },
+    { id: "wash-my-hands-often", text: "I wash my hands often.", ko: "저는 손을 자주 씻어요.", grammar: "G7" },
+    { id: "sleep-is-important", text: "Sleep is important.", ko: "잠은 중요해요.", grammar: "G7" },
+    { id: "stretch-in-the-morning", text: "I stretch in the morning.", ko: "저는 아침에 스트레칭해요.", grammar: "G7" },
+    { id: "ride-my-bike-for-exercise", text: "I ride my bike for exercise.", ko: "저는 운동으로 자전거를 타요.", grammar: "G7" },
+    { id: "healthy-food-gives-energy", text: "Healthy food gives me energy.", ko: "건강한 음식은 저에게 힘을 줘요.", grammar: "G7" },
+
+    { id: "always-brush-before-bed", text: "I always brush my teeth before bed.", ko: "저는 자기 전에 항상 이를 닦아요.", grammar: "G19", level: "intermediate" },
+    { id: "usually-sleep-eight-hours", text: "I usually sleep eight hours.", ko: "저는 보통 여덟 시간 자요.", grammar: "G19", level: "intermediate" },
+    { id: "sometimes-skip-breakfast", text: "I sometimes skip breakfast.", ko: "저는 가끔 아침을 걸러요.", grammar: "G19", level: "intermediate" },
+    { id: "have-to-drink-more-water", text: "I have to drink more water.", ko: "물을 더 마셔야 해요.", grammar: "G8", level: "intermediate" },
+    {
+      id: "how-often-do-you-exercise",
+      text: "How often do you exercise?",
+      ko: "얼마나 자주 운동해요?",
+      grammar: "G19",
+      level: "intermediate",
+      type: "produce",
+      hint: "I ___ exercise.",
+      sample: ["I usually exercise three times a week.", "I sometimes exercise after school.", "Honestly, not very often."],
+    },
+    {
+      id: "what-do-you-have-to-do-to-stay-healthy",
+      text: "What do you have to do to stay healthy?",
+      ko: "건강하려면 뭘 해야 해요?",
+      grammar: "G8",
+      level: "intermediate",
+      type: "produce",
+      hint: "I have to ___.",
+      sample: ["I have to sleep more.", "I have to eat more vegetables.", "Probably just move around more."],
+    },
+
+    { id: "never-stay-up-late-need-energy", text: "I never stay up late because I need energy.", ko: "힘이 필요해서 저는 절대 늦게까지 안 깨어 있어요.", grammar: "G19", level: "advanced" },
+    { id: "trying-to-build-better-habits", text: "I am trying to build better habits.", ko: "저는 더 좋은 습관을 만들려고 노력하고 있어요.", grammar: "G11", level: "advanced" },
+    {
+      id: "what-habit-do-you-want-to-change",
+      text: "What habit do you want to change and why?",
+      ko: "어떤 습관을 바꾸고 싶고 왜 그래요?",
+      grammar: "G7",
+      level: "advanced",
+      type: "produce",
+      hint: "I want to change ___ because ___.",
+      sample: ["I want to change my sleep schedule because I'm always tired.", "I want to stop eating so many snacks.", "Honestly, I just spend too long on my phone."],
+    },
+    {
+      id: "what-will-you-do-to-be-healthier",
+      text: "What will you do to be healthier this month?",
+      ko: "이번 달에 더 건강해지려고 뭘 할 거예요?",
+      grammar: "G9",
+      level: "advanced",
+      type: "produce",
+      hint: "I will ___.",
+      sample: ["I will go to bed by ten.", "I will walk to school instead of taking the bus.", "Probably just drink more water."],
+    },
+  ],
+};
+
 // 고학년 문법 순서. 저학년(G1~G6)·중학년(G7~G11, G16)과 별개 배열이라 번호만 이어 붙였다
 // (같은 이유는 MIDDLE_GRAMMAR_POINTS 주석 참고). 중학년의 의무·미래·비교·진행형에서
 // 한 단 더 나아가 의견·조건·관계절처럼 원어민 초등 고학년이 실제로 쓰는 복문 구조로
@@ -745,6 +884,7 @@ export const HIGH_GRAMMAR_POINTS = [
   { id: "G14", label: "조건문 (if + 현재형, will + 동사원형)" },
   { id: "G15", label: "관계대명사 who/that (사람·사물 설명)" },
   { id: "G17", label: "used to (과거 습관·상태 회상)" },
+  { id: "G20", label: "수동태 (be + 과거분사)" },
 ];
 
 const OPINIONS_CHAPTER = {
@@ -1079,6 +1219,75 @@ const TEAMWORK_CHAPTER = {
   ],
 };
 
+// 미디어와 기술은 새 문법 G20(수동태)을 도입한다 — "누가 만들었나"보다 "무엇이 만들어졌나"를
+// 말하는 구조가 기술·미디어 소재에서 자연스럽게 나오고, 고학년 기존 문법(G12~G15, G17)엔
+// 없던 형태다.
+const MEDIA_CHAPTER = {
+  id: "media",
+  title: "미디어와 기술",
+  emoji: "📱",
+  sentences: [
+    { id: "use-my-phone-every-day", text: "I use my phone every day.", ko: "저는 매일 휴대폰을 써요.", grammar: "G12" },
+    { id: "technology-changes-fast", text: "Technology changes fast.", ko: "기술은 빠르게 변해요.", grammar: "G12" },
+    { id: "watch-videos-online-media", text: "I watch videos online.", ko: "저는 온라인으로 영상을 봐요.", grammar: "G12" },
+    { id: "social-media-is-popular", text: "Social media is popular.", ko: "소셜미디어는 인기가 많아요.", grammar: "G12" },
+    { id: "search-for-information", text: "I search for information.", ko: "저는 정보를 검색해요.", grammar: "G12" },
+    { id: "apps-make-life-easier", text: "Apps make life easier.", ko: "앱은 생활을 더 편하게 해줘요.", grammar: "G12" },
+    { id: "read-the-news-online", text: "I read the news online.", ko: "저는 온라인으로 뉴스를 읽어요.", grammar: "G12" },
+    { id: "screens-can-hurt-my-eyes", text: "Screens can hurt my eyes.", ko: "화면은 눈을 아프게 할 수 있어요.", grammar: "G12" },
+    { id: "i-message-my-friends", text: "I message my friends.", ko: "저는 친구들에게 메시지를 보내요.", grammar: "G12" },
+    { id: "internet-connects-people", text: "The internet connects people.", ko: "인터넷은 사람들을 연결해줘요.", grammar: "G12" },
+
+    { id: "app-was-made-by-small-team", text: "This app was made by a small team.", ko: "이 앱은 작은 팀이 만들었어요.", grammar: "G20", level: "intermediate" },
+    { id: "many-videos-are-watched-every-day", text: "Many videos are watched every day.", ko: "매일 많은 영상이 시청돼요.", grammar: "G20", level: "intermediate" },
+    { id: "smartphones-most-useful-invention", text: "I think smartphones are the most useful invention.", ko: "스마트폰이 제일 유용한 발명품인 것 같아요.", grammar: "G13", level: "intermediate" },
+    { id: "people-who-share-false-news", text: "People who share false news cause problems.", ko: "거짓 뉴스를 퍼뜨리는 사람들은 문제를 일으켜요.", grammar: "G15", level: "intermediate" },
+    {
+      id: "what-app-is-used-the-most",
+      text: "What app is used the most in your class?",
+      ko: "우리 반에서 제일 많이 쓰는 앱이 뭐예요?",
+      grammar: "G20",
+      level: "intermediate",
+      type: "produce",
+      hint: "___ is used the most.",
+      sample: ["YouTube is used the most.", "A messaging app is used the most.", "Probably a game app, honestly."],
+    },
+    {
+      id: "most-useful-thing-about-internet",
+      text: "What's the most useful thing about the internet?",
+      ko: "인터넷에서 제일 유용한 게 뭐예요?",
+      grammar: "G13",
+      level: "intermediate",
+      type: "produce",
+      hint: "The most useful thing is ___.",
+      sample: ["The most useful thing is finding information fast.", "The most useful thing is talking to people far away.", "Probably just being able to learn anything."],
+    },
+
+    { id: "used-to-watch-tv-now-phone", text: "I used to watch TV, but now I watch videos on my phone.", ko: "예전엔 TV를 봤는데 지금은 휴대폰으로 영상을 봐요.", grammar: "G17", level: "advanced" },
+    { id: "if-use-technology-wisely-help-learn", text: "If we use technology wisely, it will help us learn.", ko: "기술을 현명하게 쓰면 배우는 데 도움이 될 거예요.", grammar: "G14", level: "advanced" },
+    {
+      id: "how-has-technology-changed-learning",
+      text: "How has technology changed the way you learn?",
+      ko: "기술이 공부하는 방식을 어떻게 바꿨어요?",
+      grammar: "G17",
+      level: "advanced",
+      type: "produce",
+      hint: "I used to ___, but now I ___.",
+      sample: ["I used to look things up in books, but now I search online.", "I used to study alone, but now I watch lessons on video.", "Honestly, I just get distracted more."],
+    },
+    {
+      id: "should-screen-time-be-limited",
+      text: "Do you think screen time should be limited? Why?",
+      ko: "화면 보는 시간을 제한해야 한다고 생각해요? 왜요?",
+      grammar: "G14",
+      level: "advanced",
+      type: "produce",
+      hint: "I think ___ because ___.",
+      sample: ["I think it should be limited because too much hurts your eyes.", "I don't think so, because we use screens for school too.", "Honestly, it depends on what you're doing on the screen."],
+    },
+  ],
+};
+
 // 학년 트랙 — 실제로 만든 학년만 넣는다(위 헤더 설명 참고).
 export const GRADES = [
   {
@@ -1086,20 +1295,20 @@ export const GRADES = [
     label: "저학년 (1~2학년)",
     emoji: "🎒",
     grammarPoints: LOWER_GRAMMAR_POINTS,
-    chapters: [SCHOOL_DAY_CHAPTER, CLASSROOM_CHAPTER, RECESS_CHAPTER, FAVORITES_CHAPTER, PE_CLASS_CHAPTER],
+    chapters: [SCHOOL_DAY_CHAPTER, CLASSROOM_CHAPTER, RECESS_CHAPTER, FAVORITES_CHAPTER, PE_CLASS_CHAPTER, LUNCH_CHAPTER],
   },
   {
     id: "middle",
     label: "중학년 (3~4학년)",
     emoji: "📖",
     grammarPoints: MIDDLE_GRAMMAR_POINTS,
-    chapters: [SCHOOLWORK_CHAPTER, FRIENDSHIP_CHAPTER, AFTER_SCHOOL_CHAPTER, NEIGHBORHOOD_CHAPTER, SCHOOL_EVENTS_CHAPTER],
+    chapters: [SCHOOLWORK_CHAPTER, FRIENDSHIP_CHAPTER, AFTER_SCHOOL_CHAPTER, NEIGHBORHOOD_CHAPTER, SCHOOL_EVENTS_CHAPTER, HEALTH_CHAPTER],
   },
   {
     id: "high",
     label: "고학년 (5~6학년)",
     emoji: "🎓",
     grammarPoints: HIGH_GRAMMAR_POINTS,
-    chapters: [OPINIONS_CHAPTER, DREAMS_CHAPTER, CURRENT_ISSUES_CHAPTER, TRAVEL_CHAPTER, TEAMWORK_CHAPTER],
+    chapters: [OPINIONS_CHAPTER, DREAMS_CHAPTER, CURRENT_ISSUES_CHAPTER, TRAVEL_CHAPTER, TEAMWORK_CHAPTER, MEDIA_CHAPTER],
   },
 ];

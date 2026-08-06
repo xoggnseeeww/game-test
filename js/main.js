@@ -9,6 +9,7 @@ import { coupleTest, coupleScreens } from "./tests/couple/index.js";
 import { numpathGame, numpathScreens } from "./games/numpath/index.js";
 import { basicConversation, basicConversationScreens } from "./learning/basic-conversation/index.js";
 import { elementaryConversation, elementaryConversationScreens } from "./learning/elementary-conversation/index.js";
+import { dialogue, dialogueScreens } from "./learning/dialogue/index.js";
 
 registerScreens(commonScreens);
 
@@ -29,6 +30,9 @@ registerScreens(basicConversationScreens);
 
 registerLearning(elementaryConversation);
 registerScreens(elementaryConversationScreens);
+
+registerLearning(dialogue);
+registerScreens(dialogueScreens);
 
 initHeader();
 initLearningSync();

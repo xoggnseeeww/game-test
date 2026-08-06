@@ -98,8 +98,9 @@ test("등록되는 화면 id와 경로가 겹치지 않는다", async () => {
   const { numpathScreens } = await import("../js/games/numpath/index.js");
   const { basicConversationScreens } = await import("../js/learning/basic-conversation/index.js");
   const { elementaryConversationScreens } = await import("../js/learning/elementary-conversation/index.js");
+  const { dialogueScreens } = await import("../js/learning/dialogue/index.js");
   const { commonScreens } = await import("../js/screens/home.js");
-  const all = [...commonScreens, ...adhdScreens, ...discScreens, ...coupleScreens, ...numpathScreens, ...basicConversationScreens, ...elementaryConversationScreens];
+  const all = [...commonScreens, ...adhdScreens, ...discScreens, ...coupleScreens, ...numpathScreens, ...basicConversationScreens, ...elementaryConversationScreens, ...dialogueScreens];
 
   const ids = all.map((s) => s.id);
   assert.equal(new Set(ids).size, ids.length, `화면 id가 겹친다: ${ids.join(", ")}`);
