@@ -23,11 +23,19 @@ const SUPABASE_ANON_KEY =
 // 환경까지는 못 막는다 — D-76). PKCE는 토큰 대신 코드를 `?code=`(location.search)로
 // 받는데, 이 값은 router.js가 애초부터 모든 replaceState에서 무조건 보존하던 값이라
 // 이 구조에서 훨씬 안전하다.
+//
+// detectSessionInUrl: false — supabase-js의 "자동으로 URL의 code를 감지해 교환한다"는
+// 동작이 이 앱처럼 순수 createClient(SSR 어댑터 아님)로 늦게(동적 import) 뜨는 구성에서도
+// 실제로 항상 발동하는지 실기기로 확증할 방법이 없었다(D-76 배포 후에도 재현, D-77). 자동
+// 처리에 기대는 대신 아래에서 `code`를 직접 읽어 `exchangeCodeForSession`을 명시적으로
+// 호출한다 — 실패해도 최소한 console.error로 남고(에러 삼킴 금지), 로그인 버튼 쪽에도
+// 보여줄 수 있다.
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  auth: { flowType: "pkce" },
+  auth: { flowType: "pkce", detectSessionInUrl: false },
 });
 
 let cachedUser = null;
+let authError = null;
 const changeListeners = new Set();
 
 function notifyChange() {
@@ -48,10 +56,34 @@ export function getCachedUser() {
   return cachedUser;
 }
 
+// OAuth 콜백 코드 교환이 실패했을 때만 채워진다(성공하면 onAuthStateChange가 알아서
+// 처리하므로 null로 유지). 로그인 버튼이 "다시 로그인하라고만 뜨고 이유를 알 수 없는"
+// 상태를 만들지 않도록 auth.js의 renderSignInButton()이 이 값을 읽어 보여준다.
+export function getAuthError() {
+  return authError;
+}
+
 supabase.auth.onAuthStateChange((_event, session) => {
   cachedUser = session?.user || null;
   notifyChange();
 });
+
+const oauthCode = new URLSearchParams(location.search).get("code");
+if (oauthCode) {
+  supabase.auth.exchangeCodeForSession(oauthCode).then(({ error }) => {
+    // 성공하면 onAuthStateChange가 이미 cachedUser를 채우고 notifyChange()도 불렀다 —
+    // 여기서 또 부르면 리스너가 두 번 실행될 뿐이라 실패했을 때만 직접 알린다.
+    if (error) {
+      authError = error;
+      console.error("로그인 코드 교환 실패", error);
+      notifyChange();
+    }
+    // 한 번 쓴 code는 재사용 불가(5분 유효, 1회용) — 새로고침·뒤로가기로 다시 교환을
+    // 시도해 매번 실패하지 않도록 주소에서 지운다. history.state는 router.js가 채워둔
+    // 값이라 그대로 보존한다.
+    history.replaceState(history.state, "", location.pathname + location.hash);
+  });
+}
 
 export function signInWithProvider(provider, redirectTo) {
   return supabase.auth.signInWithOAuth({ provider, options: { redirectTo } });

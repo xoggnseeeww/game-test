@@ -91,3 +91,4 @@
 - 기본/중급/심화를 챕터당 30개씩 완전히 채움 → [D-74](decisions/2028-h1.md#d-74-기본중급심화를-챕터당-30개씩-완전히-채움)
 - 라우터 부팅 `replaceState`가 OAuth 콜백 해시(`#access_token=...`)를 지우던 버그 수정 → [D-75](decisions/2027-h2.md#d-75-라우터-부팅-replacestate가-oauth-콜백-해시를-지우던-버그-수정)
 - Supabase Auth를 implicit → PKCE 플로우로 전환 — 해시 대신 이미 보존되던 쿼리로 토큰을 받는다 → [D-76](decisions/2027-h2.md#d-76-supabase-auth를-implicit--pkce-플로우로-전환)
+- OAuth 코드 교환을 명시적으로 호출 + 실패를 로그인 버튼에 노출 — 자동 처리 가정을 걷어내고 실패 사유를 눈에 보이게 함 → [D-77](decisions/2027-h2.md#d-77-oauth-코드-교환을-명시적으로-호출--실패를-로그인-버튼에-노출)

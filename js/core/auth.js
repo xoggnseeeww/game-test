@@ -84,6 +84,20 @@ export function renderSignInButton(container) {
       container.textContent = "로그인을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.";
       return;
     }
+    // OAuth 콜백에서 돌아온 직후라 코드 교환이 아직 안 끝났을 수 있다 — 실패로
+    // 확정되면(cloud-auth.js) 버튼을 에러 문구로 바꿔치기한다. 이 컨테이너는 헤더의
+    // renderPanel()이 currentEmail 변화가 없으면 다시 그리지 않아(의도된 최적화) 이
+    // 리스너 없이는 실패 사실이 메뉴를 다시 열어도 영영 안 보일 수 있다.
+    const showErrorIfAny = () => {
+      const err = cloud.getAuthError();
+      if (!err) return false;
+      container.textContent = `로그인 실패: ${err.message || "다시 시도해 주세요"}`;
+      return true;
+    };
+    if (showErrorIfAny()) return;
+    cloud.onAuthChange(() => {
+      if (!cloud.getCachedUser()) showErrorIfAny();
+    });
     const btn = document.createElement("button");
     btn.className = "hamburger-signin-btn";
     btn.textContent = "Google로 로그인";

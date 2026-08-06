@@ -3,6 +3,21 @@
 > 이 파일은 1~2k 토큰 이하를 유지한다 — "언젠가 할 일"이 아니라 "지금 유효한 작업"만.
 
 ## 현재 작업
+2026-08-06: **OAuth 코드 교환을 명시적으로 호출 + 실패를 로그인 버튼에 노출**(D-77). D-76(PKCE 전환)
+배포 후에도 사용자가 실기기에서 재시도 — `get_logs(auth)`에 로그인 성공이 두 번(계정을 바꿔가며 9초
+간격 재시도) 찍혀 있는데도 여전히 "또 로그인하라고 뜸". 결정적 단서: `/callback` 성공 직후 코드를
+토큰으로 바꾸는 GoTrue `/token` 요청이 로그에 아예 없다 — 브라우저가 코드 교환을 **시도조차 안 함**.
+`detectSessionInUrl`(기본값 true)의 자동 처리를 그냥 믿고 있었는데, 이 앱처럼 순수 `createClient`를
+동적 import로 늦게 띄우는 구성에서 그게 실제로 매번 발동하는지 실기기로 확증할 방법이 없었다(D-55
+한계). `detectSessionInUrl: false`로 끄고 `cloud-auth.js`가 부팅 시 `location.search`의 `code`를
+직접 읽어 `exchangeCodeForSession()`을 명시적으로 호출하도록 바꿈 — 실패하면 `console.error` +
+`getAuthError()`로 노출하고, `auth.js`의 `renderSignInButton()`이 그 값을 읽어 버튼 대신 실패 사유를
+보여준다(지금까지 두 번의 수정이 전부 "조용히 실패"해서 원인을 좁힐 신호가 하나도 없었던 게 더 큰
+문제였음). `npm test` 141/141, `scripts/verify.cjs` 전부 통과(콘솔 에러 없음). 상세는
+`docs/decisions/2027-h2.md` D-77, 오류 패턴은 `docs/ERRORS.md` E-15. **배포 후 확인 필요**: 실기기
+재확인 — 이번에도 안 되면 로그인 버튼에 뜨는 실패 문구 자체가 다음 진단의 첫 실마리다(추측 아닌
+근거로 넘어갈 수 있음).
+
 2026-08-05(3): **Supabase Auth를 implicit → PKCE 플로우로 전환**(D-76). D-75(해시 보존) 배포 후
 사용자가 실기기에서 재시도 — 주소창은 정확히 `fun.data-pantry.com`으로 정상 복귀하고(E-12 배제)
 Supabase `get_logs(auth)`에도 그 시각 실제 Google 로그인 성공이 찍혀 있는데도 브라우저는 로그인
