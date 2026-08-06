@@ -204,7 +204,7 @@ export function renderMyPage() {
     const entries = Object.entries(state.learning);
     const total = entries.reduce((sum, [, ch]) => sum + ch.index, 0);
     // weak는 elementary-conversation처럼 "헷갈렸던 문장" 자가진단이 있는 도구만 채운다
-    // (D-77 후속) — 그 챕터 완료 화면을 그냥 나가버리면 복습 진입로가 사라지는 문제라,
+    // (D-78 후속) — 그 챕터 완료 화면을 그냥 나가버리면 복습 진입로가 사라지는 문제라,
     // 도구에 무관하게 총합만 여기 한 번 더 보여준다. 개별 도구를 import하지 않고
     // state.learning 모양(weak가 있으면 { [문장id]: true })만 본다 — renderLearning의
     // "챕터 제목은 안 본다" 원칙과 같다.

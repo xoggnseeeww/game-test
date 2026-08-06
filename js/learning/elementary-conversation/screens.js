@@ -1,6 +1,6 @@
 // "초등 영어회화" 도구: 학년(GRADES) → 챕터(목차) → 단계(기본/중급/심화) → 문장 연습.
 // basic-conversation과 같은 in-place 렌더 패턴을 쓰지만, data.js에서 설명한 세 가지
-// 보강(D-77) 때문에 연습 화면(renderElementaryChapter)은 basic-conversation의
+// 보강(D-78) 때문에 연습 화면(renderElementaryChapter)은 basic-conversation의
 // renderChapter를 그대로 재사용하지 않고 새로 짰다:
 //   - 문장이 `type: "produce"`면 정답을 읽어주지 않고 질문만 던진다(유사도 채점 없음,
 //     예시 답안으로 스스로 비교).
@@ -23,7 +23,7 @@ function levelCounts(sentences) {
 }
 
 // 학년 선택 — 목차 화면(renderBasicConversationIntro)과 같은 .test-list/.test-card 패턴.
-// 아직 안 만든 학년은 GRADES에 아예 없어서(D-77) 이 화면은 항상 실제로 고를 수 있는
+// 아직 안 만든 학년은 GRADES에 아예 없어서(D-78) 이 화면은 항상 실제로 고를 수 있는
 // 학년만 보여준다.
 export function renderElementaryGrades() {
   app.appendChild(el(`
@@ -189,7 +189,7 @@ export function renderElementaryChapter(grade, chapter, level) {
   }
 
   // 문법 태그(grammar)는 원래 콘텐츠 저작 시점의 내부 장치(반복 규칙 검사용)라 학습자
-  // 화면엔 안 보였다 — "지금 뭘 배우는지" 의식하는 게 공부를 쉽게 만든다는 지적(D-77
+  // 화면엔 안 보였다 — "지금 뭘 배우는지" 의식하는 게 공부를 쉽게 만든다는 지적(D-78
   // 후속)에 따라 카드에 한 줄 노출한다.
   function grammarLabel(card) {
     return grade.grammarPoints.find((g) => g.id === card.grammar)?.label ?? card.grammar;
@@ -273,7 +273,7 @@ export function renderElementaryChapter(grade, chapter, level) {
   // (정답이 하나가 아니라서 Levenshtein으로 잴 대상이 없다) — 자가평가(잘했다/다시 연습)만
   // weak 목록에 반영한다. 아무 참고 없이 백지에서 시작하면 얼어붙는 아이가 있을 수 있어,
   // 시도 전에 문장 시작 조각(hint)을 먼저 보여준다 — 정답은 아니고 어디서부터 말을
-  // 시작하면 될지 감만 준다(D-77 후속).
+  // 시작하면 될지 감만 준다(D-78 후속).
   function showProduceCard(card) {
     cardEl.innerHTML = `
       <div class="cover">

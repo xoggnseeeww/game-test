@@ -1,6 +1,6 @@
-// 학습 카테고리의 도구 2번째: 초등 영어회화(D-77). basic-conversation과 같은 레지스트리
+// 학습 카테고리의 도구 2번째: 초등 영어회화(D-78). basic-conversation과 같은 레지스트리
 // 방식이지만 한 단이 더 있다 — 학년(GRADES) × 챕터(그 학년의 chapters) × 단계(LEVEL_LABELS)를
-// 곱해 화면을 자동 생성한다. 학년·챕터가 늘어나도 이 파일은 고칠 필요 없다(D-77 data.js
+// 곱해 화면을 자동 생성한다. 학년·챕터가 늘어나도 이 파일은 고칠 필요 없다(D-78 data.js
 // 헤더 참고 — 아직 안 만든 학년/챕터는 GRADES/CHAPTERS 배열에 아예 없다).
 import { GRADES, LEVEL_LABELS } from "./data.js";
 import {
