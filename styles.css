@@ -2142,6 +2142,19 @@ button.meta-chip {
 }
 .btn-mic[disabled] { opacity: .55; }
 
+/* produce 카드의 마이크 버튼은 "🎤 내 생각 말하기"처럼 텍스트가 붙어 84px 원 안에 안
+   들어간다 — 원형(.btn-mic) 대신 알약 모양으로 늘어나는 변형. 배경·그림자는 .btn-mic를
+   그대로 물려받고 크기·모양만 덮어쓴다. */
+.btn-mic.btn-mic-labeled {
+  width: auto;
+  height: auto;
+  min-width: 84px;
+  padding: 16px 28px;
+  border-radius: 999px;
+  font-size: 16px;
+  font-weight: 800;
+}
+
 .learning-mic-status {
   text-align: center;
   font-size: 13px;

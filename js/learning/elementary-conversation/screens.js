@@ -302,7 +302,7 @@ export function renderElementaryChapter(grade, chapter, level) {
            </div>`}
       ${!supportsRecognition()
         ? `<p class="learning-warn">이 브라우저는 음성 인식을 지원하지 않아요.</p>`
-        : `<button class="btn-mic" id="learning-mic">🎤 내 생각 말하기</button>
+        : `<button class="btn-mic btn-mic-labeled" id="learning-mic">🎤 내 생각 말하기</button>
            <div class="learning-mic-status" id="learning-mic-status"></div>`}
       <div class="learning-result" id="learning-result"></div>
       <button class="retry-btn" id="learning-skip">✓ 다음 문장</button>
