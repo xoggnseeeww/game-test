@@ -13,7 +13,7 @@ import { el, bindNav } from "../../core/dom.js";
 import { state } from "../../core/state.js";
 import { saveLearningProgress } from "../cloud.js";
 import { GRADES, LEVEL_LABELS } from "./data.js";
-import { similarity, feedbackTier, TIER_TEXT } from "../score.js";
+import { scoreSpeech, TIER_TEXT } from "../score.js";
 import { supportsSpeech, supportsRecognition, speak, listen } from "../speech.js";
 
 function levelCounts(sentences) {
@@ -260,11 +260,11 @@ export function renderElementaryChapter(grade, chapter, level) {
           micBtn.disabled = false;
           micStatus.textContent = "";
           skipBtn.style.display = "none";
-          const pct = similarity(heard, card.text);
-          const tier = feedbackTier(pct);
+          const { tier, tokens } = scoreSpeech(heard, card.text);
           markWeak(card.id, tier === "retry");
           resultEl.innerHTML = `
             <p class="learning-heard">내가 말한 것: "${heard}"</p>
+            <p class="learning-words">${tokens.map((t) => `<span class="${t.ok ? "hit" : "miss"}">${t.text}</span>`).join(" ")}</p>
             <p class="learning-feedback tier-${tier}">${TIER_TEXT[tier]}</p>
             <div class="cta"><button class="cta-btn" id="learning-next">${st.index + 1 < N ? "다음 문장" : "완료!"}</button></div>
             <button class="retry-btn" id="learning-again">🎤 이 문장 다시 말하기</button>

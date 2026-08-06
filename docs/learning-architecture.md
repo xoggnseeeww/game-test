@@ -72,9 +72,14 @@ my ~"·"I want ~"·"Let's play ~" 같은 문장 틀에 단어만 바꿔 반복�
   이어지거나 소재가 겹치는 자리가 있는지 먼저 보고, 정말 별개 상황일 때만 새 챕터를
   만든다.
 - **폴더**: `js/tests/<id>/`·`js/games/<id>/`와 같은 4파일 구조(`data.js`/`score.js`/
-  `screens.js`/`index.js`). `score.js`는 DOM을 모르는 순수 함수(Levenshtein 유사도 + 3단계
-  피드백 경계)라 `node --test`(`test/learning.score.test.js`)로 검증되고, 챕터에 무관하게
-  도구 하나가 공용으로 쓴다.
+  `screens.js`/`index.js`). `score.js`는 DOM을 모르는 순수 함수라 `node --test`
+  (`test/learning.score.test.js`)로 검증되고, 도구 폴더 밖(`js/learning/score.js`)으로 나와
+  모든 학습 도구가 공용으로 쓴다(D-78). 채점은 **단어 단위**다(D-91) — 축약형("I'm" ↔ "I am")과
+  숫자("nine" ↔ "9")를 정규화해 STT가 어느 형태로 돌려주든 같게 보고, 단어 배열을 Levenshtein
+  DP로 정렬해 점수와 **정답 문장의 단어별 정오**를 같이 낸다(`scoreSpeech`). 단어끼리 비교할
+  때만 글자 단위 유사도를 쓰되 완전 일치는 요구하지 않는다(0.8) — 인식기가 한두 글자 흘리는
+  걸 오답으로 세면 실력이 아니라 인식기 성능을 재게 된다. 피드백 경계(85/60)는 기획서 그대로지만,
+  틀린 단어가 하나라도 있으면 "완벽해요!"로 올리지 않는다(화면이 스스로 모순되지 않게).
 - **TTS/STT**: 브라우저 내장 `speechSynthesis`/`SpeechRecognition`만 쓴다. 서버 API·어댑터
   패턴 없음 — 공급자가 하나뿐인데 인터페이스부터 만드는 건 지금 시점에 과설계다(아래 §3-2).
 - **한국어 해석도 TTS로 들을 수 있다(D-69)**: 대상이 7세 이하로 좁혀지면서, 한글을 아직

@@ -2242,3 +2242,21 @@ button.meta-chip {
 .cover.cover-you {
   background: linear-gradient(135deg, #6B5BE6, #8F7FFF);
 }
+
+/* 학습 카테고리: 채점 뒤 정답 문장을 단어별로 다시 보여준다 — 점수만으로는 "어느 단어를
+   틀렸는지"를 알 수 없어서 뭘 고쳐야 할지 모른 채 다음으로 넘어갔다(D-91, A-1).
+   틀린 단어만 눈에 띄게 하고 맞은 단어는 평범하게 둔다 — 전부 색칠하면 오히려 안 읽힌다. */
+.learning-words {
+  text-align: center;
+  font-size: 15px;
+  line-height: 1.9;
+  margin: 0 0 10px;
+}
+.learning-words .hit { color: #5C5964; }
+.learning-words .miss {
+  color: #C8384F;
+  font-weight: 800;
+  background: rgba(200, 56, 79, .10);
+  border-radius: 5px;
+  padding: 1px 4px;
+}
