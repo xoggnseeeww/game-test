@@ -120,3 +120,4 @@
 - 문장 자연스러움 전수 검토 + produce 예시 답안 보강 → [D-85](decisions/2029-h1.md#d-85-문장-자연스러움-전수-검토--produce-예시-답안-보강)
 - produce 카드 마이크 버튼 레이아웃 깨짐 수정 → [D-86](decisions/2029-h1.md#d-86-produce-카드-마이크-버튼-레이아웃-깨짐-수정)
 - 각 학년 6번째 챕터 + 다중 턴 대화 도구(dialogue) 신설 → [D-87](decisions/2029-h1.md#d-87-각-학년-6번째-챕터--다중-턴-대화-도구dialogue-신설)
+- `docs/architecture.md` 분리 — 계약·절차만 남기고 인벤토리 3개를 뗌 → [D-88](decisions/2029-h1.md#d-88-docsarchitecturemd-분리--계약절차만-남기고-인벤토리-3개를-뗌)

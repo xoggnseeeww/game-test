@@ -184,7 +184,10 @@ docs/design-draft.html  최초 디자인 목업. 배포·동작과 무관 (.clau
 ## 상세 문서
 | 문서 | 내용 |
 |------|------|
-| `docs/architecture.md` | 모듈맵 · 라우터 계약 · 화면 표 (15KB 넘겨 테스트/게임별 상세는 아래로 분리됨) |
+| `docs/architecture.md` | 라우터 계약 · 상태 모양 · 추가 절차 · 채점/공유 개요 (**계약과 절차**만 — 콘텐츠가 늘어도 안 커진다, D-88) |
+| `docs/module-map.md` | 모듈맵 — 어떤 파일이 뭘 하는지 (D-88에 architecture.md에서 분리) |
+| `docs/screen-map.md` | 화면 표 — 화면 id · 경로 · guard (D-88에 분리) |
+| `docs/og-shells.md` | 페이지별 OG 미리보기 셸 (D-88에 분리) |
 | `docs/adhd-architecture.md` | ADHD 흐름 · 채점 파이프라인 |
 | `docs/disc-architecture.md` | DISC 흐름 · 채점 파이프라인 |
 | `docs/couple-architecture.md` | 부부 관계 성향 체크 흐름 · 문항지 조립 · 채점 · 부부 매칭 · 배우자 코드 · 안전 장치 |
@@ -243,7 +246,7 @@ docs/design-draft.html  최초 디자인 목업. 배포·동작과 무관 (.clau
   뽑지 않았다 — 두 번째로 필요해지면 그때 뽑는다
 - `js/core/cloud-auth.js`의 Supabase 프로젝트·anon key 변경 → 관리자 로그인(`js/core/auth.js`)이
   이 클라이언트를 쓰므로 함께 영향받는다. `scripts/verify.cjs`로 재확인할 것
-- 구조 변경(모듈 추가·이동·삭제) → **같은 커밋에** `docs/architecture.md` 모듈맵과 위 구조 개요 트리 갱신
+- 구조 변경(모듈 추가·이동·삭제) → **같은 커밋에** `docs/module-map.md`(D-88에 architecture.md에서 분리)와 위 구조 개요 트리 갱신. 새 **화면**을 추가했으면 `docs/screen-map.md`도
 - `styles.css` 클래스명 변경 → 템플릿 문자열은 타입 체크가 없다. `grep -rn '<클래스명>' js/ styles.css`로 양쪽 확인
 - 새 테스트/게임에 OG 미리보기 추가 → `og-shells/<이름>.html` 작성 + `_redirects`에 규칙 추가(**와일드카드 위**) + `assets/og-<이름>.png` + `test/og-shells.test.js`의 `SHELLS` 배열에 항목 추가. 카드(`card.name`/`card.desc`) 문구 변경 시 셸의 `<title>`·`og:title`·`og:description`도 같이 고친다 — 자동 반영 안 됨(D-47), `og-shells.test.js`가 불일치를 잡아준다
 - `assets/og-*.png` **내용**을 고칠 때 → **파일명도 반드시 같이 바꾼다**(예: `-v2`, `-v3`). URL이 그대로면 카카오·CDN·브라우저의 이미지 캐시가 옛 파일을 계속 서빙한다 — 제목·설명은 갱신되는데 이미지만 안 바뀌는 증상으로 나타나 원인 추적이 어렵다. 파일명을 바꾸면 셸의 `og:image`/`twitter:image`와 `test/og-shells.test.js`의 `SHELLS` 배열도 같이 갱신

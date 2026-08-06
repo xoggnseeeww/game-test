@@ -1,7 +1,8 @@
 # learning-architecture — 학습 카테고리
 
-> 선택 로드 문서. 학습 카테고리 상세를 확인해야 할 때만 읽는다. 공통 라우터 계약·모듈맵은
-> `docs/architecture.md`.
+> 선택 로드 문서. 학습 카테고리 상세를 확인해야 할 때만 읽는다. 공통 라우터 계약은
+> `docs/architecture.md`, 모듈맵은 `docs/module-map.md`, 화면 표는 `docs/screen-map.md`(뒤 둘은
+> D-88에서 분리됨).
 
 ## 1. 배경 · 범위 (D-60, D-63, D-64, D-65, D-66, D-67, D-68, D-69, D-72, D-73, D-74)
 
