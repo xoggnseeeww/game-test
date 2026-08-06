@@ -62,28 +62,28 @@ js/learning/<toolId>/   학습 카테고리 안의 독립 도구 1개 = 폴더 1
                         — 도구가 여럿이면 학습 목록(`/learning`)에 카드로 나열된다. 도구
                         내부는 챕터(목차) 여러 개로 이뤄질 수 있고, index.js가 챕터별 화면을
                         자동 생성한다. basic-conversation은 챕터 → 단계(D-73), elementary-
-                        conversation은 학년 → 챕터 → 단계(D-75) — 학년 한 겹만 더 곱한
+                        conversation은 학년 → 챕터 → 단계(D-77) — 학년 한 겹만 더 곱한
                         것뿐이라 자동 생성 방식 자체는 같다
   data.js               챕터 목차 — 단일 소스. 문장은 기본 → 중급(`level: "intermediate"`)
                         → 심화(`level: "advanced"`) 3단계로 이어진다(D-72, D-73). 챕터를
                         누르면 먼저 단계를 고르는 화면이 뜬다. elementary-conversation은
                         문장마다 `grammar`(그 학년 `grammarPoints`의 id)도 달아 문법
-                        진행·반복을 추적한다(D-75) — basic-conversation엔 없는 필드
+                        진행·반복을 추적한다(D-77) — basic-conversation엔 없는 필드
   screens.js            렌더 함수: 목차 화면 + 챕터 화면(브라우저 TTS/STT 직접 연동, 서버
                         API 없음). 듣기/말하기를 강제하지 않고 건너뛰기 버튼
                         (#learning-skip)을 항상 같이 보여준다(D-61). elementary-
                         conversation은 `type: "produce"` 문장(질문만 던지고 예시 답안으로
                         자가평가, 정답 유사도 채점 없음)과 낮은 점수/자가평가로 표시된
-                        문장을 다시 도는 "헷갈렸던 문장만 복습하기"도 처리한다(D-75) —
+                        문장을 다시 도는 "헷갈렸던 문장만 복습하기"도 처리한다(D-77) —
                         basic-conversation의 renderChapter를 재사용하지 않고 따로 짰다
   index.js               디스크립터: <tool>(메타: id, card) + <tool>Screens(목차 화면 +
                         자동 생성한 챕터/학년별 화면)
 js/learning/score.js     발음 유사도 판정 — Levenshtein 기반, DOM을 모른다. 도구 폴더
-                        밖에 있어 여러 학습 도구가 공용으로 쓴다(D-75, 원래
+                        밖에 있어 여러 학습 도구가 공용으로 쓴다(D-77, 원래
                         basic-conversation 안에 있던 걸 두 번째 도구가 생기며 옮김 —
                         복사하면 한쪽만 고치는 버그가 생긴다)
 js/learning/speech.js    TTS/STT 헬퍼(speak/listen/supportsSpeech/supportsRecognition) —
-                        score.js와 같은 이유로 공용(D-75)
+                        score.js와 같은 이유로 공용(D-77)
 js/learning/cloud.js     학습 진행률(state.learning)을 Supabase에 동기화(D-68) — 도구 폴더
                         밖, 도구가 여럿이어도 공용으로 재사용한다. NumPath 마을(D-55)과 같은
                         패턴(cloud-auth-loader.js로 CDN 동적 import), 코인/마을 같은 보상
@@ -139,7 +139,7 @@ js/learning/cloud.js     학습 진행률(state.learning)을 Supabase에 동기�
 늘어날 뿐, 챕터 자체는 목차 화면(§3 `learning-basic-conversation`)이 그 도구의 `CHAPTERS`
 데이터에서, 챕터별 단계 선택·연습 화면은 `CHAPTERS`와 `LEVEL_LABELS`를 곱해(D-73)
 `index.js`가 직접 만든다. `elementary-conversation`은 여기에 `GRADES` 한 겹을 더 곱한다
-(D-75) — 학년·챕터·단계가 늘어나도 `index.js`는 안 고친다. 처음엔(D-60) 챕터 하나
+(D-77) — 학년·챕터·단계가 늘어나도 `index.js`는 안 고친다. 처음엔(D-60) 챕터 하나
 (`greeting`)를 도구인 것처럼 최상위에 바로 등록했다가, 사용자가 "학습 카테고리 안에 다른
 공부 도구도 넣을 거다, 지금 건 그 안의 목차 항목 하나여야 한다"고 바로잡아서(D-63) 지금
 모양(도구만 레지스트리, 챕터는 도구 내부)이 됐다.
