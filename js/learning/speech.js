@@ -12,11 +12,23 @@ export function supportsRecognition() {
   return typeof window !== "undefined" && !!(window.SpeechRecognition || window.webkitSpeechRecognition);
 }
 
+// 로컬(기기 내장) 음성은 대체로 기계음에 가깝고, 네트워크 음성(Chrome의 "Google US English" 등)이
+// 훨씬 자연스럽다 — 있으면 그쪽을 우선 고른다. 첫 호출 시점엔 목록이 아직 안 채워져 있을 수 있어
+// (Chrome이 비동기 로드) 그럴 땐 그냥 브라우저 기본 음성으로 재생된다.
+function pickVoice(lang) {
+  const voices = window.speechSynthesis.getVoices();
+  const langPrefix = lang.slice(0, 2);
+  const matching = voices.filter((v) => v.lang === lang || v.lang.startsWith(langPrefix));
+  return matching.find((v) => !v.localService) || matching[0] || null;
+}
+
 export function speak(text, rate, lang = "en-US") {
   window.speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
   u.lang = lang;
   u.rate = rate;
+  const voice = pickVoice(lang);
+  if (voice) u.voice = voice;
   window.speechSynthesis.speak(u);
 }
 

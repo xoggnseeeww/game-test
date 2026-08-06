@@ -145,7 +145,14 @@ export function renderChapter(chapter, level) {
            <div class="learning-mic-status" id="learning-mic-status"></div>`}
       <div class="learning-result" id="learning-result"></div>
       <button class="retry-btn" id="learning-skip">✓ 이미 할 수 있어요 · 다음 문장</button>
+      ${st.index > 0 ? `<button class="retry-btn" id="learning-prev">◀ 이전 문장</button>` : ""}
     `;
+
+    cardEl.querySelector("#learning-prev")?.addEventListener("click", () => {
+      state.learning[key].index -= 1;
+      saveLearningProgress();
+      showCard();
+    });
 
     cardEl.querySelectorAll(".learning-listen .cta-btn").forEach((btn) => {
       btn.addEventListener("click", () => speak(card.text, Number(btn.dataset.rate)));

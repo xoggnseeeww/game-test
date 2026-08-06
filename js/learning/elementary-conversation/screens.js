@@ -188,6 +188,13 @@ export function renderElementaryChapter(grade, chapter, level) {
     showCard();
   }
 
+  function prev() {
+    if (st.index === 0) return;
+    st.index -= 1;
+    saveLearningProgress();
+    showCard();
+  }
+
   // 문법 태그(grammar)는 원래 콘텐츠 저작 시점의 내부 장치(반복 규칙 검사용)라 학습자
   // 화면엔 안 보였다 — "지금 뭘 배우는지" 의식하는 게 공부를 쉽게 만든다는 지적(D-78
   // 후속)에 따라 카드에 한 줄 노출한다.
@@ -226,6 +233,7 @@ export function renderElementaryChapter(grade, chapter, level) {
            <div class="learning-mic-status" id="learning-mic-status"></div>`}
       <div class="learning-result" id="learning-result"></div>
       <button class="retry-btn" id="learning-skip">✓ 이미 할 수 있어요 · 다음 문장</button>
+      ${st.index > 0 ? `<button class="retry-btn" id="learning-prev">◀ 이전 문장</button>` : ""}
     `;
 
     cardEl.querySelectorAll(".learning-listen .cta-btn").forEach((btn) => {
@@ -233,6 +241,7 @@ export function renderElementaryChapter(grade, chapter, level) {
     });
     cardEl.querySelector("#learning-listen-ko")?.addEventListener("click", () => speak(card.ko, 1, "ko-KR"));
     cardEl.querySelector("#learning-skip").addEventListener("click", advance);
+    cardEl.querySelector("#learning-prev")?.addEventListener("click", prev);
 
     const micBtn = cardEl.querySelector("#learning-mic");
     if (!micBtn) return;
@@ -297,6 +306,7 @@ export function renderElementaryChapter(grade, chapter, level) {
            <div class="learning-mic-status" id="learning-mic-status"></div>`}
       <div class="learning-result" id="learning-result"></div>
       <button class="retry-btn" id="learning-skip">✓ 다음 문장</button>
+      ${st.index > 0 ? `<button class="retry-btn" id="learning-prev">◀ 이전 문장</button>` : ""}
     `;
 
     cardEl.querySelectorAll(".learning-listen .cta-btn").forEach((btn) => {
@@ -304,6 +314,12 @@ export function renderElementaryChapter(grade, chapter, level) {
     });
     cardEl.querySelector("#learning-listen-ko")?.addEventListener("click", () => speak(card.ko, 1, "ko-KR"));
     cardEl.querySelector("#learning-skip").addEventListener("click", advance);
+    cardEl.querySelector("#learning-prev")?.addEventListener("click", prev);
+
+    // 질문형(produce) 카드는 텍스트를 읽어야 하는 아이에게 진입 장벽이라, 버튼을 누르기 전에
+    // 질문을 자동으로 한 번 읽어준다 — 반복 카드는 아이가 스스로 페이스를 조절해야 해서
+    // 자동 재생을 안 하지만, 질문·답변형은 실제 대화처럼 질문이 먼저 들려야 자연스럽다.
+    if (supportsSpeech()) speak(card.text, 1);
 
     const micBtn = cardEl.querySelector("#learning-mic");
     if (!micBtn) return;
