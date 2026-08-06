@@ -121,3 +121,4 @@
 - produce 카드 마이크 버튼 레이아웃 깨짐 수정 → [D-86](decisions/2029-h1.md#d-86-produce-카드-마이크-버튼-레이아웃-깨짐-수정)
 - 각 학년 6번째 챕터 + 다중 턴 대화 도구(dialogue) 신설 → [D-87](decisions/2029-h1.md#d-87-각-학년-6번째-챕터--다중-턴-대화-도구dialogue-신설)
 - `docs/architecture.md` 분리 — 계약·절차만 남기고 인벤토리 3개를 뗌 → [D-88](decisions/2029-h1.md#d-88-docsarchitecturemd-분리--계약절차만-남기고-인벤토리-3개를-뗌)
+- 출력 규칙을 `CLAUDE.md` 최상단으로 이동 — 내용이 아니라 위치가 문제였다 → [D-89](decisions/2029-h1.md#d-89-출력-규칙을-claudemd-최상단으로-이동--내용이-아니라-위치가-문제였다)
