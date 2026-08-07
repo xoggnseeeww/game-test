@@ -83,6 +83,9 @@ js/learning/score.js     발음 유사도 판정 — Levenshtein 기반, DOM을 
                         복사하면 한쪽만 고치는 버그가 생긴다)
 js/learning/speech.js    TTS/STT 헬퍼(speak/listen/supportsSpeech/supportsRecognition) —
                         score.js와 같은 이유로 공용(D-78)
+js/learning/grammar.js   문법 설명 블록(D-96) — 연습 화면과 복습 화면 공용. 도구를 모르는
+                        순수 view 함수라 D-70 경계를 안 깬다. 문장에서 그 문법이 쓰인 자리는
+                        `check` 정규식으로 찾아 <mark>로 감싼다(표시용 데이터 없음)
 js/learning/record.js    STT가 없는 브라우저(iOS Safari)의 말하기 폴백(D-95) — MediaRecorder로
                         녹음해 되듣고 자가평가한다. 6개 호출부가 이 마크업+바인딩을 공용으로
                         쓰고, 결과는 STT 경로와 똑같이 weak/SRS에 반영된다

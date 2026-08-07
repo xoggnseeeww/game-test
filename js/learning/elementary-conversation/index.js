@@ -36,7 +36,7 @@ export const elementaryConversation = {
       text: sentence.text, ko: sentence.ko, where: `${grade.label} · ${chapter.title}`,
       type: sentence.type || "repeat", sample: sentence.sample, hint: sentence.hint,
       // 복습 화면도 produce 문장에 문법 형태 확인을 붙일 수 있게 같이 넘긴다(D-94).
-      grammar: gp && { kidLabel: gp.kidLabel, check: gp.check },
+      grammar: gp && { kidLabel: gp.kidLabel, explain: gp.explain, check: gp.check },
     };
   },
 };

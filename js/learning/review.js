@@ -16,6 +16,7 @@ import { supportsSpeech, supportsRecognition, speak, listen } from "./speech.js"
 import { recordFallbackMarkup, bindRecordFallback } from "./record.js";
 import { collectDue, markCorrect, markWrong } from "./srs.js";
 import { practicePrefsMarkup, bindPracticePrefs, sentenceMarkup, koMarkup, bindReveal } from "./prefs.js";
+import { grammarDetailMarkup } from "./grammar.js";
 
 // 등록된 도구들에게 차례로 물어 첫 번째로 답하는 도구의 결과를 쓴다. 아무도 못 알아보면
 // null — 콘텐츠에서 사라진 옛 문장이거나 형식이 바뀐 key다(그런 항목은 목록에서 조용히 뺀다).
@@ -97,7 +98,7 @@ export function renderReview() {
   }
 
   function showRepeat(item) {
-    const { text, ko, where } = item.card;
+    const { text, ko, where, grammar } = item.card;
     cardEl.innerHTML = `
       <div class="cover">
         <div class="tag">복습</div>
@@ -106,6 +107,7 @@ export function renderReview() {
       </div>
       ${practicePrefsMarkup()}
       <p class="learning-grammar-focus">📍 ${where}</p>
+      ${grammarDetailMarkup(grammar, text, { label: "🔤 문법" })}
       ${!supportsSpeech()
         ? `<p class="learning-warn">이 브라우저는 음성 재생을 지원하지 않아요.</p>`
         : `<div class="learning-listen">
@@ -182,6 +184,7 @@ export function renderReview() {
         <h2>${text}</h2>
       </div>
       <p class="learning-grammar-focus">📍 ${where}</p>
+      ${grammarDetailMarkup(grammar, "", { label: "🔤 문법" })}
       ${hint ? `<p class="learning-hint">💡 이렇게 시작해보세요: <b>${hint}</b></p>` : ""}
       ${!supportsRecognition()
         ? recordFallbackMarkup()

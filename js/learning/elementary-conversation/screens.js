@@ -18,6 +18,7 @@ import { supportsSpeech, supportsRecognition, speak, listen } from "../speech.js
 import { recordFallbackMarkup, bindRecordFallback } from "../record.js";
 import { markWrong, markCorrect } from "../srs.js";
 import { practicePrefsMarkup, bindPracticePrefs, sentenceMarkup, koMarkup, bindReveal } from "../prefs.js";
+import { grammarDetailMarkup } from "../grammar.js";
 
 function levelCounts(sentences) {
   return Object.keys(LEVEL_LABELS)
@@ -159,6 +160,77 @@ export function renderElementaryChapter(grade, chapter, level) {
     const next = markCorrect(st.weak[id]);
     if (next) st.weak[id] = next;
     else delete st.weak[id];
+  }
+
+  function showDone() {
+    titleEl.textContent = `${chapter.title} · ${LEVEL_LABELS[level]}${reviewMode ? " · 복습" : ""}`;
+    const weakLeft = allSentences.some((s) => st.weak[s.id]);
+    cardEl.innerHTML = `
+      <div class="empty-state">
+        <div class="emoji">🎉</div>
+        <div class="msg">문장 ${N}개를 다 배웠어요!</div>
+      </div>
+      ${weakLeft && !reviewMode
+        ? `<div class="cta"><button class="cta-btn" id="learning-review-weak">🔁 헷갈렸던 문장만 복습하기</button></div>`
+        : ""}
+      <div class="cta"><button class="cta-btn" id="learning-listen-quiz">🎧 듣고 뜻 맞히기</button></div>
+      <div class="cta"><button class="cta-btn" id="learning-restart">처음부터 다시 놀기</button></div>
+      <button class="retry-btn" id="learning-toc">단계 다시 고르기</button>
+    `;
+    cardEl.querySelector("#learning-listen-quiz").addEventListener("click", () => go(`learning-elementary-${grade.id}-${chapter.id}-${level}-listen`));
+    cardEl.querySelector("#learning-review-weak")?.addEventListener("click", () => {
+      reviewMode = true;
+      sentences = allSentences.filter((s) => st.weak[s.id]);
+      N = sentences.length;
+      st.index = 0;
+      showCard();
+    });
+    cardEl.querySelector("#learning-restart").addEventListener("click", () => {
+      reviewMode = false;
+      sentences = allSentences;
+      N = sentences.length;
+      st.index = 0;
+      st.weak = {};
+      saveLearningProgress();
+      showCard();
+    });
+    cardEl.querySelector("#learning-toc").addEventListener("click", () => go(`learning-elementary-${grade.id}-${chapter.id}`));
+  }
+
+  function advance() {
+    st.index += 1;
+    saveLearningProgress();
+    showCard();
+  }
+
+  function prev() {
+    if (st.index === 0) return;
+    st.index -= 1;
+    saveLearningProgress();
+    showCard();
+  }
+
+  // 문법 태그(grammar)는 원래 콘텐츠 저작 시점의 내부 장치(반복 규칙 검사용)라 학습자
+  // 화면엔 안 보였다 — "지금 뭘 배우는지" 의식하는 게 공부를 쉽게 만든다는 지적(D-78
+  // 후속)에 따라 카드에 한 줄 노출한다.
+  function grammarPoint(card) {
+    return grade.grammarPoints.find((g) => g.id === card.grammar);
+  }
+
+  // 카드에는 **아이 말(kidLabel)**을 띄운다(D-94) — "조동사"·"관계대명사"·"수동태" 같은 용어는
+  // 초등학생이 모르니, 그대로 띄우면 "지금 뭘 배우는지 알려준다"는 원래 목적이 무너진다.
+  // label(문법 용어)은 콘텐츠 저작·문서·테스트가 계속 쓴다.
+  function grammarLabel(card) {
+    const gp = grammarPoint(card);
+    return gp?.kidLabel ?? gp?.label ?? card.grammar;
+  }
+
+  // 설명 블록은 복습 화면과 공용이다(js/learning/grammar.js) — 한쪽만 고치면 같은 문법이
+  // 화면마다 다르게 설명된다.
+  function grammarBlock(card) {
+    const gp = grammarPoint(card);
+    if (!gp?.explain) return `<p class="learning-grammar-focus">🔤 오늘의 문법: ${grammarLabel(card)}</p>`;
+    return grammarDetailMarkup(gp, card.text);
   }
 
   function showDone() {
@@ -529,7 +601,7 @@ export function renderElementaryListen(grade, chapter, level) {
       btn.addEventListener("click", () => {
         const ok = btn.dataset.ko === card.ko;
         if (ok) correct += 1;
-        else markWeak(card.id, true);
+        else markWeak(card.id);
         saveLearningProgress();
         cardEl.querySelectorAll(".listen-choice").forEach((b) => {
           b.disabled = true;

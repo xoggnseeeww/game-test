@@ -183,6 +183,8 @@ js/learning/<toolId>/ 학습 카테고리 안의 독립 도구 1개 = 폴더 1�
                       버튼도 둔다(D-61). 문장 카드 위 마스코트 일러스트(D-61)는 실물로
                       보니 별로라 D-64에서 뺐다 — 이미지가 필요하면 나중에 실제 이미지
                       에셋으로 따로 넣는다
+js/learning/grammar.js 문법 설명 블록(D-96) — 연습·복습 화면 공용. 도구를 모르는 순수 view
+                      함수라 D-70 경계를 안 깬다(문법 항목은 resolveReview가 넘겨준다)
 js/learning/record.js STT 없는 브라우저(iOS Safari)의 말하기 폴백(D-95) — MediaRecorder로
                       녹음해 되듣고 자가평가. 6개 호출부 공용, 결과는 STT 경로와 똑같이
                       weak/SRS에 반영된다. iOS에서 말하기가 통째로 죽어 있던 걸 메운 것
