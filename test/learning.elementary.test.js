@@ -157,3 +157,14 @@ test("check는 엉뚱한 문장을 잡지 않는다 (오탐으로 '안 썼다'�
     assert.equal(gp.check.test(sentence), expected, `${id} check가 "${sentence}"를 ${expected ? "잡아야" : "안 잡아야"} 한다`);
   }
 });
+
+test("모든 문법 항목에 설명(explain)이 있다 — 이름만으로는 어떻게 쓰였는지 알 수 없다(D-96)", () => {
+  for (const grade of GRADES) {
+    for (const gp of grade.grammarPoints) {
+      assert.ok(
+        typeof gp.explain === "string" && gp.explain.length > 10,
+        `${grade.id}/${gp.id}에 explain이 없다 — 카드에 문법 이름만 뜨고 설명이 안 나온다`
+      );
+    }
+  }
+});

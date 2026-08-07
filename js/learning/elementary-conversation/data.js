@@ -56,13 +56,13 @@ export const LEVEL_LABELS = { basic: "기본", intermediate: "중급", advanced:
 //                  만들면 맞게 말했는데 "안 썼다"고 하는 오답이 생기고, 그게 없는 것보다 나쁘다.
 //                  `test/learning.elementary.test.js`가 각 check가 실제 문장에 걸리는지 검사한다.
 export const LOWER_GRAMMAR_POINTS = [
-  { id: "G1", label: "be동사 현재형 (am/is/are)", kidLabel: "\"나는 ~예요\" 말하기", check: /\b(am|is|are|isn't|aren't|i'm|it's|that's|there's|this is)\b/i },
-  { id: "G2", label: "일반동사 현재형 (3인칭 단수 포함)", kidLabel: "\"나는 ~해요\" 말하기" },
-  { id: "G3", label: "조동사 can (능력·허락)", kidLabel: "\"~할 수 있어요 / ~해도 돼요\" 말하기", check: /\bcan(not|'t)?\b/i },
-  { id: "G4", label: "There is/are · 위치 전치사", kidLabel: "\"~가 있어요\" 말하기", check: /\bthere\s+(is|are|isn't|aren't)\b|\bthere's\b/i },
-  { id: "G5", label: "조동사 should (제안·규칙)", kidLabel: "\"~하는 게 좋아요\" 말하기", check: /\bshould(n't)?\b/i },
-  { id: "G6", label: "과거형 (규칙 -ed · went/had 등)", kidLabel: "\"어제 ~했어요\" 말하기", check: /\b\w+ed\b|\b(was|were|went|had|did|ate|saw|made|got|came|took|gave|said|found|won|lost|ran|felt)\b/i },
-  { id: "G18", label: "want to + 동사원형 (하고 싶다)", kidLabel: "\"~하고 싶어요\" 말하기", check: /\bwants?\s+to\b/i },
+  { id: "G1", label: "be동사 현재형 (am/is/are)", kidLabel: "\"나는 ~예요\" 말하기", check: /\b(am|is|are|isn't|aren't|i'm|it's|that's|there's|this is)\b/i, explain: "`am / is / are`가 “~이다”예요. 나는 am, 너는 are, 나머지 하나는 is." },
+  { id: "G2", label: "일반동사 현재형 (3인칭 단수 포함)", kidLabel: "\"나는 ~해요\" 말하기", explain: "동사를 그대로 쓰면 “~해요”. 다른 사람 한 명 얘기일 땐 뒤에 -s를 붙여요(he walks)." },
+  { id: "G3", label: "조동사 can (능력·허락)", kidLabel: "\"~할 수 있어요 / ~해도 돼요\" 말하기", check: /\bcan(not|'t)?\b/i, explain: "`can + 동사`는 “~할 수 있어요”. 물어볼 땐 Can I ~?로 “~해도 돼요?”가 돼요." },
+  { id: "G4", label: "There is/are · 위치 전치사", kidLabel: "\"~가 있어요\" 말하기", check: /\bthere\s+(is|are|isn't|aren't)\b|\bthere's\b/i, explain: "`There is / There are ~`는 “~가 있어요”. 하나면 is, 여럿이면 are." },
+  { id: "G5", label: "조동사 should (제안·규칙)", kidLabel: "\"~하는 게 좋아요\" 말하기", check: /\bshould(n't)?\b/i, explain: "`should + 동사`는 “~하는 게 좋아요”. 규칙이나 제안을 말할 때 써요." },
+  { id: "G6", label: "과거형 (규칙 -ed · went/had 등)", kidLabel: "\"어제 ~했어요\" 말하기", check: /\b\w+ed\b|\b(was|were|went|had|did|ate|saw|made|got|came|took|gave|said|found|won|lost|ran|felt)\b/i, explain: "동사 뒤에 -ed를 붙이면 “어제 한 일”이 돼요. go→went, eat→ate처럼 통째로 바뀌는 것도 있어요." },
+  { id: "G18", label: "want to + 동사원형 (하고 싶다)", kidLabel: "\"~하고 싶어요\" 말하기", check: /\bwants?\s+to\b/i, explain: "`want to + 동사`는 “~하고 싶어요”. want 뒤에는 to가 꼭 따라와요." },
 ];
 
 const SCHOOL_DAY_CHAPTER = {
@@ -476,13 +476,13 @@ const LUNCH_CHAPTER = {
 // 참조하지 않고 이 학년 안에서 다시 정의했다(학년 트랙이 독립적이어야 한다는 게 D-78의
 // 전제).
 export const MIDDLE_GRAMMAR_POINTS = [
-  { id: "G7", label: "현재형 문장 복습 (be동사·일반동사)", kidLabel: "지금 하는 일 말하기" },
-  { id: "G8", label: "조동사 have to / must (의무)", kidLabel: "\"꼭 ~해야 해요\" 말하기", check: /\b(have|has|had)\s+to\b|\bmust\b/i },
-  { id: "G9", label: "미래형 (will / be going to)", kidLabel: "\"앞으로 ~할 거예요\" 말하기", check: /\bwill\b|\bgoing\s+to\b|\b(i'll|we'll|you'll|they'll|he'll|she'll)\b/i },
-  { id: "G10", label: "비교급 (-er, more than)", kidLabel: "\"~보다 더 ~해요\" 말하기", check: /\bthan\b|\bmore\s+\w+/i },
-  { id: "G11", label: "현재진행형 (be + -ing)", kidLabel: "\"지금 ~하고 있어요\" 말하기", check: /\b(am|is|are|i'm|we're|you're|they're|he's|she's|it's)\s+\w+ing\b/i },
-  { id: "G16", label: "과거진행형 (was/were + -ing)", kidLabel: "\"그때 ~하고 있었어요\" 말하기", check: /\b(was|were)\s+\w+ing\b/i },
-  { id: "G19", label: "빈도부사 (always/usually/sometimes/never)", kidLabel: "\"얼마나 자주\" 말하기", check: /\b(always|usually|often|sometimes|never|rarely|every\s+(day|morning|week))\b/i },
+  { id: "G7", label: "현재형 문장 복습 (be동사·일반동사)", kidLabel: "지금 하는 일 말하기", explain: "be동사(am/is/are)와 그냥 동사로 “지금 그런 것”을 말해요." },
+  { id: "G8", label: "조동사 have to / must (의무)", kidLabel: "\"꼭 ~해야 해요\" 말하기", check: /\b(have|has|had)\s+to\b|\bmust\b/i, explain: "`have to + 동사`는 “꼭 ~해야 해요”. 다른 사람 한 명이면 has to를 써요." },
+  { id: "G9", label: "미래형 (will / be going to)", kidLabel: "\"앞으로 ~할 거예요\" 말하기", check: /\bwill\b|\bgoing\s+to\b|\b(i'll|we'll|you'll|they'll|he'll|she'll)\b/i, explain: "`will + 동사`나 `be going to + 동사`는 “앞으로 ~할 거예요”." },
+  { id: "G10", label: "비교급 (-er, more than)", kidLabel: "\"~보다 더 ~해요\" 말하기", check: /\bthan\b|\bmore\s+\w+/i, explain: "둘을 견줄 땐 `-er than`(taller than), 긴 낱말은 `more ~ than`을 써요." },
+  { id: "G11", label: "현재진행형 (be + -ing)", kidLabel: "\"지금 ~하고 있어요\" 말하기", check: /\b(am|is|are|i'm|we're|you're|they're|he's|she's|it's)\s+\w+ing\b/i, explain: "`am/is/are + 동사-ing`는 “지금 ~하고 있어요”." },
+  { id: "G16", label: "과거진행형 (was/were + -ing)", kidLabel: "\"그때 ~하고 있었어요\" 말하기", check: /\b(was|were)\s+\w+ing\b/i, explain: "`was/were + 동사-ing`는 “그때 ~하고 있었어요”. 과거의 한 순간을 그려줘요." },
+  { id: "G19", label: "빈도부사 (always/usually/sometimes/never)", kidLabel: "\"얼마나 자주\" 말하기", check: /\b(always|usually|often|sometimes|never|rarely|every\s+(day|morning|week))\b/i, explain: "always(항상) → usually(보통) → sometimes(가끔) → never(전혀). 보통 동사 앞에 넣어요." },
 ];
 
 const SCHOOLWORK_CHAPTER = {
@@ -890,12 +890,12 @@ const HEALTH_CHAPTER = {
 // 한 단 더 나아가 의견·조건·관계절처럼 원어민 초등 고학년이 실제로 쓰는 복문 구조로
 // 넘어간다.
 export const HIGH_GRAMMAR_POINTS = [
-  { id: "G12", label: "현재형 문장 복습 (고학년 소재)", kidLabel: "내 생각 말하기" },
-  { id: "G13", label: "최상급 (the most, -est)", kidLabel: "\"제일 ~한 것\" 말하기", check: /\b(most|best|worst|\w{3,}est)\b/i },
-  { id: "G14", label: "조건문 (if + 현재형, will + 동사원형)", kidLabel: "\"만약 ~하면\" 말하기", check: /\bif\b/i },
-  { id: "G15", label: "관계대명사 who/that (사람·사물 설명)", kidLabel: "\"~하는 사람/것\"으로 설명 붙이기", check: /\b(who|that|which)\b/i },
-  { id: "G17", label: "used to (과거 습관·상태 회상)", kidLabel: "\"예전엔 ~했어요\" 말하기", check: /\bused\s+to\b/i },
-  { id: "G20", label: "수동태 (be + 과거분사)", kidLabel: "\"~되었어요\"로 말하기", check: /\b(is|are|was|were|be|been)\s+(\w+ed|made|written|done|built|taken|given|seen|known|shown|sold|held)\b/i },
+  { id: "G12", label: "현재형 문장 복습 (고학년 소재)", kidLabel: "내 생각 말하기", explain: "지금의 사실이나 내 생각을 현재형 그대로 말해요." },
+  { id: "G13", label: "최상급 (the most, -est)", kidLabel: "\"제일 ~한 것\" 말하기", check: /\b(most|best|worst|\w{3,}est)\b/i, explain: "셋 이상 중에 제일이면 `the + -est`(the tallest), 긴 낱말은 `the most ~`." },
+  { id: "G14", label: "조건문 (if + 현재형, will + 동사원형)", kidLabel: "\"만약 ~하면\" 말하기", check: /\bif\b/i, explain: "`If + 지금형, will + 동사` — “만약 ~하면 ~할 거예요”. if 뒤에는 will을 안 써요." },
+  { id: "G15", label: "관계대명사 who/that (사람·사물 설명)", kidLabel: "\"~하는 사람/것\"으로 설명 붙이기", check: /\b(who|that|which)\b/i, explain: "`who`(사람)나 `that`(사람·사물) 뒤에 설명을 붙여요 — a friend who helps me." },
+  { id: "G17", label: "used to (과거 습관·상태 회상)", kidLabel: "\"예전엔 ~했어요\" 말하기", check: /\bused\s+to\b/i, explain: "`used to + 동사`는 “예전엔 ~했어요(지금은 아니고요)”." },
+  { id: "G20", label: "수동태 (be + 과거분사)", kidLabel: "\"~되었어요\"로 말하기", check: /\b(is|are|was|were|be|been)\s+(\w+ed|made|written|done|built|taken|given|seen|known|shown|sold|held)\b/i, explain: "`am/is/are/was/were + 과거분사`는 “~되었어요”. 누가 했는지는 by로 붙여요." },
 ];
 
 const OPINIONS_CHAPTER = {

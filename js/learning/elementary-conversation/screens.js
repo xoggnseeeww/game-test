@@ -224,6 +224,30 @@ export function renderElementaryChapter(grade, chapter, level) {
     return gp?.kidLabel ?? gp?.label ?? card.grammar;
   }
 
+  // 문법 이름만 알려주면 "그래서 이 문장 어디가 그 문법인데?"에 답이 안 된다(D-96).
+  // `check` 정규식(D-94)이 이미 그 형태를 찾을 줄 아니까, 같은 걸로 문장에서 짚어준다 —
+  // 표시용 데이터를 따로 만들지 않는다. check가 없는 문법이면 설명만 보여준다.
+  function grammarInSentence(card) {
+    const gp = grammarPoint(card);
+    if (!gp?.check) return "";
+    const m = gp.check.exec(card.text);
+    if (!m) return "";
+    return card.text.slice(0, m.index) + `<mark>${m[0]}</mark>` + card.text.slice(m.index + m[0].length);
+  }
+
+  // 접어두고 눌러서 편다 — 매번 펼쳐두면 카드가 설명으로 덮인다.
+  function grammarBlock(card) {
+    const gp = grammarPoint(card);
+    if (!gp?.explain) return `<p class="learning-grammar-focus">🔤 오늘의 문법: ${grammarLabel(card)}</p>`;
+    const applied = grammarInSentence(card);
+    return `
+      <details class="grammar-detail">
+        <summary>🔤 오늘의 문법: ${grammarLabel(card)} <span class="more">어떻게 쓰였나요?</span></summary>
+        <p class="grammar-rule">${gp.explain.replace(/`([^`]+)`/g, "<code>$1</code>")}</p>
+        ${applied ? `<p class="grammar-applied">${applied}</p>` : ""}
+      </details>`;
+  }
+
   function showCard() {
     if (st.index >= N) return showDone();
     const card = sentences[st.index];
@@ -240,7 +264,7 @@ export function renderElementaryChapter(grade, chapter, level) {
         ${koMarkup(card.ko, supportsSpeech())}
       </div>
       ${practicePrefsMarkup()}
-      <p class="learning-grammar-focus">🔤 오늘의 문법: ${grammarLabel(card)}</p>
+      ${grammarBlock(card)}
       ${!supportsSpeech()
         ? `<p class="learning-warn">이 브라우저는 음성 재생을 지원하지 않아요.</p>`
         : `<div class="learning-listen">
@@ -327,7 +351,7 @@ export function renderElementaryChapter(grade, chapter, level) {
           ${supportsSpeech() ? `<button class="ko-listen-btn" id="learning-listen-ko" aria-label="한국어 뜻 듣기">🔊</button>` : ""}
         </p>
       </div>
-      <p class="learning-grammar-focus">🔤 오늘의 문법: ${grammarLabel(card)}</p>
+      ${grammarBlock(card)}
       <p class="learning-hint">💡 이렇게 시작해보세요: <b>${card.hint}</b></p>
       ${!supportsSpeech()
         ? `<p class="learning-warn">이 브라우저는 음성 재생을 지원하지 않아요.</p>`
