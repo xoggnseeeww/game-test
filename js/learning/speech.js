@@ -12,22 +12,55 @@ export function supportsRecognition() {
   return typeof window !== "undefined" && !!(window.SpeechRecognition || window.webkitSpeechRecognition);
 }
 
-// 로컬(기기 내장) 음성은 대체로 기계음에 가깝고, 네트워크 음성(Chrome의 "Google US English" 등)이
-// 훨씬 자연스럽다 — 있으면 그쪽을 우선 고른다. 첫 호출 시점엔 목록이 아직 안 채워져 있을 수 있어
-// (Chrome이 비동기 로드) 그럴 땐 그냥 브라우저 기본 음성으로 재생된다.
-function pickVoice(lang) {
-  const voices = window.speechSynthesis.getVoices();
-  const langPrefix = lang.slice(0, 2);
-  const matching = voices.filter((v) => v.lang === lang || v.lang.startsWith(langPrefix));
-  return matching.find((v) => !v.localService) || matching[0] || null;
+// 음성 고르기. 순수 함수라 `node --test`로 검증된다(브라우저 API를 안 만진다) — speak()이
+// `getVoices()` 결과를 넣어준다.
+//
+// **지역(en-US vs en-GB/en-IN/en-AU)이 로컬/네트워크보다 우선이다.** D-84에서 "네트워크 음성이
+// 더 자연스럽다"만 보고 `!localService`를 먼저 골랐더니, 기기에 **en-US 로컬 음성이 있어도
+// en-IN 네트워크 음성**이 뽑히는 일이 생겼다 — 미국식 영어를 배우는 아이에게는 이게 "발음이
+// 완전 이상하다"로 들린다. 지역이 정확히 맞는 것 중에서만 네트워크를 선호한다.
+//
+// 특정 음성 이름은 여전히 하드코딩하지 않는다(D-84) — 기기·브라우저마다 목록이 달라 이름
+// 매칭은 금방 깨진다.
+export function pickVoice(voices, lang) {
+  const prefix = lang.slice(0, 2);
+  // 3: 지역까지 일치 + 네트워크 / 2: 지역까지 일치 / 1: 언어만 일치 + 네트워크 / 0: 언어만 일치
+  const score = (v) => {
+    const vlang = String(v.lang || "").replace("_", "-");
+    if (vlang.toLowerCase() === lang.toLowerCase()) return v.localService ? 2 : 3;
+    if (vlang.toLowerCase().startsWith(prefix)) return v.localService ? 0 : 1;
+    return -1;
+  };
+  let best = null;
+  let bestScore = -1;
+  for (const v of voices || []) {
+    const sc = score(v);
+    if (sc > bestScore) { best = v; bestScore = sc; }
+  }
+  return best;
 }
 
 export function speak(text, rate, lang = "en-US") {
   window.speechSynthesis.cancel();
+
+  // Chrome은 목록을 비동기로 채워서 **첫 호출에 `getVoices()`가 빈 배열**인 경우가 있다.
+  // 그때 그냥 재생하면 음성 지정 없이 기기 기본으로 읽는데, 한국어 엔진이 기본인 기기에서는
+  // 영어 문장을 한국어 발음으로 읽어버린다("발음이 엉망"의 진짜 원인 중 하나).
+  // 목록이 아직 비었으면 채워질 때 한 번만 다시 시도한다.
+  const voices = window.speechSynthesis.getVoices();
+  if (!voices.length) {
+    window.speechSynthesis.addEventListener(
+      "voiceschanged",
+      () => speak(text, rate, lang),
+      { once: true }
+    );
+    return;
+  }
+
   const u = new SpeechSynthesisUtterance(text);
   u.lang = lang;
   u.rate = rate;
-  const voice = pickVoice(lang);
+  const voice = pickVoice(voices, lang);
   if (voice) u.voice = voice;
   window.speechSynthesis.speak(u);
 }

@@ -82,7 +82,9 @@ js/learning/score.js     발음 유사도 판정 — Levenshtein 기반, DOM을 
                         basic-conversation 안에 있던 걸 두 번째 도구가 생기며 옮김 —
                         복사하면 한쪽만 고치는 버그가 생긴다)
 js/learning/speech.js    TTS/STT 헬퍼(speak/listen/supportsSpeech/supportsRecognition) —
-                        score.js와 같은 이유로 공용(D-78)
+                        score.js와 같은 이유로 공용(D-78). `pickVoice`만 순수 함수로 떼어
+                        node --test로 검증한다(D-97) — 지역 일치가 로컬/네트워크보다 우선하고,
+                        음성 목록이 아직 비었으면 voiceschanged를 기다렸다 재생한다
 js/learning/grammar.js   문법 설명 블록(D-96) — 연습 화면과 복습 화면 공용. 도구를 모르는
                         순수 view 함수라 D-70 경계를 안 깬다. 문장에서 그 문법이 쓰인 자리는
                         `check` 정규식으로 찾아 <mark>로 감싼다(표시용 데이터 없음)
