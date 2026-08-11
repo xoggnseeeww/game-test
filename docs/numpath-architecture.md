@@ -31,6 +31,18 @@
 레벨을 이어 쓰는 안전망(`levelFor`)이 있다. 인트로에서 고른 난이도는 `state.numpath.difficulty`
 (세션 한정)에 남아 다음 런의 기본값이 된다.
 
+## 이동 제한 강제 (D-60)
+
+`puzzle.moveLimit`(생성기가 `pathLen + slack`으로 정함)은 처음부터 데이터로 있었고
+`solve.js`도 탐색 상한으로 써 왔지만, 플레이 화면(`play.js`)은 HUD에 "이동 횟수 X / Y"를
+보여주고 다 쓰면 메시지만 띄울 뿐 실제로 이동을 막지는 않았다 — 그래서 퍼즐이 항상 풀리는
+것(역산 생성)과 겹쳐 클리어에 실패 리스크가 전혀 없었다. `attemptMove()`에
+`isOutOfMoves(puzzle, playState)` 가드를 추가해 제한 도달 시 이동을 실제로 차단하고,
+`renderBoard()`도 그 시점에 `np-board--locked`(클리어 때와 같은 클래스)를 씌워 CSS
+`pointer-events: none`으로 한 번 더 막는다. `canEnter()`(engine.js)는 건드리지 않았다 —
+거기서 moveLimit까지 검사하면 `isStuck()`(갈 곳 없음)과 `isOutOfMoves()`(제한 소진)가 항상
+동시에 true가 돼 "서로 배타적으로 판정된다"는 기존 계약이 깨진다.
+
 ## 런 타이머 + 개인 최고 기록 (D-59)
 
 플레이 HUD에 실시간 타이머(m:ss, `formatTime()`)가 흐르고, 결과 화면에 이번 런 소요 시간과

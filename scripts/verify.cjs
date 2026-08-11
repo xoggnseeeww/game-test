@@ -118,23 +118,45 @@ async function readNumpathBoard(page) {
   return { size, board, start, target, moveLimit };
 }
 
+const NUMPATH_DIRS = [
+  [-1, 0],
+  [1, 0],
+  [0, -1],
+  [0, 1],
+];
+
+function numpathApplyOp(v, op, operand) {
+  if (op === "+") return v + operand;
+  if (op === "-") return v - operand;
+  if (op === "*") return v * operand;
+  if (op === "/") return v / operand;
+  throw new Error(`numpathApplyOp: 알 수 없는 연산자 ${op}`);
+}
+
+// 시작 칸에서 한 수만 두되, 그 수 자체로 target을 맞춰버리지 않는 이동을 고른다. solveNumpath()가
+// 찾은 첫 해가 우연히 1수짜리(시작 칸 바로 옆이 곧 target)일 수 있는데, 그 경우 Undo/Reset 검사가
+// "1수 두고 아직 안 끝났는지" 확인하려던 게 클리어로 끝나버려 Undo 버튼이 비활성 상태로 굳는다
+// (검사 코드가 그 상태를 기다리며 멈춤) — 실제 버그가 아니라 검사 쪽의 낮은 확률 경쟁 조건이었다.
+function firstNonClearingMove(puzzle) {
+  for (const [dr, dc] of NUMPATH_DIRS) {
+    const nr = puzzle.start.r + dr;
+    const nc = puzzle.start.c + dc;
+    if (nr < 0 || nr >= puzzle.size || nc < 0 || nc >= puzzle.size) continue;
+    const cell = puzzle.board[nr][nc];
+    if (!cell || cell.type === "block") continue;
+    const next = numpathApplyOp(puzzle.start.value, cell.op, cell.operand);
+    if (cell.op === "/" && !Number.isInteger(next)) continue;
+    if (next <= 0 || next === puzzle.target) continue;
+    return { r: nr, c: nc };
+  }
+  return null;
+}
+
 function solveNumpath(puzzle) {
-  const DIRS = [
-    [-1, 0],
-    [1, 0],
-    [0, -1],
-    [0, 1],
-  ];
+  const DIRS = NUMPATH_DIRS;
   const visited = new Set([`${puzzle.start.r},${puzzle.start.c}`]);
   let found = null;
-
-  function applyOp(v, op, operand) {
-    if (op === "+") return v + operand;
-    if (op === "-") return v - operand;
-    if (op === "*") return v * operand;
-    if (op === "/") return v / operand;
-    throw new Error(`solveNumpath: 알 수 없는 연산자 ${op}`);
-  }
+  const applyOp = numpathApplyOp;
 
   function dfs(r, c, value, moves, path) {
     if (found) return;
@@ -621,10 +643,9 @@ async function playNumpathRun(page) {
   // Undo/Reset: 한 칸 이동 → Undo로 되돌리고 → 다시 이동 → Reset으로 처음 상태까지 되돌린다.
   {
     const puzzle0 = await readNumpathBoard(page);
-    const path0 = solveNumpath(puzzle0);
-    if (!path0) throw new Error("NumPath Undo/Reset 검사: 자체 솔버가 스테이지 0의 해를 못 찾음");
+    const first = firstNonClearingMove(puzzle0);
+    if (!first) throw new Error("NumPath Undo/Reset 검사: 시작 칸에서 target을 즉시 맞추지 않는 이동을 못 찾음");
     const startValueText = await page.textContent("#np-current");
-    const first = path0[0];
 
     await page.click(`.np-tile[data-r="${first.r}"][data-c="${first.c}"]`);
     const afterMoveValue = await page.textContent("#np-current");

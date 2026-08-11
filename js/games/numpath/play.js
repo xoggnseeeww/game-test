@@ -114,7 +114,9 @@ export function renderNumpathPlay() {
     boardEl.dataset.size = puzzle.size;
     boardEl.innerHTML = "";
 
-    const reachable = new Set(availableMoves(puzzle, playState).map(({ r, c }) => posKey(r, c)));
+    const outOfMoves = isOutOfMoves(puzzle, playState);
+    if (outOfMoves) boardEl.classList.add("np-board--locked");
+    const reachable = outOfMoves ? new Set() : new Set(availableMoves(puzzle, playState).map(({ r, c }) => posKey(r, c)));
 
     for (let r = 0; r < puzzle.size; r++) {
       for (let c = 0; c < puzzle.size; c++) {
@@ -179,7 +181,7 @@ export function renderNumpathPlay() {
   }
 
   function attemptMove(r, c) {
-    if (!canEnter(puzzle, playState, r, c)) {
+    if (isOutOfMoves(puzzle, playState) || !canEnter(puzzle, playState, r, c)) {
       playBlockedTone(muted());
       return;
     }
