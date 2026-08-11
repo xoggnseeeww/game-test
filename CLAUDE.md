@@ -31,12 +31,11 @@
 ## 커맨드
 | 동작 | 명령어 |
 |------|--------|
-| 로컬 실행 | `python3 serve.py 8766` — **`-m http.server` 금지** (SPA 폴백 없어 하위 경로 404 → 라우팅 오판) → `docs/ERRORS.md` E-9. `functions/api/`는 이걸로 안 뜬다(정적 파일 서버라 API가 없다) — 부부 체크의 짧은 코드는 자동으로 링크 폴백으로 넘어간다(의도된 동작) |
-| 로컬 실행(백엔드 포함) | `npx wrangler pages dev . --port 8788` — `functions/api/couple-code/`까지 재현하려면 이거여야 한다(KV는 로컬 파일로 자동 대체). `wrangler.jsonc`의 `compatibility_date`가 설치된 wrangler 바이너리보다 앞서 있으면 뜨지 않는다 — 그땐 `--compatibility-date=YYYY-MM-DD`로 낮춰서 로컬 실행만 우회한다(설정 파일 자체는 오늘 날짜로 둔다) |
+| 로컬 실행 | `python3 serve.py 8766` — **`-m http.server` 금지** (SPA 폴백 없어 하위 경로 404 → 라우팅 오판) → `docs/ERRORS.md` E-9. 이걸로 앱 전체가 뜬다(D-99로 백엔드가 없어져서 재현 못 하는 경로가 없다) |
 | 빌드 | **없음** (ES 모듈을 브라우저가 직접 로드) |
 | 테스트 | `npm test` (= `node --test`, 의존성 0) — 채점 로직·모듈 정합성 |
-| 브라우저 회귀 | `mkdir -p /tmp/pw && cd /tmp/pw && npm i playwright` → `NODE_PATH=/tmp/pw/node_modules node scripts/verify.cjs` (서버 먼저). `VERIFY_BASE=http://localhost:8788`로 wrangler dev를 가리키면 짧은 코드 발급·조회까지 실제로 검증된다 — 안 하면 그 부분만 폴백 경로로 대체 확인된다 |
-| 배포 | `main` push → Cloudflare Pages 자동 배포 (Functions·KV 바인딩도 `wrangler.jsonc`에서 같이 배포됨) |
+| 브라우저 회귀 | `mkdir -p /tmp/pw && cd /tmp/pw && npm i playwright` → `NODE_PATH=/tmp/pw/node_modules node scripts/verify.cjs` (서버 먼저) |
+| 배포 | `main` push → Cloudflare Pages 자동 배포 |
 
 ## Claude Code 세션 (`.claude/`)
 `.claude/hooks/session-start.sh`는 원격(Claude Code on the web) 세션에서 컨테이너가 새로 뜰 때마다
@@ -60,20 +59,20 @@
   그 위에 페이지별 OG 셸로 보내는 rewrite 규칙 3개가 더 있다(D-47) — `_redirects`는 첫 매치 우선이라
   더 구체적인 규칙이 항상 와일드카드보다 **위**에 있어야 한다. `test/og-shells.test.js`가 순서를 검사한다
 - 영속 데이터: 예전엔 기본적으로 없었다(`localStorage["gt_reaction_best"]`로 반응속도 최고기록을
-  저장했으나 D-20에서 제거). 지금은 예외가 셋이다.
-  **① 부부 체크의 짧은 매칭 코드**(Cloudflare KV, `COUPLE_CODES` 바인딩, 7일 TTL 자동 만료) — 식별자
-  없는 익명 점수 덩어리만 저장되고, 만료 외에 수동 삭제 경로는 없다(D-45). 백엔드는 이 기능에만
-  있다 — Cloudflare Pages Functions(`functions/api/couple-code/`) + KV, `wrangler.jsonc`로 바인딩.
-  이 예외가 생기면서 개인정보처리방침(`/privacy`, 홈 하단 링크)을 신설했다 — 실제로 저장·처리하는
-  것만 적는다. 아직 안 하는 걸 미리 적어두면 나중에 그 기능이 생겼을 때 방침이 먼저 거짓말이 된다.
-  **② 로그인 이메일·이름**(`localStorage["gt_user_email"]`·`["gt_user_name"]`,
+  저장했으나 D-20에서 제거). 지금은 예외가 둘이다 — **백엔드도 서버 호출도 없다**(부부 체크의
+  짧은 매칭 코드가 유일한 예외였는데 D-99에서 기능째 없앴다. Cloudflare Pages Functions·KV
+  바인딩·`wrangler.jsonc`도 같이 삭제됐다. **되살리지 말 것** — 응답이 실린 코드가 부부 사이에서
+  오가는 구조 자체가 위험이었다).
+  개인정보처리방침(`/privacy`, 홈 하단 링크)은 그대로 둔다 — 실제로 저장·처리하는 것만 적는다.
+  아직 안 하는 걸 미리 적어두면 나중에 그 기능이 생겼을 때 방침이 먼저 거짓말이 된다.
+  **① 로그인 이메일·이름**(`localStorage["gt_user_email"]`·`["gt_user_name"]`,
   `js/core/auth.js`) — 일반 방문자 전부에게 열려 있다(D-68). `js/core/cloud-auth.js`가
   data-pantry.com과 같은 Supabase Auth(Google·카카오 OAuth) 세션을 재사용할 뿐, 이 레포
   자체엔 별도 계정 백엔드가 없다. 이름은 Google 계정의 `user_metadata`에서 가져오며
   없으면 이메일로 대체 표시한다(D-71). `isAdmin()`(같은 파일)만 이메일이 `ADMIN_EMAIL`과
   같은지 별도로 판별해 부부 체크 같은 출시 전 도구 게이트(D-56)에 쓴다 — 로그인 자체와
   관리자 판별은 별개다.
-  **③ 학습 진행률**(Supabase `learning_progress` 테이블, RLS로 본인 행만 접근, D-68) —
+  **② 학습 진행률**(Supabase `learning_progress` 테이블, RLS로 본인 행만 접근, D-68) —
   로그인한 사용자의 `state.learning`을 저장한다. `js/learning/cloud.js`가 로그인 시 병합,
   진행이 바뀔 때마다 업서트. 로그인하지 않았거나 CDN이 막혀 있으면 이 앱의 다른 콘텐츠처럼
   세션 한정으로만 동작한다.
@@ -116,11 +115,9 @@ js/screens/home.js    홈(카테고리 카드 3개: 심리테스트/미니게임
                       마이페이지(로그인 상태·학습 진행 집계, D-70 — 개별 학습 도구는 import 안 함)
 js/tests/<id>/        테스트 1개 = 폴더 1개: data · score · screens · index(디스크립터)
                       현재 adhd(+반응속도 게임), disc(+딜레마 게임),
-                      couple(+assemble · match — 문항지 조립과 부부 매칭이 따로 검증돼야 해서 분리).
-                      couple은 screens.js(문항 진행·개인 결과)가 다른 테스트 대비 훨씬 커져서
-                      screens-match.js(초대·코드 입력·결합 결과)로 한 번 더 쪼갰다 —
-                      의존 방향은 screens-match.js → screens.js 한쪽뿐(반대는 없음).
-                      두 화면 파일이 같이 쓰는 카드 캔버스는 card.js로 뺐다
+                      couple(+assemble — 문항지 조립이 채점과 따로 검증돼야 해서 분리).
+                      배우자와 결과를 합치는 흐름(match·shortcode·remote·screens-match)은
+                      D-99에서 통째로 삭제했다 — 개인 결과만 낸다. 공유 카드 캔버스는 card.js
 js/games/<id>/        테스트에 속하지 않는 독립 미니게임 1개 = 폴더 1개. 현재 numpath
 js/learning/<toolId>/ 학습 카테고리 안의 독립 도구 1개 = 폴더 1개(게임과 같은 레지스트리
                       방식, D-60·D-63 — 도구가 여럿이면 학습 목록에 카드로 나열). 도구
@@ -200,16 +197,11 @@ js/learning/review.js "오늘 복습" 화면(`/learning/review`) — 도구별�
                       `listLearning()`의 `resolveReview(key,id)`로 문장을 되돌려받는다(D-70
                       경계 유지). `registerLearning`은 안 한다 — 도구가 아니라 도구들의 결과를
                       모으는 화면이라 학습 목록에 카드로 뜨면 안 된다
-functions/api/couple-code/  부부 체크 짧은 코드 발급(index.js)·조회([code].js). 유일한 백엔드 —
-                      Cloudflare Pages Function + KV(COUPLE_CODES). js/tests/couple/shortcode.js를
-                      그대로 가져다 쓴다(발급·조회·브라우저 검증이 같은 알파벳을 봐야 한다)
-wrangler.jsonc         위 Function의 KV 바인딩 설정. 빌드 명령은 여전히 없다 — 이 파일은 배포
-                      산출물이 아니라 Cloudflare Pages가 Functions를 띄울 때만 읽는다
 test/                 node --test 스위트 (채점 로직 · 게임 로직 · 모듈 import/export 정합성 · OG 셸 정합성).
                       `og-shells/`와 이름이 비슷하지만 무관 — 여긴 순수 JS 유닛 테스트 폴더다
 styles.css            전체 스타일. 브랜드 색은 CSS custom properties + theme-* 클래스
 _redirects            Cloudflare Pages SPA 폴백 + 페이지별 OG 셸 rewrite (순서 중요, 위 항목 참고)
-serve.py              로컬 개발 서버 — `_redirects`를 실제로 읽어 규칙대로 적용한다(개발 전용, functions/는 못 띄운다)
+serve.py              로컬 개발 서버 — `_redirects`를 실제로 읽어 규칙대로 적용한다(개발 전용)
 scripts/verify.cjs     헤드리스 브라우저 회귀 스위트 (레포 의존성 아님 — 파일 헤더 참고)
 docs/design-draft.html  최초 디자인 목업. 배포·동작과 무관 (.claudeignore)
 ```
@@ -223,7 +215,7 @@ docs/design-draft.html  최초 디자인 목업. 배포·동작과 무관 (.clau
 | `docs/og-shells.md` | 페이지별 OG 미리보기 셸 (D-88에 분리) |
 | `docs/adhd-architecture.md` | ADHD 흐름 · 채점 파이프라인 |
 | `docs/disc-architecture.md` | DISC 흐름 · 채점 파이프라인 |
-| `docs/couple-architecture.md` | 부부 관계 성향 체크 흐름 · 문항지 조립 · 채점 · 부부 매칭 · 배우자 코드 · 안전 장치 |
+| `docs/couple-architecture.md` | 부부 관계 성향 체크 흐름 · 문항지 조립 · 채점 · 개인 결과 구성 · 안전 장치 |
 | `docs/numpath-architecture.md` | NumPath 흐름 · 게임 로직(타일 모델 · 생성기 · 솔버 · 별 판정) 개요 |
 | `docs/learning-architecture.md` | 학습 카테고리 구조(도구 → 목차 → 챕터, D-63) · 지금 자른 것(로그인·SRS·결제·어댑터 패턴·어르신 모드)을 나중에 어떻게 붙일지 |
 | `docs/ERRORS.md` | 오류 패턴 (같은 증상이 재발할 때) |
@@ -245,10 +237,13 @@ docs/design-draft.html  최초 디자인 목업. 배포·동작과 무관 (.clau
   **확인하지 못한 항목은 `CURRENT_TASK.md`의 "배포 후 확인 필요"로 옮긴다** — 침묵은 "확인됨"으로 오독된다.
 - **의학적 진단 표현 금지** — "성향 체크"까지만. `disclaimer` 문구를 제거하거나 약화하지 말 것 → `docs/DECISIONS.md` D-3
 - **부부 체크의 결과 전달 안전 장치를 빼지 말 것** — 유형 라벨 단독 노출 금지(연속 점수·확신도 동반),
-  **단일 궁합 점수 산출 금지**(블록별 구간 서술만), 백분위·석차 표현 금지(규준 표본이 없다),
-  격차의 **방향·지목 노출 금지**(크기와 개념명만), 원 척도 유형명·축 명칭 노출 금지(자사 표기 AT/CS만).
-  전부 기획서 §2·§6~§9의 요구이고 `npm test`와 `scripts/verify.cjs`가 함께 검사한다 →
-  `docs/couple-architecture.md` §8
+  백분위·석차 표현 금지(규준 표본이 없다), 원 척도 유형명·축 명칭 노출 금지(자사 표기 AT/CS만),
+  진단성 표현 금지. 전부 기획서 §2·§6~§9의 요구이고 `npm test`와 `scripts/verify.cjs`가
+  함께 검사한다 → `docs/couple-architecture.md` §8
+- **부부 체크의 결합(배우자와 결과 합치기) 기능을 되살리지 말 것** — 짧은 코드·초대 링크·결합
+  리포트·KV 백엔드를 D-99에서 통째로 없앴다. 응답이 실린 코드가 부부 사이에서 오가고, 차이
+  값이 대화가 아니라 다툼의 근거로 쓰이는 위험을 화면 문구로는 못 막는다는 판단이다 →
+  `docs/couple-architecture.md` §5
 
 ## 동기화 매트릭스
 > `[바꾸는 것] → [반드시 같이 고칠 것]`. 모를 때 필요한 정보라서 자동 로드에 둔다.
@@ -263,17 +258,14 @@ docs/design-draft.html  최초 디자인 목업. 배포·동작과 무관 (.clau
 - `AXIS_HIGH_THRESHOLD` 변경 → `axisIntensityText()`의 구간 경계(`60`)도 같이 조정
 - `CPT_ROUNDS` / `CPT_NOGO_COUNT` 변경 → `gameBonuses()`의 오류율 구간이 여전히 의미 있는지 확인
 - 새 `theme` 값 추가 → `js/core/router.js`의 `THEME_CLASSES` 배열 + `styles.css`의 `theme-*` 변수 블록
-- 부부 체크의 배우자 코드 필드 추가/순서 변경 → `match.js`의 `VERSION`도 함께 올린다. 자리로만
-  읽는 코드라, 순서를 바꾸면 **이미 공유된 링크가 조용히 다른 값으로 해석된다**
-- 부부 체크 문항 추가/삭제 → 문장이 부부 양쪽에 동일한 문항만 `computeCouple()`의 `comparable`
-  ·`anchors`에 넣는다. 역할별로 문장이 갈리는 문항(R1~R4)이 들어가면 서로 다른 문장의 점수를 빼게 된다
+- 부부 체크 문항 추가/삭제 → 그 문항이 결과 어디에 나오는지 정한다. 성향 4축·애착·갈등이
+  아니면 `score.js`의 `SELF_READINGS`와 `data.js`의 `READING_TEXT`에 넣는 자리다.
+  `test/couple.score.test.js`의 "답한 문항은 전부 결과 어딘가에서 쓰인다"가 빠뜨림을 잡는다
 - 부부 체크 앵커 문항 수 변경 → `assemble.js`의 `ANCHOR_ZONE_START`/`ANCHOR_STRIDE`가 문항지
   끝을 넘지 않는지 확인한다(6개×3칸이 34번에서 시작해 정확히 49번에 끝난다). 넘으면 조립이
   조용히 앞으로 밀린다
-- 부부 체크 KV에 담는 값(짧은 코드 → 배우자 코드 문자열)의 형식·바인딩 이름 변경 →
-  `functions/api/couple-code/index.js`·`[code].js`·`wrangler.jsonc` 셋 다 같이 고친다.
-  바인딩 이름(`COUPLE_CODES`)은 세 곳 모두 문자 그대로 일치해야 한다 — 하나만 바꾸면
-  로컬(`wrangler pages dev`)에서만 조용히 깨진다(배포본은 대시보드 바인딩이 남아있어 더 늦게 발견됨)
+- 부부 체크 자기보고 항목(`SELF_READINGS`) 추가 → `READING_TEXT`에 같은 키로 구간 서술
+  셋(low·mid·high)과 대화 문장을 함께 넣는다. 하나만 하면 화면에 undefined가 찍힌다
 - 다른 테스트/게임도 출시 전 관리자 전용으로 두려면 → `js/tests/couple/index.js`의
   `comingSoonGuard()` 패턴을 그대로 복사해 모든 화면 `guard`에 씌우고, `card.comingSoon = true`
   추가(D-56). 관리자 이메일은 `js/core/auth.js`의 `ADMIN_EMAIL` 하나뿐이라 공용 유틸리티로

@@ -1756,8 +1756,7 @@ button.meta-chip {
 }
 
 .cp-profile,
-.cp-action,
-.cp-invite-cta {
+.cp-action {
   margin: 16px 20px 0;
   background: #fff;
   border-radius: 20px;
@@ -1781,7 +1780,7 @@ button.meta-chip {
   margin: 12px 0 0;
 }
 
-.cp-bar-row, .cp-gap-row { margin-top: 12px; }
+.cp-bar-row { margin-top: 12px; }
 
 .cp-bar-head {
   display: flex;
@@ -1829,6 +1828,13 @@ button.meta-chip {
 /* 구분선은 모든 조각에 둔다 — `:first-of-type`으로 첫 조각만 빼면, 두 호출부의 앞 형제
    구성이 달라서(카드는 제목 div, 접기 블록은 문단 p) 한쪽에서만 적용되어 더 어긋난다. */
 .cp-deep-sec { margin-top: 14px; padding-top: 13px; border-top: 1px solid #EFEDF3; }
+
+/* 자기보고 항목(앵커·역할·자녀) 한 덩어리 — 막대 + 구간 서술 + (필요할 때) 대화 문장.
+   항목이 여러 개 이어지므로 덩어리 사이를 띄워야 어디까지가 한 항목인지 보인다. */
+.cp-reading { margin-top: 18px; }
+.cp-reading:first-of-type { margin-top: 4px; }
+.cp-reading .cp-script { margin-top: 10px; }
+.cp-reading-shaky { color: #6E6A78; font-style: italic; }
 .cp-deep-label { font-size: 13px; font-weight: 800; color: var(--accent-ink); }
 .cp-deep-sec .cp-note { margin-top: 7px; }
 
@@ -1852,93 +1858,6 @@ button.meta-chip {
 
 .cp-script-title { font-size: 13px; font-weight: 800; color: var(--accent-ink); margin-bottom: 6px; }
 .cp-script p { margin: 0; font-size: 13px; line-height: 1.75; color: #4A4750; }
-
-.cp-invite-cta .cta-btn { margin-top: 4px; }
-
-/* 결과 화면의 두 번째 매칭 경로(배우자 코드 입력) — 첫 번째(초대 링크 만들기)보다
-   무게를 낮춰서, 둘 다 같은 굵기로 눈에 들어와 무엇을 먼저 해야 할지 헷갈리지 않게 한다. */
-.cp-invite-secondary {
-  margin-top: 8px;
-  background: transparent;
-  border: 1.5px solid var(--accent-dim);
-  color: var(--accent-ink);
-}
-
-.cp-invite-link {
-  margin: 16px 20px 0;
-  background: #F7F6FA;
-  border-radius: 14px;
-  padding: 13px 14px;
-  font-size: 11.5px;
-  line-height: 1.6;
-  color: #5C5964;
-  word-break: break-all;
-}
-
-.cp-shortcode-block {
-  margin: 18px 20px 0;
-  background: #F4F3F7;
-  border-radius: 16px;
-  padding: 16px 18px;
-  text-align: center;
-}
-
-/* 결과 화면의 "배우자와 결과를 합쳐볼까요?" 카드(.cp-invite-cta) 안에 곧바로 얹힐 때는
-   그 카드가 이미 자체 padding을 갖고 있어, 기본 20px 좌우 여백을 그대로 쓰면 이중으로
-   들어가 보인다. */
-.cp-shortcode-block--inline {
-  margin: 14px 0 0;
-}
-
-.cp-shortcode-block .share-mini {
-  margin-top: 2px;
-}
-
-.cp-shortcode {
-  margin: 10px 0 14px;
-  font-family: "SF Mono", Menlo, Consolas, monospace;
-  font-size: 26px;
-  font-weight: 800;
-  letter-spacing: 2px;
-  color: var(--accent-ink);
-}
-
-.cp-code-entry {
-  margin: 18px 20px 0;
-}
-
-.cp-code-entry input {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 15px 16px;
-  border-radius: 14px;
-  border: 1.5px solid #E4E2E9;
-  font-family: "SF Mono", Menlo, Consolas, monospace;
-  font-size: 15px;
-  background: #fff;
-  color: #3B3941;
-}
-
-.cp-code-entry input:focus {
-  outline: none;
-  border-color: var(--accent);
-}
-
-.cp-code-entry .cta-btn {
-  width: 100%;
-  margin-top: 10px;
-}
-
-.cp-code-error {
-  color: var(--accent-ink);
-  text-align: center;
-}
-
-.cp-code-error[hidden] { display: none; }
-
-.cp-pair-emoji { font-size: 44px; line-height: 1.1; }
-.cp-pair-emoji span { font-size: 24px; opacity: .7; margin: 0 8px; vertical-align: middle; }
-.cp-pair-name { font-size: 20px; line-height: 1.45; }
 
 .cp-support {
   margin: 18px 20px 0;
@@ -1971,28 +1890,6 @@ button.meta-chip {
   cursor: pointer;
   padding: 8px;
 }
-
-.cp-guide-two {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 10px;
-}
-
-.cp-guide-col {
-  background: #F7F6FA;
-  border-radius: 14px;
-  padding: 13px 14px;
-}
-
-.cp-guide-col .head {
-  font-size: 13px;
-  font-weight: 800;
-  color: var(--accent-ink);
-  margin-bottom: 5px;
-}
-
-.cp-guide-col p { margin: 0; font-size: 13px; line-height: 1.7; color: #4A4750; }
 
 /* 가장 오해하기 쉬운 지점이라 유일하게 강조 배경을 준다 */
 .cp-guide-key { border: 2px solid var(--accent-dim); }
@@ -2083,25 +1980,6 @@ button.meta-chip {
 .cp-fold-body > p { margin: 0 0 10px; font-size: 13.5px; line-height: 1.75; color: #4A4750; }
 .cp-fold-body > p:last-child { margin-bottom: 0; }
 .cp-fold-body .cp-note:first-child { margin-top: 0; }
-
-/* 네 성향 비교를 한 줄로 훑을 수 있게 하는 칩. 설명은 눈여겨볼 항목에만 붙는다. */
-.cp-chip-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 4px;
-}
-
-.cp-chip {
-  font-size: 12px;
-  font-weight: 700;
-  padding: 7px 11px;
-  border-radius: 999px;
-  background: #F0EEF4;
-  color: #5C5964;
-}
-
-.cp-chip-contrast { background: var(--accent-soft); color: var(--accent-ink); }
 
 /* 학습 카테고리: 영어 문장 밑 한글 해석. .cover p 기본값(13px)보다 눈에 띄게 키운다 —
    여기가 읽는 목적 자체인 텍스트라 다른 테스트 인트로의 부가 설명(.cover p)과는 무게가 다르다.

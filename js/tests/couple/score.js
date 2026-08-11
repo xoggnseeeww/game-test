@@ -93,7 +93,7 @@ export function reverseMismatchCount(answers) {
 }
 
 // 플래그 2개 이상이면 결과를 내지 않고 재응답을 유도한다. 부정확한 데이터로 산출된
-// 인지 격차는 부부에게 도움이 되기는커녕 다툼거리만 만든다.
+// 성향 서술은 도움이 되기는커녕 자기 이해를 엉뚱한 쪽으로 굳힌다.
 export function validityCheck(answers, elapsedMs) {
   const flags = [];
   if (answers.QC1 !== QC1_EXPECTED) flags.push("지시 이행 문항의 답이 안내와 다릅니다");
@@ -145,8 +145,9 @@ export function anchorScores(answers) {
 // 사회적 바람직성 편향을 이미 안고 있는데 타이브레이크가 그 위에 한 방향으로 더 얹는 구조였다.
 //
 // 시드는 요인 원점수에서 뽑는다. 같은 응답이면 새로고침해도 같은 결과가 나오고(재현성),
-// 사용자 간에는 고르게 흩어진다. 배우자 코드에는 원점수가 실리므로 **상대 기기에서 다시
-// 채점해도 같은 순서가 나온다** — 응답 원본이 아니라 원점수에서 뽑는 이유가 이것이다.
+// 사용자 간에는 고르게 흩어진다. (원점수에서 뽑는 이유는 원래 "배우자 기기에서 다시
+// 채점해도 같은 순서가 나오게" 하기 위해서였다 — 그 흐름은 D-99에서 없어졌지만, 응답
+// 원본이 아니라 원점수를 쓰는 편이 여전히 단순하다.)
 export function seedFromRaw(raw) {
   let h = 2166136261;
   for (const factor of Object.keys(FACTOR_ITEMS)) {
@@ -256,6 +257,68 @@ export function resolveConflict(scRaw, ocRaw) {
   };
 }
 
+// ---------------------------------------------------------------- 개인 읽을거리 (§7.3·§7.4를 1인용으로)
+
+// 앵커(AN)·역할(R)·자녀(K) 문항은 예전엔 **부부 결합 리포트에서만** 쓰였다. 그 흐름을
+// 없애면서(D-99) 이 문항들이 전부 죽은 문항이 될 뻔했다 — 답은 하는데 결과에는 안 나오는
+// 문항이 절반 가까이 되는 셈이라, 그 자체로 결과가 부실해 보이는 원인이다. 두 사람의 답을
+// 빼는 대신 **내 답을 그대로 읽어주는** 쪽으로 옮겼다.
+//
+// 부부 비교가 아니라 자기보고라서 §6.5.3(격차의 방향·지목 금지)과 충돌하지 않는다 —
+// 비교 대상이 없으니 지목할 상대도 없다.
+//
+// `watch`는 "이 방향으로 나오면 눈여겨볼 값"이다. 그 방향일 때만 대화 문장을 붙인다 —
+// 전부 붙이면 조언이 배경음이 되고, 정작 지금 필요한 한 줄이 묻힌다(§8.4의 취지).
+export const SELF_READINGS = [
+  { key: "AN1", group: "feel", codes: ["AN1a", "AN1b"], watch: "low" },
+  { key: "AN2", group: "feel", codes: ["AN2a", "AN2b"], watch: "high" },
+  { key: "AN3", group: "feel", codes: ["AN3a", "AN3b"], watch: "high" },
+  { key: "ROLE_LOAD", group: "role", codes: ["R1", "R2"], watch: "high" },
+  { key: "ROLE_FIT", group: "role", codes: ["R4", "R5"], watch: "low" },
+  // R6은 역채점 대상(REVERSE_CODES)이라 scoreItem을 거치면 "바꾸기 어렵다"가 뒤집혀
+  // **바꿀 여지가 있다**가 높은 쪽이 된다. 다른 항목과 방향을 맞추기 위한 것이다.
+  { key: "ROLE_FLEX", group: "role", codes: ["R6"], watch: "low" },
+  { key: "CHILD_TALK", group: "child", codes: ["K1", "K3"], watch: "low" },
+  { key: "CHILD_TIME", group: "child", codes: ["K2"], watch: "low" },
+  { key: "CHILD_STRAIN", group: "child", codes: ["K4"], watch: "high" },
+  { key: "CHILD_VALUES", group: "child", codes: ["K5"], watch: "low" },
+];
+
+// 구간 경계. 1~5 척도의 중앙값 3을 가운데 두고 위아래로 반 칸씩 둔다 — 3.0은 "보통이다"를
+// 고른 상태라 어느 쪽으로도 읽지 않는 게 맞다. 이 폭을 ±1로 넓히면 2점대 후반이 "낮음"에서
+// 빠져서, 실제로 힘들다고 답한 사람에게 아무 말도 안 하게 된다.
+export const READING_LOW_MAX = 2.5;
+export const READING_HIGH_MIN = 3.5;
+
+export function readingLevel(score) {
+  if (score <= READING_LOW_MAX) return "low";
+  if (score >= READING_HIGH_MIN) return "high";
+  return "mid";
+}
+
+/**
+ * 자기보고 항목을 구간으로 읽는다.
+ * @returns {Array<{key,group,score,level,watched,consistent}>}
+ *   score는 1.0~5.0(문항 평균), watched는 "지금 눈여겨볼 방향으로 나왔는가",
+ *   consistent는 같은 개념을 두 문항으로 묻는 앵커에서만 의미가 있다(§7.3).
+ */
+export function selfReadings(answers) {
+  const anchors = anchorScores(answers);
+  return SELF_READINGS.map((r) => {
+    const score = r.codes.reduce((sum, c) => sum + scoreItem(c, answers[c]), 0) / r.codes.length;
+    const level = readingLevel(score);
+    return {
+      key: r.key,
+      group: r.group,
+      score,
+      level,
+      watched: level === r.watch,
+      // 두 문항이 3점 이상 벌어진 앵커는 본인 응답 자체가 흔들린 것이라 단정하지 않는다.
+      consistent: anchors[r.key] ? anchors[r.key].consistent : true,
+    };
+  });
+}
+
 // ---------------------------------------------------------------- 전체 채점
 
 /**
@@ -263,7 +326,7 @@ export function resolveConflict(scRaw, ocRaw) {
  * @param {Object} answers 문항 코드 → 1~5
  * @param {{elapsedMs?:number|null, setup?:Object}} opts
  *        elapsedMs가 null이면 속도 검사를 건너뛴다. setup은 결과에 그대로 실려
- *        배우자 코드(match.js)와 리포트 서사에 쓰인다.
+ *        역할·자녀 서사를 고르는 데 쓰인다.
  */
 export function computeCouple(answers, { elapsedMs = null, setup = null } = {}) {
   const validity = validityCheck(answers, elapsedMs);
@@ -289,17 +352,12 @@ export function computeCouple(answers, { elapsedMs = null, setup = null } = {}) 
     conflict,
     typeKey: `${behavior.primary}-${attachment.key}`,
     anchors: anchorScores(answers),
-    // 부부 비교에 쓰이는 문항값. 문장이 양쪽에 동일한 것만 담는다(§5.6) —
-    // R1~R4는 역할마다 문장이 달라 측정 동등성이 없으므로 여기 들어오면 안 된다.
-    // 앵커는 개별 응답값이 아니라 개념 점수(anchors)로만 넘어간다.
-    comparable: {
-      R5: answers.R5,
-      R6: answers.R6,
-      K1: answers.K1,
-      K2: answers.K2,
-      K3: answers.K3,
-      K4: answers.K4,
-      K5: answers.K5,
-    },
+    // 앵커·역할·자녀 문항을 개인 결과에서 읽어주는 구간 값(D-99). 예전의 `comparable`
+    // (부부 비교용 문항값 묶음)은 결합 리포트와 함께 사라졌다 — 내보낼 곳이 없는 값을
+    // 결과 객체에 남겨두면, 다음 사람이 "이건 어디에 쓰이지"를 매번 다시 추적하게 된다.
+    readings: selfReadings(answers),
+    // 역할이 정체성에서 차지하는 비중(R3)만 막대가 아니라 한 줄 덧말로 쓴다 —
+    // 높고 낮음이 좋고 나쁨이 아니라 서술의 결을 바꾸는 값이라서다.
+    roleIdentity: answers.R3,
   };
 }

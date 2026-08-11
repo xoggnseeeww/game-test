@@ -803,28 +803,29 @@ async function playNumpathRun(page) {
     await page.isVisible(".cp-privacy"),
     "cp-privacy"
   );
-  check(
-    "인트로에 '부부 결과 매칭' 버튼이 있다 (배우자 코드로 바로 합치기)",
-    await page.isVisible('[data-nav="couple-pair"]')
-  );
   // === 이용 안내 화면 ===
-  // "둘이 하면 더 정확해진다"는 오해를 미리 풀어주는 화면이라, 링크가 살아 있는지와
+  // D-99 이후 이 화면의 역할은 "결과를 어떻게 읽는가"다. 링크가 살아 있는지와
   // 핵심 문장이 실제로 렌더되는지를 본다.
   await page.click('[data-nav="couple-guide"]');
   check("인트로 → 이용 안내", page.url().endsWith("/test/couple/guide"), page.url());
   const guideBody = (await page.textContent("#app")).replace(/\s+/g, " ");
   check(
-    "안내에 '개인 결과는 합쳐도 더 정확해지지 않는다'가 명시됨",
-    guideBody.includes("내 결과가 더 정확해지지는 않습니다"),
+    "안내가 '정해진 성격표가 아니다'라고 못박는다",
+    guideBody.includes("정해진 성격표가 아닙니다"),
     guideBody.slice(0, 120)
   );
-  check("안내에 이용 순서가 있다", guideBody.includes("배우자 초대 링크"));
-  check("안내에 자주 묻는 것이 있다", guideBody.includes("자녀 단계는 꼭 같게 골라야 하나요"));
+  check("안내에 무엇이 나오는지 목록이 있다", guideBody.includes("심화 서술"));
+  check("안내에 자주 묻는 것이 있다", guideBody.includes("내 답이 어디에 저장되나요"));
   check("안내에도 상시 안내 링크가 있다", await page.isVisible(".cp-support"));
-  // 설명서가 "둘이 하면 더 정확" 류로 되돌아가는 변경을 막는다.
+  // D-99: 결합 기능은 없앴다. 안내가 다시 "합쳐 보세요"로 돌아가는 변경을 여기서 막는다.
   check(
-    "'합치면 더 정확' 류 표현 없음",
-    !/합치면 더 정확|둘이 하면 더 정확|정확도가 (올라|높아)/.test(guideBody),
+    "결합 기능을 되살리는 안내 문구 없음 (D-99)",
+    !/결과를 합쳐 보세요|초대 링크를 (보내|만들)|배우자 코드를 입력/.test(guideBody),
+    guideBody.slice(0, 120)
+  );
+  check(
+    "없앤 기능을 물어보는 사람을 위해 그 사실이 안내에 남아 있다",
+    guideBody.includes("지금은 그 기능을") || guideBody.includes("없앴습니다"),
     guideBody.slice(0, 120)
   );
   await page.click('[data-nav="couple-intro"]');
@@ -944,6 +945,8 @@ async function playNumpathRun(page) {
     (await page.$$eval(".cp-fold .cp-fold-body", (n) => n.every((b) => b.textContent.trim().length > 10))),
     ""
   );
+  const foldReadings = await page.$$eval(".cp-fold .cp-reading", (n) => n.length);
+  check("역할·자녀 접기 블록에도 자기보고 항목이 들어 있다", foldReadings >= 6, `${foldReadings}개`);
   const cpProfileBars = await page.$$eval(".cp-profile .cp-bar-row", (n) => n.length);
   check("결과에 연속 프로필이 함께 나옴 (§6.1 — 라벨 단독 노출 금지)", cpProfileBars >= 6, `${cpProfileBars}개 막대`);
   check("애착 축에 중간값 선 표시", (await page.$$(".cp-bar-mid")).length >= 2);
@@ -957,6 +960,30 @@ async function playNumpathRun(page) {
     ),
     cpBody.slice(0, 200)
   );
+  // === D-99: 개인 결과가 앵커·역할·자녀 문항까지 읽어주는가 ===
+  // 결합 리포트를 없애면서 이 문항들이 죽은 문항이 될 뻔했다. 화면에 실제로 나오는지를
+  // 구조로 본다 — 문구 검사만 하면 카드 하나가 통째로 빠져도 통과할 수 있다.
+  const feelReadings = await page.$$eval(".cp-feelings .cp-reading", (n) => n.length);
+  check("결과에 '지금 내가 느끼고 있는 것'(앵커) 항목이 나온다", feelReadings === 3, `${feelReadings}개`);
+  const readingsWithoutText = await page.$$eval(".cp-reading", (rows) =>
+    rows.filter((r) => !r.querySelector(".cp-note")?.textContent.trim()).length
+  );
+  check("모든 자기보고 항목에 구간 서술이 붙어 있다", readingsWithoutText === 0, `${readingsWithoutText}개 비어 있음`);
+  // 대화 문장은 눈여겨볼 방향으로 나온 항목에만 붙는다. 전부 붙거나 하나도 안 붙으면
+  // watch 판정이 죽은 것이다(응답을 흩어 답했으므로 양쪽이 다 나와야 정상).
+  const feelScripts = await page.$$eval(".cp-feelings .cp-script", (n) => n.length);
+  check(
+    "대화 문장이 눈여겨볼 항목에만 붙는다 (전부/전무가 아님)",
+    feelScripts > 0 && feelScripts < feelReadings,
+    `${feelScripts}/${feelReadings}`
+  );
+  // 결합 흐름을 되살리는 문구가 결과 화면에 남아 있으면 안 된다(D-99).
+  check(
+    "결과 화면에 결합·코드 관련 문구가 없다 (D-99)",
+    !/결과를 합쳐|배우자 코드|짧은 코드|초대 링크/.test(cpBody),
+    cpBody.slice(0, 140)
+  );
+
   check("결과에 상시 안내 링크 노출 (§9.2)", await page.isVisible(".cp-support"));
   check("결과에 서비스 성격 고지 노출 (§9.3)", cpBody.includes("진단하거나 관계의 미래를 예측하지 않습니다"));
 
@@ -966,286 +993,12 @@ async function playNumpathRun(page) {
     !/상위\s*\d+\s*%|백분위|하위\s*\d+\s*%/.test(cpBody),
     cpBody.slice(0, 120)
   );
-  check(
-    "결과 화면에도 '부부 결과 매칭' 보조 버튼이 있다 (초대 링크 만들기와 별개 경로)",
-    await page.isVisible('.cp-invite-secondary[data-nav="couple-pair"]')
-  );
   // 유형 설명이 한 줄 요약에 그치지 않고 실제로 풀어써졌는지 본다(D-51). 예전 한 줄
   // 요약은 40자 안팎이었다 — 길이만으로도 "한 줄짜리 요약"과 구분된다.
   check(
     "결과 유형 설명이 한 줄 요약을 넘어서는 길이로 풀어써졌다",
     (await page.$eval(".result-card p", (p) => p.textContent.trim().length)) > 80,
     await page.textContent(".result-card p")
-  );
-
-  // 짧은 코드는 예전엔 "배우자 초대 링크 만들기"를 눌러 별도 화면까지 가야 보였다 —
-  // 결과 화면에 뜨자마자(클릭 없이) 바로 노출되는지 본다(D-51).
-  const resultShortCodeReady = await page
-    .waitForFunction(
-      () => {
-        const el = document.querySelector("#cp-shortcode-inline");
-        return el && /^[0-9A-Z]{4}-[0-9A-Z]{4}$/.test(el.textContent.trim());
-      },
-      { timeout: 8000 }
-    )
-    .then(() => true)
-    .catch(() => false);
-  if (resultShortCodeReady) {
-    check(
-      "결과 화면에 짧은 코드가 클릭 없이 바로 노출된다",
-      /^[0-9A-Z]{4}-[0-9A-Z]{4}$/.test((await page.textContent("#cp-shortcode-inline")).trim()),
-      await page.textContent("#cp-shortcode-inline")
-    );
-    check(
-      "짧은 코드가 뜬 뒤에도 여전히 결과 화면에 있다 (별도 화면으로 안 넘어감)",
-      page.url().endsWith("/test/couple/result"),
-      page.url()
-    );
-  } else {
-    check(
-      "백엔드가 없을 때는 결과 화면의 코드 노출도 조용히 폴백 문구로 넘어간다",
-      (await page.textContent("#cp-shortcode-inline")).includes("발급이 지금 안 돼요")
-    );
-  }
-
-  // === 배우자 초대 링크 왕복 ===
-  await page.click('[data-nav="couple-invite"]');
-  check("초대 링크 화면 주소", page.url().endsWith("/test/couple/invite"), page.url());
-  const inviteUrl = (await page.textContent("#cp-link")).trim();
-  check("초대 링크가 ?p= 코드를 담고 있다", /\/test\/couple\/pair\?p=[0-9a-z]+$/.test(inviteUrl), inviteUrl);
-
-  // 짧은 코드는 functions/api/couple-code/의 KV 발급이 실제로 동작해야 나온다.
-  // `serve.py`로 돌리면 API가 없어 폴백 문구("발급이 지금 안 돼요")만 확인할 수 있고,
-  // 이 왕복은 `wrangler pages dev`로 돌릴 때만 끝까지 검증된다 — VERIFY_BASE로 가리킨다.
-  let shortCodeText = null;
-  const shortCodeReady = await page
-    .waitForSelector("#cp-code-card-btn:not([disabled])", { timeout: 6000 })
-    .then(() => true)
-    .catch(() => false);
-  if (shortCodeReady) {
-    shortCodeText = (await page.textContent("#cp-shortcode")).trim();
-    check("짧은 코드가 발급된다 (XXXX-XXXX 형식)", /^[0-9A-Z]{4}-[0-9A-Z]{4}$/.test(shortCodeText), shortCodeText);
-    check(
-      "코드 카드 저장 버튼이 활성화된다",
-      await page.$eval("#cp-code-card-btn", (b) => b.classList.contains("active"))
-    );
-  } else {
-    check(
-      "백엔드가 없을 때는 짧은 코드 발급 실패가 조용히 링크 폴백으로 넘어간다",
-      (await page.textContent("#cp-shortcode-block")).includes("발급이 지금 안 돼요")
-    );
-  }
-
-  // 발급 API는 인증이 없는 공개 엔드포인트다. 형식(길이)만 보고 KV에 넣으면, 누구나
-  // 유효하지 않은 문자열을 계속 보내 하루 쓰기 한도(1,000회)를 실제 사용자보다 먼저
-  // 채울 수 있다 — decodePartner()로 진짜 유효한 코드인지 먼저 확인하고 저장해야 한다.
-  // 브라우저 UI로는 이 경로를 못 타서(앱은 항상 유효한 코드만 보낸다) API를 직접 두드린다.
-  if (shortCodeReady) {
-    const junkRes = await fetch(`${BASE}/api/couple-code`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ p: "x".repeat(25) }),
-    });
-    check(
-      "짧은 코드 발급 API가 유효하지 않은 부부 코드는 거절한다 (KV 쓰기 한도 남용 방지)",
-      junkRes.status === 400,
-      `status=${junkRes.status}`
-    );
-  }
-
-  // 결과 화면의 "부부 결과 매칭" 버튼 — 이미 내 결과가 나와 있는 상태에서 배우자 코드를
-  // 직접 입력하면, 상황 고르기로 다시 보내지 않고 곧장 결합 결과로 가야 한다(coupleReady()가
-  // 참일 때의 분기). 자기 자신의 코드로 매칭해서 라우팅만 확인한다 — 결과 값의 의미가
-  // 아니라 "이미 완료한 사람은 문항을 또 안 풀어도 된다"가 관심사다. 뒤로가기는 SPA
-  // 내비게이션(data-nav)으로 돌아가 state.couple을 유지한다 — goto()면 새 세션이 된다.
-  await page.click('[data-nav="couple-result"]');
-  await page.waitForSelector(".cp-invite-secondary");
-  await page.click(".cp-invite-secondary");
-  check("결과 화면 매칭 버튼 → 코드 입력 화면", page.url().endsWith("/test/couple/pair"), page.url());
-
-  // 코드 입력 화면의 뒤로가기는 예전엔 항상 "home"에 고정돼 있었다 — 이미 결과가 있는
-  // 사람이 배우자 코드를 입력하러 왔다가 코드를 넣지 않고 뒤로 가면, 자기 결과 화면이
-  // 아니라 홈으로 튕겨서 결과를 다시 찾아가야 했다(D-51).
-  check(
-    "코드 입력 화면의 뒤로가기가 내 결과로 향한다 (홈으로 고정되지 않음)",
-    (await page.$eval(".back-btn", (b) => b.dataset.nav)) === "couple-result"
-  );
-  await page.click(".back-btn");
-  check("뒤로가기 클릭 → 실제로 내 결과 화면으로 돌아간다", page.url().endsWith("/test/couple/result"), page.url());
-
-  // 원래 시나리오(자기 코드로 매칭)를 이어간다.
-  await page.click(".cp-invite-secondary");
-  check("결과 화면 매칭 버튼 → 코드 입력 화면 (재진입)", page.url().endsWith("/test/couple/pair"), page.url());
-  await page.fill("#cp-code-input", inviteUrl);
-  await page.click("#cp-code-submit");
-  await page.waitForFunction(() => !location.pathname.endsWith("/pair"), { timeout: 5000 });
-  check(
-    "이미 내 결과가 있으면 매칭 즉시 결합 결과로 (상황 고르기를 다시 시키지 않음)",
-    new URL(page.url()).pathname === "/test/couple/together",
-    page.url()
-  );
-
-  // 링크를 새 세션(state가 빈 상태)에서 열면 "배우자가 먼저 마쳤다" 화면이 떠야 한다.
-  const partnerPath = inviteUrl.slice(inviteUrl.indexOf("/test/couple/pair"));
-  await goto(partnerPath);
-  check("초대 링크 직접 접속 → 배우자 초대 화면 (홈 폴백 아님)", await page.isVisible(".cover"), page.url());
-  check("초대 화면이 배우자 유형을 보여줌", (await page.textContent(".cover")).includes("형"), page.url());
-  check("초대 화면 주소에 코드가 남아 있음", page.url().includes("?p="), page.url());
-
-  // 깨진 코드는 인트로로 떨어져야 한다 — 카카오톡에서 링크 끝이 잘려 붙는 경우가 있다.
-  // (라우터는 화면을 바꿔도 location.search를 그대로 붙이므로 경로만 본다.)
-  // 예전엔 여기서 인트로로 돌려보냈다. 지금은 "부부 결과 매칭" 버튼으로 같은 화면에
-  // 직접 들어올 수 있는 경로가 생겨서, 깨진 코드도 인트로로 튕기는 대신 같은 화면에서
-  // 직접 입력할 기회를 준다 — 배우자가 보낸 링크가 잘렸어도 코드만 따로 받아 넣을 수 있다.
-  await goto(partnerPath.slice(0, -1));
-  check(
-    "코드가 잘린 초대 링크 → 직접 입력 폼으로 대체(인트로로 튕기지 않음)",
-    new URL(page.url()).pathname === "/test/couple/pair" && (await page.isVisible("#cp-code-input")),
-    page.url()
-  );
-
-  // 잘못된 값을 넣으면 화면에 머물며 에러만 보여줘야 한다 — 조용히 아무 일도 안 하거나
-  // 엉뚱한 화면으로 튀면 사용자가 뭐가 잘못됐는지 알 수 없다.
-  // (직전 검사에서 잘린 코드가 ?p=로 붙어 있는 채라, 경로만 비교한다 — 라우터가
-  // go()로 화면을 바꿔도 location.search를 그대로 들고 다닌다.)
-  await page.fill("#cp-code-input", "이건-말이안되는값");
-  await page.click("#cp-code-submit");
-  await page.waitForSelector("#cp-code-error:not([hidden])", { timeout: 5000 });
-  check(
-    "직접 입력 폼: 잘못된 코드는 에러를 보여주고 같은 화면에 머문다",
-    new URL(page.url()).pathname === "/test/couple/pair" && (await page.isVisible("#cp-code-error")),
-    page.url()
-  );
-
-  // 링크를 통째로 붙여넣어도(짧은 코드가 아니라) 코드가 추출돼 처리돼야 한다 —
-  // 카카오톡에서 사람들이 실제로 링크째 복사해 붙이는 경우가 이 경로다.
-  await page.fill("#cp-code-input", inviteUrl);
-  await page.click("#cp-code-submit");
-  await page.waitForFunction(() => !location.pathname.endsWith("/pair"), { timeout: 5000 });
-  check(
-    "직접 입력 폼: 링크를 통째로 붙여넣어도 코드가 추출된다",
-    new URL(page.url()).pathname === "/test/couple/setup",
-    page.url()
-  );
-
-  // 짧은 코드도 같은 폼에서 받아야 한다 — 인트로의 "부부 결과 매칭" 버튼으로 들어온
-  // 완전히 새 세션에서, 링크가 아니라 8자 코드만으로 매칭이 되는지 확인한다.
-  if (shortCodeReady) {
-    await goto("/test/couple");
-    await page.click('[data-nav="couple-pair"]');
-    check("인트로의 매칭 버튼 → 코드 입력 화면", page.url().endsWith("/test/couple/pair"), page.url());
-    await page.fill("#cp-code-input", shortCodeText);
-    await page.click("#cp-code-submit");
-    await page.waitForFunction(() => !location.pathname.endsWith("/pair"), { timeout: 5000 });
-    check(
-      "짧은 코드만 입력해도 매칭된다 (아직 내 결과가 없으니 상황 고르기로)",
-      new URL(page.url()).pathname === "/test/couple/setup",
-      page.url()
-    );
-  }
-
-  // === 초대받은 쪽이 답을 마치면 결합 리포트까지 도달하는가 ===
-  // 초대 링크의 목적이 "합쳐 보기"이므로, 문항을 마친 뒤 개인 결과에서 멈추면 안 된다.
-  await goto(partnerPath);
-  await page.click("#cp-pair-start");
-  await page.click('.cp-axis-btn[data-code="T-W"]');
-  await page.click('.cp-axis-btn[data-code="R-C"]');
-  await page.click('.cp-axis-btn[data-code="K-1"]'); // 배우자와 같은 자녀 단계
-  await page.click("#cp-setup-next");
-  await page.waitForSelector(".cp-likert-btn");
-  anchorPick = 1; // 초대받은 쪽은 앵커에 "전혀 아니다" → 인지 격차가 반드시 생긴다
-  for (let i = 0; i < coupleTotal; i++) await answerCouple(coupleTotal - i);
-  await page.waitForSelector("#ad-gate-continue", { timeout: 5000 });
-  await page.waitForFunction(() => !document.querySelector("#ad-gate-continue").disabled, { timeout: 6000 });
-  await page.click("#ad-gate-continue");
-  await page.waitForSelector(".result-card", { timeout: 5000 });
-  check(
-    "초대받은 쪽은 문항 완료 후 개인 결과가 아니라 결합 결과로 간다",
-    page.url().includes("/test/couple/together"),
-    page.url()
-  );
-
-  const reportBody = (await page.textContent("#app")).replace(/\s+/g, " ");
-  check("결합 결과에 두 유형 조합 이름이 나온다", (await page.textContent(".cp-pair-name")).includes("×"));
-  check("성향 조합 해석이 나온다 (§7.2)", reportBody.includes("두 분의 성향은"));
-  // 애착 조합 해석(attachTag)이 한 줄 요약을 넘어서는지 본다(D-51).
-  check(
-    "성향 조합 헤드라인 설명이 한 줄 요약을 넘어서는 길이로 풀어써졌다",
-    (await page.$eval(".result-card p", (p) => p.textContent.trim().length)) > 80,
-    await page.textContent(".result-card p")
-  );
-  // 예전엔 "많이 다른(contrast)" 축에만 설명을 붙이고, 닮았거나(similar) 보완하는(complement)
-  // 축은 칩 라벨만 보여줬다 — 칩에 등장하는 구간 수만큼 설명 문장이 있는지로 확인한다
-  // (구간이 3개(닮음/보완/대비) 다 나오면 설명도 3줄, 2개만 나오면 2줄이어야 한다).
-  const dynamicsNoteCount = await page.$$eval(".cp-profile", (blocks) => {
-    const b = blocks.find((el) => el.querySelector(".cp-block-title")?.textContent.trim() === "두 분의 성향은");
-    return b ? b.querySelectorAll(".cp-note").length : -1;
-  });
-  const dynamicsLevelCount = await page.$$eval(".cp-chip-row .cp-chip", (chips) =>
-    new Set(chips.map((c) => [...c.classList].find((cl) => cl.startsWith("cp-chip-")))).size
-  );
-  check(
-    "성향 조합 설명이 축마다(닮음·보완·대비 구간별로) 붙는다 — 대비되는 축에만 몰아주지 않음",
-    dynamicsNoteCount === dynamicsLevelCount && dynamicsNoteCount >= 1,
-    `note=${dynamicsNoteCount} distinctLevels=${dynamicsLevelCount}`
-  );
-  check("앵커 기반 체감 비교가 나온다 (§7.3)", reportBody.includes("같은 질문, 서로의 대답"));
-  check("환경축 비교가 나온다 (§7.4)", reportBody.includes("역할과 자녀 이야기"));
-  // "격차가 큰 항목에는 반드시 대화 스크립트를 함께 붙인다"(§6.5.3)를 구조로 확인한다.
-  // 스크립트가 화면 어딘가에 1개 있는지만 보면, 정작 격차 항목에 안 붙어도 통과한다.
-  const gapRowsMissingScript = await page.$$eval(".cp-gap-row", (rows) =>
-    rows
-      .filter((r) => {
-        const level = r.querySelector(".cp-bar-head b");
-        return level && level.textContent.trim() !== "비슷함";
-      })
-      .filter((r) => !r.querySelector(".cp-script"))
-      .map((r) => r.querySelector(".cp-bar-head span").textContent.trim())
-  );
-  check(
-    "격차가 있는 항목에는 빠짐없이 대화 스타터가 붙는다 (§6.5.3)",
-    gapRowsMissingScript.length === 0,
-    gapRowsMissingScript.join(", ")
-  );
-  check("결합 결과에 상시 안내 링크 노출 (§9.2)", await page.isVisible(".cp-support"));
-
-  // 단일 궁합 점수·등급명을 만들지 않는다(§7.2). 점수를 되살리는 변경은 여기서 걸린다.
-  check(
-    "궁합 점수·등급명 노출 없음 (§7.2)",
-    !/궁합|매칭\s*점수|\d+\s*점\s*(만점|궁합)|매우 안정|성장 필요|상담 권유/.test(reportBody),
-    reportBody.slice(0, 140)
-  );
-  // 격차의 크기와 개념명만 내보내고, 누가 어느 쪽이었는지(방향)는 내보내지 않는다(§7.3).
-  check(
-    "격차 방향·지목 표현 없음 (§6.5.3·§7.3)",
-    !/(아내|남편)\s*쪽이|(아내|남편)분이\s|라고 답했습니다|더 크게 느끼고/.test(reportBody),
-    reportBody.slice(0, 140)
-  );
-  // 원 척도의 유형명·축 명칭을 사용자 화면에 노출하지 않는다(§2.1 B등급 · §2.3).
-  check(
-    "원 척도 유형명·축 명칭 미노출 (§2.3)",
-    !/집착형|두려움형|경쟁형|순응형|타협형|애착\s*불안|애착\s*회피/.test(reportBody),
-    reportBody.slice(0, 140)
-  );
-
-  // === §7.6 자녀 단계 불일치는 결합 리포트를 만들지 않는다 ===
-  // 자녀 단계는 객관적 사실이라 갈릴 수 없다. 갈리면 K문항의 문장 자체가 달라져
-  // 비교 근거가 사라진다.
-  await goto(partnerPath);
-  await page.click("#cp-pair-start");
-  await page.click('.cp-axis-btn[data-code="T-W"]');
-  await page.click('.cp-axis-btn[data-code="R-C"]');
-  await page.click('.cp-axis-btn[data-code="K-2"]'); // 배우자는 K-1을 골랐다
-  await page.click("#cp-setup-next");
-  for (let i = 0; i < coupleTotal; i++) await answerCouple(coupleTotal - i);
-  await page.waitForFunction(() => !document.querySelector("#ad-gate-continue").disabled, { timeout: 6000 });
-  await page.click("#ad-gate-continue");
-  await page.waitForSelector(".empty-state, .result-card", { timeout: 5000 });
-  const mismatchBody = (await page.textContent("#app")).replace(/\s+/g, " ");
-  check(
-    "자녀 단계가 다르면 결합 결과를 만들지 않고 다시 확인하도록 안내 (§7.6)",
-    mismatchBody.includes("자녀 단계를 다시 확인"),
-    mismatchBody.slice(0, 120)
   );
 
   // === 공유 슬러그 주소 (세 테스트 모두) ===
@@ -1284,9 +1037,7 @@ async function playNumpathRun(page) {
     ["/test/disc/dilemma/ad", ".cover", "광고 게이트 (게임 미완료, DISC)"],
     ["/test/couple/play", ".cover", "부부 체크 문항 (축 미선택)"],
     ["/test/couple/result", ".cover", "부부 체크 결과 (문항 미완료)"],
-    ["/test/couple/invite", ".cover", "부부 체크 초대 (문항 미완료)"],
     ["/test/couple/ad", ".cover", "부부 체크 광고 게이트 (문항 미완료)"],
-    ["/test/couple/together", ".cover", "부부 체크 결합 결과 (코드·응답 없음)"],
     ["/game/numpath/play", ".cover", "NumPath 플레이 (런 없음)"],
     ["/game/numpath/ad", ".cover", "NumPath 광고 게이트 (런 없음)"],
     ["/game/numpath/result", ".cover", "NumPath 결과 (런 없음)"],
@@ -1295,14 +1046,12 @@ async function playNumpathRun(page) {
     check(`${label} 주소 직접 접속 → 인트로 폴백`, await page.isVisible(sel), page.url());
   }
 
-  // /test/couple/pair는 위 표의 다른 화면들과 다르다 — 코드가 없다고 인트로로
-  // 튕기지 않고, 이 화면 자체가 직접 입력 폼을 보여준다(부부 결과 매칭 진입점).
-  await goto("/test/couple/pair");
-  check(
-    "부부 체크 페어링 (코드 없음) 주소 직접 접속 → 자체 입력 폼 렌더 (인트로 폴백 아님)",
-    await page.isVisible(".cover") && await page.isVisible("#cp-code-input"),
-    page.url()
-  );
+  // D-99로 사라진 주소들. 라우터에 등록돼 있지 않으므로 SPA 폴백이 홈을 그려야 한다 —
+  // 없앤 화면이 어딘가에 되살아나면(디스크립터를 다시 추가하면) 여기서 걸린다.
+  for (const p of ["/test/couple/invite", "/test/couple/pair", "/test/couple/together"]) {
+    await goto(p);
+    check(`없앤 결합 화면(${p})은 홈으로 폴백된다 (D-99)`, await page.isVisible(".hero-title"), page.url());
+  }
 
   // === OG 셸: 특정 경로만 og-shells/*.html로 rewrite되고, 그 안에서도 SPA가 그대로 뜨는가 ===
   // _redirects가 /test/adhd·/test/disc·/game/numpath 세 경로만 og-shells/*.html로 rewrite한다
@@ -1367,24 +1116,17 @@ async function playNumpathRun(page) {
   check("홈 하단 링크 → 개인정보처리방침", page.url().endsWith("/privacy"), page.url());
   const privacyBody = (await page.textContent("#app")).replace(/\s+/g, " ");
   check(
-    "개인정보처리방침에 부부 체크 코드의 보유기간(7일)이 명시됨",
-    privacyBody.includes("7일이 지나면 자동으로 삭제"),
+    "개인정보처리방침이 검사 응답을 저장하지 않는다고 밝힌다 (D-99로 KV 저장 절 삭제)",
+    privacyBody.includes("기기의 메모리에만") && !privacyBody.includes("7일이 지나면 자동으로 삭제"),
     privacyBody.slice(0, 120)
   );
   check("개인정보처리방침에 문의처가 있다", privacyBody.includes("@"));
   await page.click('[data-nav="home"]');
   check("개인정보처리방침 뒤로가기 → 홈", page.url().endsWith("/") || new URL(page.url()).pathname === "/", page.url());
 
-  // /api/couple-code 관련 콘솔 에러는 두 갈래로 나온다: ① 백엔드가 아예 없는 로컬 개발
-  // (serve.py) — 위에서 shortCodeReady가 false로 이미 감지됐고, 그건 기대된 동작이라
-  // 별도로 확인했다(브라우저 자체가 찍는 "Failed to load resource: ... 501"과 remote.js가
-  // 찍는 "짧은 코드 발급 실패" 둘 다 이 경우에 나온다). ② 백엔드가 있는데도 실패 —
-  // 이건 진짜 버그라 걸러내면 안 된다. 그래서 무조건 지우지 않고, ①로 확인됐을 때만
-  // 이 경로의 메시지를 콘솔 에러 집계에서 뺀다.
-  const filteredErrors = shortCodeReady
-    ? errors
-    : errors.filter((e) => !e.includes("/api/couple-code") && !e.includes("couple/remote.js"));
-  check("콘솔/페이지 에러 없음", filteredErrors.length === 0, filteredErrors.join(" ; "));
+  // 예전에는 백엔드(/api/couple-code)가 없는 로컬 실행에서 나는 콘솔 에러를 걸러냈다.
+  // D-99로 그 백엔드 자체가 사라져서 예외 없이 전부 본다 — 이 앱에는 이제 서버 호출이 없다.
+  check("콘솔/페이지 에러 없음", errors.length === 0, errors.join(" ; "));
 
   await browser.close();
 

@@ -1,7 +1,7 @@
-// 부부 관계 성향 체크의 화면들 — 문항 진행·개인 결과까지. 배우자와 합치는 흐름
-// (초대·코드 입력·결합 결과)은 screens-match.js에 있다. 그쪽이 이 파일의
-// resetCouple·coupleReady·partnerFromUrl·result·foldMarkup과 아래 세 상수를
-// 가져다 쓴다 — 반대 방향은 없다(이 파일은 screens-match.js를 모른다).
+// 부부 관계 성향 체크의 화면들. 배우자와 결과를 합치는 흐름(초대 링크·짧은 코드·결합
+// 리포트)은 D-99에서 통째로 없앴다 — 이 검사는 이제 개인 결과만 낸다. 없앤 이유는
+// `docs/couple-architecture.md` §5 참고(응답이 실린 코드가 부부 사이에서 오간다는 것
+// 자체가 감당할 수 없는 위험이었다).
 import { app, go, onLeave, parseSharedPath, setExitGuard } from "../../core/router.js";
 import { el, bindNav, bindAdGate } from "../../core/dom.js";
 import { state } from "../../core/state.js";
@@ -31,12 +31,11 @@ import {
   DONTS_BEHAVIOR,
   DONTS_ATTACH,
   CONFLICT_SCRIPTS,
+  READING_TEXT,
+  ROLE_IDENTITY_NOTE,
 } from "./data.js";
 import { computeCouple, BEHAVIOR_AXES } from "./score.js";
 import { assembleQuestionnaire, NOTICE_POSITION } from "./assemble.js";
-import { decodePartner, encodePartner } from "./match.js";
-import { formatShortCode } from "./shortcode.js";
-import { ensureShortCode } from "./remote.js";
 import { createCoupleCanvas, drawCoupleCardFooter } from "./card.js";
 
 const COMBO_COUNT = T_AXIS.length * R_AXIS.length * K_AXIS.length;
@@ -45,7 +44,7 @@ const COMBO_COUNT = T_AXIS.length * R_AXIS.length * K_AXIS.length;
 // 장치보다 실질적으로 더 중요하다 — 사용자가 결과를 판정이 아니라 대화 소재로 받아들이게
 // 만드는 프레이밍이기 때문이다.
 export const SERVICE_NOTICE =
-  "이 체크는 두 분이 서로를 이해하는 대화를 돕기 위한 도구입니다. 심리 상태를 진단하거나 관계의 미래를 예측하지 않습니다.";
+  "이 체크는 나를 이해하고 배우자와 나눌 이야기를 찾기 위한 도구입니다. 심리 상태를 진단하거나 관계의 미래를 예측하지 않습니다.";
 
 // 감지·분기 없이 결과 화면 하단에 항상 같은 모습으로 놓인다. 특정 응답에 반응해서
 // 나타나는 것이 아니라서 낙인 효과가 없고, 필요한 사람은 언제든 찾을 수 있다(§9.2).
@@ -63,16 +62,16 @@ export const SUPPORT_MARKUP = `
   </div>
 `;
 
-// 응답 공개 범위 고지(§6.5.2). 기획서 원문은 "배우자가 볼 수 없습니다"라고 단정하지만,
-// 이 사이트는 백엔드가 없어 결과를 링크에 실어 보낸다. 링크에 담기는 것과 화면에 보이는
-// 것을 정확히 구분해서 적었다 — 지키지 못할 약속을 해두면 고지 자체가 신뢰를 잃는다.
+// 응답 공개 범위 고지(§6.5.2). D-99 이후로는 지킬 수 있는 약속의 범위가 훨씬 넓어졌다 —
+// 응답이 담긴 링크·코드를 만드는 경로 자체가 없어져서, "이 기기 밖으로 나가지 않는다"고
+// 그냥 쓸 수 있다. 예전 문구는 "배우자에게 문항별로 보여지지 않는다"까지만 말할 수 있었다.
 export const PRIVACY_MARKUP = `
   <div class="cp-privacy">
-    <div class="cp-privacy-title">🔒 문항별 답은 배우자에게 보여지지 않아요</div>
-    <p>배우자와 결과를 합쳐 봐도, 각 문항에 어떻게 답했는지는 어느 화면에도 표시되지 않습니다.
-    두 분의 결과를 비교한 요약만 함께 보시게 됩니다.</p>
-    <p><b>솔직하게 답할수록 두 분에게 실제로 도움이 되는 결과가 나옵니다.</b>
-    배우자를 배려해서 좋게 답하시면, 정작 두 분이 풀어야 할 문제를 놓치게 됩니다.</p>
+    <div class="cp-privacy-title">🔒 답한 내용은 이 기기 밖으로 나가지 않아요</div>
+    <p>문항에 어떻게 답했는지도, 결과도 서버로 전송되거나 저장되지 않습니다.
+    화면을 새로고침하면 그대로 사라집니다.</p>
+    <p><b>솔직하게 답할수록 나에게 실제로 도움이 되는 결과가 나옵니다.</b>
+    좋게 보이려고 답하시면, 정작 지금 풀어야 할 것을 놓치게 됩니다.</p>
   </div>
 `;
 
@@ -85,8 +84,6 @@ export function resetCouple() {
     completed: false,
     startedAt: null,
     elapsedMs: null,
-    partner: state.couple ? state.couple.partner : null,
-    shortCode: null,
   };
 }
 
@@ -97,12 +94,6 @@ export function coupleReady() {
   return Boolean(c.completed && c.items && Object.keys(c.answers).length >= c.items.length);
 }
 
-// 응답 품질 플래그가 2개 이상이면 결과를 내지 않는다(§5.0). 배우자 초대 링크도 같은 기준으로
-// 막는다 — 결과가 안 나올 응답으로 코드를 만들어 보내면 배우자만 헛수고한다.
-export function coupleBlocked() {
-  return coupleReady() && result().validity.verdict === "blocked";
-}
-
 // 결과는 화면을 다시 그릴 때마다 같은 값이어야 한다. 순수 함수라 매번 계산해도 되지만,
 // 소요시간만은 완료 시점에 한 번 고정해둔다.
 export function result() {
@@ -110,16 +101,6 @@ export function result() {
     elapsedMs: state.couple.elapsedMs,
     setup: state.couple.setup,
   });
-}
-
-// 배우자 코드는 주소(?p=)에만 있고 state에는 캐시해둔다. 뒤로가기로 이 화면에 다시 와도
-// 코드를 잃지 않게 하기 위해서다.
-export function partnerFromUrl() {
-  const code = new URLSearchParams(location.search).get("p");
-  if (!code) return state.couple.partner;
-  const decoded = decodePartner(code);
-  if (decoded) state.couple.partner = decoded;
-  return decoded;
 }
 
 // ---------------------------------------------------------------- 인트로
@@ -136,7 +117,7 @@ export function renderCoupleIntro() {
         <div class="emoji">💞</div>
         <div class="tag">부부 관계 성향 체크</div>
         <h2>우리는 서로를<br/>어떻게 보고 있을까?</h2>
-        <p>문항 ${ITEM_TOTAL}개에 답하면 나의 관계 성향이 나와요.<br/>배우자와 각자 해보고 결과를 합칠 수도 있어요.</p>
+        <p>문항 ${ITEM_TOTAL}개에 답하면 나의 관계 성향이 나와요.<br/>혼자 조용히 보는 결과예요.</p>
       </div>
       <div class="meta-chips">
         <div class="meta-chip"><div class="value">${ITEM_TOTAL}문항</div><div class="label">약 6분 30초</div></div>
@@ -148,7 +129,6 @@ export function renderCoupleIntro() {
       <div class="cta">
         <button class="cta-btn" id="cp-start">시작하기</button>
       </div>
-      <div class="cp-guide-link"><button data-nav="couple-pair">💌 부부 결과 매칭 — 배우자 코드가 있어요</button></div>
       <div class="cp-guide-link"><button data-nav="couple-guide">📖 이 체크, 어떻게 쓰는 건가요?</button></div>
       ${adSlotMarkup("bannerBottom", "margin-top:6px; margin-bottom:22px;")}
     </div>
@@ -195,7 +175,7 @@ export function renderCoupleSetup() {
       <p class="cp-setup-lead">고른 내용에 맞춰 문항 문장이 바뀝니다.</p>
       ${axisGroupMarkup("나는", "결과 문구의 호칭에만 쓰이고 점수에는 영향을 주지 않아요", "t", T_AXIS)}
       ${axisGroupMarkup("우리 집에서 나는", "지금 주로 맡고 있는 쪽을 고르세요", "r", R_AXIS)}
-      ${axisGroupMarkup("자녀는", "배우자와 함께 결과를 보려면 같은 항목을 골라야 해요", "k", K_AXIS)}
+      ${axisGroupMarkup("자녀는", "지금 상황에 가장 가까운 것을 고르세요", "k", K_AXIS)}
       <div class="cta">
         <button class="cta-btn" id="cp-setup-next" disabled>문항 시작하기</button>
       </div>
@@ -245,7 +225,7 @@ export function renderCoupleQuestion() {
       </div>
       ${adSlotMarkup("bannerTop", "margin-top:10px; margin-bottom:4px;")}
       <div class="cp-anchor-notice" id="cp-anchor-notice" hidden>
-        🔒 거의 다 왔어요. 남은 문항도 <b>배우자에게 문항별로 보여지지 않습니다</b> —
+        🔒 거의 다 왔어요. 남은 문항의 답도 <b>이 기기 밖으로 나가지 않습니다</b> —
         있는 그대로 답해주세요.
       </div>
       <div class="question-block">
@@ -329,9 +309,7 @@ export function renderCoupleAd() {
     </div>
   `));
   bindNav(app);
-  // 배우자 초대 링크를 타고 들어와 문항을 마친 경우엔 결합 결과가 목적지다. 개인 결과로
-  // 보내면 초대받은 쪽은 "합쳐서 보자"던 것을 스스로 다시 찾아가야 한다.
-  bindAdGate(app, () => go(state.couple.partner ? "couple-report" : "couple-result"));
+  bindAdGate(app, () => go("couple-result"));
 }
 
 // ---------------------------------------------------------------- 결과 부품
@@ -368,10 +346,10 @@ export function foldMarkup(title, body) {
 
 // 백분위·석차 표현은 쓰지 않는다. 비교할 규준 표본이 없는 상태에서 "상위 20%"라고 쓰는
 // 것은 허위 정보다 — 절대값과 기준선만 보여주고 사용자가 직접 위치를 읽게 한다(§6.2).
-function barMarkup(label, value, { midline = false, desc = "" } = {}) {
+function barMarkup(label, value, { midline = false, desc = "", valueText = "" } = {}) {
   return `
     <div class="cp-bar-row">
-      <div class="cp-bar-head"><span>${label}</span><b>${Math.round(value)}점</b></div>
+      <div class="cp-bar-head"><span>${label}</span><b>${valueText || `${Math.round(value)}점`}</b></div>
       <div class="cp-bar-track">
         ${midline ? '<span class="cp-bar-mid"></span>' : ""}
         <span class="cp-bar-fill" style="width:${Math.max(2, Math.round(value))}%;"></span>
@@ -465,11 +443,65 @@ function conflictBody(r) {
   `;
 }
 
-function narrativeBody(r) {
+// 자기보고 항목(앵커·역할·자녀) 한 줄. 1~5 척도라 0~100 막대와 눈금이 다르므로 숫자를
+// 그대로 쓰지 않고 "5점 중 3.5"로 적는다 — 63점짜리 성향 막대와 나란히 놓였을 때
+// 같은 척도로 오해하지 않게 하는 게 목적이다.
+//
+// `watch` 방향으로 나온 항목에만 대화 문장이 붙는다(READING_TEXT 주석 참고).
+function readingMarkup(reading) {
+  const t = READING_TEXT[reading.key];
+  const pct = ((reading.score - 1) / 4) * 100;
+  return `
+    <div class="cp-reading">
+      ${barMarkup(t.label, pct, {
+        midline: true,
+        desc: t.desc,
+        valueText: `5점 중 ${reading.score.toFixed(1)}`,
+      })}
+      <p class="cp-note">${t[reading.level]}</p>
+      ${reading.consistent
+        ? ""
+        : `<p class="cp-note cp-reading-shaky">이 항목은 비슷한 두 문항에 서로 다르게 답하셔서, 참고로만 봐주세요.</p>`}
+      ${reading.watched
+        ? `<div class="cp-script"><div class="cp-script-title">💬 이렇게 말문을 열어보세요</div><p>${t.script}</p></div>`
+        : ""}
+    </div>
+  `;
+}
+
+function readingsOf(r, group) {
+  return r.readings.filter((x) => x.group === group).map(readingMarkup).join("");
+}
+
+// 앵커 세 문항은 예전엔 부부의 인지 격차를 내는 데에만 쓰였다(D-99로 그 흐름이 사라짐).
+// 지금은 내 답을 그대로 읽어주는 자리다 — 결과에서 가장 "지금의 나"에 가까운 값이라
+// 접지 않고 펼쳐둔다. 비교 대상이 없으니 방향·지목 문제(§6.5.3)도 성립하지 않는다.
+function feelingsMarkup(r) {
+  return `
+    <div class="cp-profile cp-feelings">
+      <div class="cp-block-title">지금 내가 느끼고 있는 것</div>
+      <p class="cp-block-sub">성향과 달리 이 값들은 <b>시기에 따라 움직여요.</b>
+      지금 이 시기의 상태로 읽어주세요.</p>
+      ${readingsOf(r, "feel")}
+    </div>
+  `;
+}
+
+function roleBody(r) {
   if (!r.setup) return "";
+  const identity = r.roleIdentity >= 4 ? ROLE_IDENTITY_NOTE.high : r.roleIdentity <= 2 ? ROLE_IDENTITY_NOTE.low : "";
   return `
     <p>${ROLE_NARRATIVE[r.behavior.primary][r.setup.r]}</p>
+    ${identity ? `<p>${identity}</p>` : ""}
+    ${readingsOf(r, "role")}
+  `;
+}
+
+function childBody(r) {
+  if (!r.setup) return "";
+  return `
     <p>${CHILD_NARRATIVE[r.setup.k]}</p>
+    ${readingsOf(r, "child")}
   `;
 }
 
@@ -492,77 +524,6 @@ function actionMarkup(r) {
   `;
 }
 
-// 배우자 코드를 이미 들고 있으면 초대가 아니라 결합 결과가 다음 목적지다.
-//
-// 예전엔 짧은 코드를 보려면 "배우자 초대 링크 만들기"를 눌러 별도 화면(couple-invite)까지
-// 가야 했다 — 코드 자체는 그 화면에서 자동으로 뜨지만, 그 화면에 도달하는 클릭 한 번이
-// 불편하다는 피드백을 받았다. 결과 화면에 뜨자마자 코드를 바로 노출한다(아래 wireInlineShortCode).
-// "링크로 보내기·코드 카드 저장" 같은 부가 기능은 여전히 couple-invite 화면에 남겨둔다.
-function inviteBlockMarkup(r) {
-  if (state.couple.partner) {
-    return `
-      <div class="cp-invite-cta">
-        <div class="cp-block-title">배우자 결과가 준비돼 있어요</div>
-        <p class="cp-block-sub">같은 질문에 두 분이 얼마나 다르게 답했는지 볼 수 있어요.</p>
-        <button class="cta-btn" data-nav="couple-report">두 분의 결합 결과 보기</button>
-      </div>
-    `;
-  }
-  return `
-    <div class="cp-invite-cta">
-      <div class="cp-block-title">배우자와 결과를 합쳐볼까요?</div>
-      <p class="cp-block-sub">같은 질문에 두 분이 얼마나 다르게 답했는지 볼 수 있어요.
-      <b>혼자서는 알 수 없는 것</b>이에요. (위 결과가 더 정확해지는 건 아니에요.)</p>
-      <div class="cp-shortcode-block cp-shortcode-block--inline">
-        <div class="cp-block-sub" style="margin:0 0 4px;">짧은 코드를 문자로 바로 보내세요 (7일간 유효)</div>
-        <div class="cp-shortcode" id="cp-shortcode-inline">발급 중...</div>
-        <button class="share-mini" id="cp-shortcode-inline-copy" hidden>🔗 코드 복사</button>
-      </div>
-      <button class="cta-btn" data-nav="couple-invite">🔗 링크로 보내기 · 코드 카드 저장</button>
-      <button class="cta-btn cp-invite-secondary" data-nav="couple-pair">💌 부부 결과 매칭 — 배우자 코드 입력하기</button>
-    </div>
-  `;
-}
-
-// 결과 화면에 들어오자마자(클릭 없이) 짧은 코드를 발급·표시한다. 같은 결과로 재진입하면
-// ensureShortCode()의 캐시를 그대로 쓰므로, 화면을 여러 번 오가도 재발급되지 않는다.
-// 화면을 떠난 뒤 응답이 오면 onLeave로 잡은 left 플래그로 DOM 갱신을 건너뛴다(E-4와 같은 함정).
-async function wireInlineShortCode(r) {
-  const codeEl = app.querySelector("#cp-shortcode-inline");
-  if (!codeEl) return; // 이미 배우자 코드를 들고 있는 분기(위)는 이 요소가 없다.
-  const copyBtn = app.querySelector("#cp-shortcode-inline-copy");
-
-  let left = false;
-  onLeave(() => {
-    left = true;
-  });
-
-  const partnerCode = encodePartner(r);
-  const short = await ensureShortCode(partnerCode);
-  if (left) return;
-
-  if (!short) {
-    codeEl.textContent = "발급이 지금 안 돼요 — 아래 버튼으로 링크를 보내주세요.";
-    return;
-  }
-
-  codeEl.textContent = formatShortCode(short);
-  copyBtn.hidden = false;
-  copyBtn.classList.add("active");
-  copyBtn.addEventListener("click", async () => {
-    try {
-      await navigator.clipboard.writeText(formatShortCode(short));
-      const original = copyBtn.textContent;
-      copyBtn.textContent = "✅ 복사 완료!";
-      setTimeout(() => {
-        copyBtn.textContent = original;
-      }, 1500);
-    } catch (err) {
-      console.error("코드 복사 실패", err);
-    }
-  });
-}
-
 // 사유를 특정하지 않는다. 속도 외의 사유로 플래그가 섰을 때 "빠르게 진행되어"라고
 // 안내하면 사실과 다른 말이 나간다(§5.0 v3.1 교정 3).
 function warnMarkup(validity) {
@@ -575,9 +536,8 @@ function warnMarkup(validity) {
 export function renderCoupleResult() {
   const r = result();
 
-  // 플래그가 2개 이상이면 결과를 내지 않는다(§5.0). 부정확한 데이터로 산출된 인지 격차는
-  // 부부에게 도움이 되기는커녕 다툼거리만 만든다 — 여기서 막지 않으면 그대로 결합
-  // 리포트까지 흘러간다.
+  // 플래그가 2개 이상이면 결과를 내지 않는다(§5.0). 부정확한 데이터로 산출된 성향
+  // 서술은 도움이 되기는커녕 자기 이해를 엉뚱한 쪽으로 굳힌다.
   if (r.validity.verdict === "blocked") {
     app.appendChild(el(`
       <div>
@@ -587,7 +547,7 @@ export function renderCoupleResult() {
         </div>
         <ul class="cp-flag-list">${r.validity.flags.map((f) => `<li>${f}</li>`).join("")}</ul>
         <p class="disclaimer">지금 응답으로 결과를 내면 실제와 다른 유형이 나올 가능성이 높아요.
-        두 분에게 도움이 되는 결과를 위해 결과 산출을 건너뛰었습니다.</p>
+        도움이 되는 결과를 위해 결과 산출을 건너뛰었습니다.</p>
         <div class="cta">
           <button class="cta-btn" id="cp-retry">처음부터 다시 하기</button>
         </div>
@@ -616,11 +576,11 @@ export function renderCoupleResult() {
 
       ${profileMarkup(r)}
       ${personaMarkup(r)}
-      ${foldMarkup("지금 이 상황에서는", narrativeBody(r))}
+      ${feelingsMarkup(r)}
+      ${foldMarkup("지금의 역할, 나에게는", roleBody(r))}
+      ${foldMarkup("자녀 시기와 두 사람", childBody(r))}
       ${foldMarkup("갈등이 생겼을 때", conflictBody(r))}
       ${actionMarkup(r)}
-
-      ${inviteBlockMarkup(r)}
 
       ${shareBlockMarkup("내 유형을 친구에게 보여주기")}
 
@@ -646,10 +606,8 @@ export function renderCoupleResult() {
     go("couple-intro");
   });
 
-  wireInlineShortCode(r);
-
-  // 공유는 "내 유형 소개 페이지" 주소로만 한다. 배우자 코드가 담긴 주소를 여기에 걸면
-  // 아무에게나 내 응답이 실린 링크가 나간다 — 초대 링크는 별도 화면에서만 만든다.
+  // 공유는 "내 유형 소개 페이지" 주소로만 한다. 응답이 담긴 주소는 이 앱 어디에서도
+  // 만들지 않는다(D-99에서 그 경로 자체를 없앴다).
   wireShare(app, {
     url: `${location.origin}/test/couple/result/${t.slug}`,
     text: `부부 관계 성향 체크에서 "${t.name}"이 나왔어요. 당신은 어떤 유형인가요?`,
@@ -751,12 +709,10 @@ async function drawCoupleCard(r) {
 
 // ---------------------------------------------------------------- 이용 안내
 
-// 이 화면이 있는 이유: 사용자는 "둘이 하면 더 정확해진다"고 짐작하기 쉬운데, 실제 설계는
-// 그렇지 않다. 개인 점수는 자기 응답만으로 계산되고 배우자 응답은 한 글자도 들어가지 않는다.
-// 합쳐서 얻는 것은 정밀도가 아니라 **혼자서는 존재할 수 없는 정보**(인지 격차)다.
-// 이 구분을 미리 알려주지 않으면 사용자는 기대와 다른 결과를 받고 "부정확하다"고 느낀다.
-// 마케팅 문구도 같은 이유로 "둘이 하면 더 정확해집니다"가 아니라
-// "혼자서는 알 수 없는 것을 알게 됩니다" 쪽을 쓴다.
+// 이 화면이 있는 이유(D-99로 목적이 바뀜): 예전에는 "둘이 하면 더 정확해지는 게 아니라
+// 다른 게 나온다"는 오해를 미리 풀어주는 화면이었다. 배우자와 합치는 흐름을 없앤 뒤로는
+// **결과를 어떻게 읽어야 하는가**를 맡는다 — 유형 이름 하나로 자기를 규정해버리는 것이
+// 이 검사에서 가장 흔한 오독이고, 결과 화면 안에 다 적으면 정작 결과가 안 읽힌다.
 export function renderCoupleGuide() {
   const anchorPerConcept = ANCHOR_ITEMS.length / ANCHOR_CONCEPTS.length;
 
@@ -771,83 +727,66 @@ export function renderCoupleGuide() {
       <div class="cover">
         <div class="emoji">📖</div>
         <div class="tag">부부 관계 성향 체크</div>
-        <h2>혼자서는<br/>알 수 없는 것</h2>
-        <p>혼자 해도 되고, 배우자와 함께 해도 돼요.<br/>나오는 게 서로 다릅니다.</p>
+        <h2>결과를<br/>어떻게 읽을까?</h2>
+        <p>유형 이름 하나로 나를 규정하지 않는 게<br/>이 결과를 제대로 쓰는 방법이에요.</p>
       </div>
 
       <div class="cp-profile">
         <div class="cp-block-title">무엇이 나오나요</div>
-        <div class="cp-guide-two">
-          <div class="cp-guide-col">
-            <div class="head">혼자 하면</div>
-            <p>나의 관계 성향 유형과 네 가지 성향 점수.</p>
-          </div>
-          <div class="cp-guide-col">
-            <div class="head">둘이 하면</div>
-            <p>위는 <b>그대로</b>이고, <b>같은 질문에 두 사람이 얼마나 다르게 답했는지</b>가 더해져요.</p>
-          </div>
-        </div>
+        <ol class="cp-guide-steps">
+          <li>관계 성향 유형과 <b>네 가지 성향 점수</b></li>
+          <li>평소 모습 · 속마음 · 힘들 때 · 대화법 <b>심화 서술</b></li>
+          <li>지금 <b>내가 느끼고 있는 것</b>(알아줌 · 부담 · 분담)</li>
+          <li>지금의 <b>역할과 자녀 시기</b>가 나에게 어떤지</li>
+          <li>배우자에게 보여줄 <b>실행 제안</b>과 대화 문장</li>
+        </ol>
       </div>
 
       <div class="cp-profile cp-guide-key">
         <div class="cp-block-title">⚠️ 오해하기 쉬운 것</div>
-        <p class="cp-guide-lead">둘이 한다고 <b>내 결과가 더 정확해지지는 않습니다.</b></p>
-        <p>내 점수는 <b>내가 답한 문항 ${ITEM_TOTAL}개만으로</b> 계산돼요. 배우자의 답은 한 글자도
-        들어가지 않습니다. 합쳐서 얻는 건 더 정확한 결과가 아니라
-        <b>혼자서는 아예 없는 정보</b>예요.</p>
+        <p class="cp-guide-lead">이 결과는 <b>지금의 나</b>를 찍은 사진이지, 정해진 성격표가 아닙니다.</p>
+        <p>점수는 <b>내가 답한 문항 ${ITEM_TOTAL}개만으로</b> 계산돼요. 요즘 유난히 지쳐 있다면
+        그 상태가 그대로 실립니다 — 그래서 시기를 달리해 다시 해보면 값이 조금씩 움직여요.
+        <b>그게 오류가 아니라 이 검사가 재는 것의 성질</b>입니다.</p>
       </div>
 
       <div class="cp-profile">
-        <div class="cp-block-title">예를 들면</div>
+        <div class="cp-block-title">이렇게 써보세요</div>
         <div class="cp-guide-story">
-          <p>"지금의 분담이 공정하다"에 <b>내가 2점</b>을 눌렀다고 해볼게요.
-          내가 예민한 걸까요, 실제로 기울어 있는 걸까요? 이것만으론 알 수 없어요.</p>
-          <p><b>배우자가 같은 문장에 4점</b>을 눌렀다는 걸 알아야
-          "같은 집을 서로 다르게 보고 있다"는 이야기가 됩니다.</p>
-          <p class="punch">재는 대상이 <b>'나'에서 '우리'로</b> 바뀌는 거예요.</p>
+          <p>결과를 <b>배우자에게 보여주는 것</b>까지가 이 체크의 절반이에요. 특히 "배우자에게
+          보여주세요" 블록은 처음부터 그러라고 만든 문장들입니다.</p>
+          <p>혼자 읽고 끝내도 괜찮아요. 다만 <b>마음에 걸린 항목 하나</b>만 골라
+          그 밑에 붙은 대화 문장을 그대로 꺼내보시면, 평소에 안 하던 이야기가 시작됩니다.</p>
+          <p class="punch">읽는 게 아니라 <b>말을 걸어보는 것</b>이 목적이에요.</p>
         </div>
       </div>
 
-      <div class="cp-profile">
-        <div class="cp-block-title">순서</div>
-        <ol class="cp-guide-steps">
-          <li>상황 고르기 (호칭·역할·자녀 단계)</li>
-          <li>문항 ${ITEM_TOTAL}개 답하기 (약 6분 30초)</li>
-          <li>내 결과 보기 — 여기서 끝내도 돼요</li>
-          <li>결과 화면에서 <b>배우자 초대 링크</b> 만들어 보내기</li>
-          <li>배우자가 답하면 <b>배우자 화면</b>에 결합 결과가 나와요</li>
-        </ol>
-        <p class="cp-note">배우자가 먼저 하고 나에게 링크를 보내도 똑같이 동작해요.</p>
-      </div>
-
       ${foldMarkup(
-        "차이 값은 왜 세 단계로만 보여주나요?",
-        `<p>두 사람의 답을 빼면 <b>두 사람의 오차가 함께 실려요.</b> 이 체크에서 가장 흔들리기 쉬운
-         값이라, 차이를 내는 문항만 개념 하나당 ${anchorPerConcept}문항씩 모두 ${ANCHOR_ITEMS.length}문항을 써서 두껍게 받쳤습니다.</p>
-         <p>반대로 <b>두 분에게 공통으로 있는 버릇은 빼는 순간 사라집니다.</b> 둘 다 후하게 답하는
-         편이라면 그 후함은 차이에서 상쇄돼요.</p>
-         <p>그래도 소수점까지 단정할 만큼 정밀한 값은 아니라서,
-         <b>비슷함 / 조금 다름 / 뚜렷하게 다름</b> 세 단계로만 보여드립니다.</p>`
+        "배우자와 결과를 합쳐 볼 수는 없나요?",
+        `<p>예전에는 짧은 코드로 두 사람의 결과를 합쳐 <b>같은 질문에 서로 얼마나 다르게 답했는지</b>를
+         보여줬지만, 지금은 그 기능을 <b>없앴습니다.</b></p>
+         <p>차이를 숫자로 받아든 두 사람이 그걸 대화가 아니라 근거로 쓰게 되는 순간,
+         이 도구는 도움이 아니라 다툼의 재료가 됩니다. 그 위험을 화면 문구로 막는 데에는
+         한계가 있어서 <b>기능 자체를 내려놓는 쪽</b>을 택했어요.</p>
+         <p>대신 각자 해보고 <b>결과 화면을 서로 보여주는 것</b>은 언제든 할 수 있습니다 —
+         그게 원래 얻고 싶었던 대화에 더 가깝습니다.</p>`
       )}
 
       ${foldMarkup(
-        "한 사람이 대충 답하면 어떻게 되나요?",
-        `<p>결합 결과의 신뢰도는 두 사람의 평균이 아니라 <b>약한 쪽</b>을 따릅니다.
-         한 분이라도 응답 점검에 두 번 이상 걸리면 결합 결과를 아예 만들지 않아요.
-         서로 시간 있을 때 각자 천천히 답해주세요.</p>`
+        "왜 문항이 이렇게 많나요?",
+        `<p>성향 하나를 문항 하나로 재면 그날 기분이 그대로 결과가 됩니다. 그래서 성향마다
+         여러 문항을 두고 평균을 냈고, 특히 흔들리기 쉬운 항목은 개념 하나당
+         ${anchorPerConcept}문항씩 모두 ${ANCHOR_ITEMS.length}문항을 써서 두껍게 받쳤습니다.</p>
+         <p>중간에 방향이 반대인 문장이 섞여 있는 것도 같은 이유예요 — 읽지 않고 한쪽으로만
+         찍으면 그게 드러나서, 그때는 결과를 내지 않고 다시 해달라고 안내합니다.</p>`
       )}
 
       ${foldMarkup(
         "자주 묻는 것",
         `<div class="cp-guide-qa">
-          <div class="q">자녀 단계는 꼭 같게 골라야 하나요?</div>
-          <p>네. 다르면 두 분이 서로 다른 문장을 받게 돼서 비교가 성립하지 않아요.
-          <b>역할은 달라도 되고, 둘 다 같은 걸 골라도 괜찮습니다</b> — 두 분 다 "내가 주로 맡고 있다"고
-          느끼는 것 자체가 의미 있는 신호라 따로 짚어드려요.</p>
-
-          <div class="q">내 답을 배우자가 보게 되나요?</div>
-          <p>어느 화면에도 표시되지 않아요. 비교한 요약만 함께 보시게 됩니다.
-          다만 초대 링크에는 계산에 필요한 값이 담기니 <b>배우자 외에는 보내지 마세요.</b></p>
+          <div class="q">내 답이 어디에 저장되나요?</div>
+          <p>저장되지 않습니다. 답과 결과 모두 이 기기의 메모리에만 있고,
+          <b>새로고침하면 사라집니다.</b> 서버로 전송되는 값도 없어요.</p>
 
           <div class="q">"결과를 만들 수 없다"고 나와요.</div>
           <p>응답이 너무 빠르거나 한쪽 값으로만 치우쳤을 때예요. 천천히 다시 해주시면 됩니다.</p>
@@ -855,6 +794,10 @@ export function renderCoupleGuide() {
           <div class="q">결과가 나랑 안 맞는 것 같아요.</div>
           <p>유형 이름보다 <b>네 성향 점수</b>를 봐주세요. 1·2위가 거의 붙어 있으면
           결과 화면이 그렇게 알려드리는데, 그런 경우는 원래 단정하기 어려운 값이에요.</p>
+
+          <div class="q">역할이나 자녀 단계를 잘못 골랐어요.</div>
+          <p>처음부터 다시 하시면 됩니다. 그 세 가지는 문항 문장을 고르는 데 쓰여서,
+          중간에 바꾸면 이미 답한 문항과 문장이 어긋나거든요.</p>
 
           <div class="q">다시 해도 되나요?</div>
           <p>언제든지요. 다만 짧은 간격으로 반복하면 성향이 아니라

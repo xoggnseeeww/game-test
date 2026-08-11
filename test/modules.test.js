@@ -125,7 +125,9 @@ test("등록되는 화면 id와 경로가 겹치지 않는다", async () => {
   assert.ok(paths.includes("/learning/basic-conversation"));
   assert.ok(coupleScreens.some((s) => s.id === "couple-shared" && s.dynamicPath));
 
-  // 배우자 초대 링크는 ?p=<코드>를 붙여 보낸다. 그 주소가 고정 경로로 등록돼 있어야
-  // 새로고침·직접 접속에서 홈으로 튕기지 않는다.
-  assert.ok(paths.includes("/test/couple/pair"));
+  // D-99에서 없앤 결합 흐름의 주소는 등록돼 있으면 안 된다. 디스크립터만 되살리고
+  // 화면 파일이 없는 상태로 배포되면 라우터가 undefined를 render로 들고 죽는다.
+  for (const gone of ["/test/couple/invite", "/test/couple/pair", "/test/couple/together"]) {
+    assert.ok(!paths.includes(gone), `${gone}는 D-99에서 없앤 화면이다`);
+  }
 });

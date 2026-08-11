@@ -1,6 +1,6 @@
-// 공유 카드(drawCoupleCard, screens.js)와 배우자 전용 코드 카드(drawCoupleCodeCard,
-// screens-match.js)가 같은 배경·헤더·바닥 URL을 그린다. 하나만 있으면 브랜드 색이
-// 바뀔 때 두 곳을 따로 고칠 필요가 없다.
+// 공유 카드(drawCoupleCard, screens.js)의 배경·헤더·바닥 URL. 예전에는 배우자 전용
+// 코드 카드도 같이 썼지만 그 흐름은 D-99에서 없앴다 — 파일을 합치지 않고 남겨둔 이유는
+// 캔버스 배경을 그리는 코드가 결과 화면 로직과 섞이면 둘 다 읽기 나빠지기 때문이다.
 export function createCoupleCanvas() {
   const W = 1080;
   const H = 1080;

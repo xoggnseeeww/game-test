@@ -185,7 +185,7 @@ ADHD·DISC 채점 파이프라인 상세는 각각 `docs/adhd-architecture.md` �
 |------|---------------|
 | `modules.test.js` | 모듈 import/export 정합성 · **화면 id·경로 중복** — 새 도구/게임을 추가하면 이 파일의 화면 목록에도 넣어야 검사 대상이 된다 |
 | `copy.test.js` | 개수 하드코딩 금지(D-17) — 세 번 재발해서 문서 규칙에서 테스트로 승격됐다 |
-| `adhd.score.test.js` · `disc.score.test.js` · `couple.score/match/shortcode.test.js` | 채점 불변식 · 부부 체크 안전 장치(유형 단독 노출 금지 등) · 짧은 코드 |
+| `adhd.score.test.js` · `disc.score.test.js` · `couple.score.test.js` | 채점 불변식 · 부부 체크 안전 장치(유형 단독 노출 금지 등) · 결과에 안 쓰이는 문항이 생기지 않는가(D-99) |
 | `numpath.engine.test.js` · `numpath.generate.test.js` | 타일 모델 · 생성기 · 솔버 · 별 판정 |
 | `learning.score.test.js` | 발음 채점 — **단어 단위** 정렬·판정 구간, 축약형/숫자 정규화, 오답 단어 표시(D-91) |
 | `learning.elementary.test.js` | 문법 태그 유효성 · **반복(recycling) 규칙** · produce 문장의 hint/sample 존재 · kidLabel에 문법 용어가 안 남았는지 · `check` 정규식이 실제 문장에 걸리고 엉뚱한 문장은 안 잡는지(D-94) · 모든 문법에 `explain`이 있는지(D-96) |

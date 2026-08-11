@@ -30,8 +30,13 @@ import {
   DONTS_BEHAVIOR,
   DONTS_ATTACH,
   CONFLICT_SCRIPTS,
+  READING_TEXT,
+  ROLE_IDENTITY_NOTE,
 } from "../js/tests/couple/data.js";
 import {
+  SELF_READINGS,
+  selfReadings,
+  readingLevel,
   REVERSE_CODES,
   FACTOR_ITEMS,
   BEHAVIOR_AXES,
@@ -443,6 +448,8 @@ function userFacingCopy() {
     ...Object.values(BEHAVIOR_AXIS_MEANING),
     ...Object.values(BEHAVIOR_DEEP).flatMap((d) => [d.short, ...DEEP_PARTS.map((p) => d[p])]),
     ...Object.values(ATTACH_DEEP).flatMap((d) => DEEP_PARTS.map((p) => d[p])),
+    ...Object.values(READING_TEXT).flatMap((t) => [t.label, t.desc, t.low, t.mid, t.high, t.script]),
+    ...Object.values(ROLE_IDENTITY_NOTE),
   ];
 }
 
@@ -530,10 +537,12 @@ test("결과가 유형 라벨·연속 프로필·확신도를 항상 함께 낸�
   assert.ok(["clear", "moderate", "edge"].includes(r.behavior.confidence));
   assert.ok(["clear", "edge"].includes(r.attachment.confidence));
   assert.equal(r.validity.verdict, "ok");
-  // 부부 비교에 쓰는 값은 양쪽 문장이 같은 것만 담는다 — R1~R4가 새면 안 된다.
-  // 앵커는 개별 응답값이 아니라 개념 점수로만 넘어간다.
-  assert.deepEqual(Object.keys(r.comparable).sort(), ["K1", "K2", "K3", "K4", "K5", "R5", "R6"]);
   assert.deepEqual(Object.keys(r.anchors).sort(), ["AN1", "AN2", "AN3"]);
+  // 부부 비교용 문항값 묶음(comparable)은 결합 리포트와 함께 사라졌다(D-99).
+  // 내보낼 곳이 없는 값이 결과 객체에 남으면 다음 사람이 매번 용도를 다시 추적한다.
+  assert.equal(r.comparable, undefined, "결합 리포트용 값이 결과에 남아 있다");
+  // 대신 같은 문항들이 개인용 구간 값으로 나온다.
+  assert.equal(r.readings.length, SELF_READINGS.length);
 });
 
 // 진행 상태를 "답이 다 찼는가"로 세면, 마지막 문항에서 뒤로 간 순간에도 답은 전부 차 있어서
@@ -559,4 +568,68 @@ test("결과 화면 guard는 답 개수가 아니라 완료 플래그를 본다"
   // 완료했더라도 문항지가 없으면(=새로고침으로 state가 날아간 뒤) 결과를 그릴 수 없다.
   state.couple.items = null;
   assert.equal(coupleReady(), false);
+});
+
+// ---------------------------------------------------------------- 개인 읽을거리 (D-99)
+
+test("답한 문항은 전부 결과 어딘가에서 쓰인다", () => {
+  // D-99로 결합 리포트를 없애면서 앵커·역할·자녀 문항이 통째로 죽은 문항이 될 뻔했다.
+  // "답은 했는데 결과엔 안 나오는 문항"이 늘어나는 것이 결과가 부실해지는 가장 큰 원인이라,
+  // 그 상태로 되돌아가는 변경을 여기서 막는다.
+  const used = new Set(SELF_READINGS.flatMap((r) => r.codes));
+  used.add("R3"); // 막대가 아니라 덧말(ROLE_IDENTITY_NOTE)로 쓰인다
+  for (const code of Object.keys(FACTOR_ITEMS).flatMap((f) => FACTOR_ITEMS[f])) used.add(code);
+  const scored = [...ANCHOR_ITEMS, ...ROLE_ITEMS, ...CHILD_ITEMS].map((i) => i.code);
+  for (const code of scored) assert.ok(used.has(code), `${code}가 결과 어디에도 안 쓰인다`);
+  // QC 문항만 예외 — 응답 품질 검사에만 쓰이고 결과에 나오지 않는 게 설계다.
+});
+
+test("자기보고 항목마다 구간 서술 세 개와 대화 문장이 있다", () => {
+  for (const r of SELF_READINGS) {
+    const t = READING_TEXT[r.key];
+    assert.ok(t, `${r.key} 문구`);
+    assert.ok(t.label?.length > 2 && t.desc?.length > 10, `${r.key} 라벨·설명`);
+    for (const level of ["low", "mid", "high"]) {
+      assert.ok(t[level]?.length >= 60, `${r.key}의 ${level} 서술이 너무 짧다: ${t[level]}`);
+    }
+    // watch 방향으로 나왔을 때만 붙지만, 없으면 그 순간 화면이 비어버린다.
+    assert.ok(t.script?.includes("\""), `${r.key}의 대화 문장`);
+    assert.ok(["low", "high"].includes(r.watch), `${r.key}의 watch 방향`);
+  }
+});
+
+test("구간 경계는 3.0을 어느 쪽으로도 읽지 않는다", () => {
+  assert.equal(readingLevel(1), "low");
+  assert.equal(readingLevel(2.5), "low");
+  assert.equal(readingLevel(2.6), "mid");
+  assert.equal(readingLevel(3), "mid");
+  assert.equal(readingLevel(3.4), "mid");
+  assert.equal(readingLevel(3.5), "high");
+  assert.equal(readingLevel(5), "high");
+});
+
+test("역채점 문항(R6)은 방향을 뒤집어 읽는다", () => {
+  // R6 문장은 "바꾸는 것은 어렵다"이다. 뒤집지 않으면 "바꿀 여지가 크다"는 라벨에
+  // 정반대 값이 실려, 화면 문구와 점수가 서로 반대말을 하게 된다.
+  const rigid = selfReadings(variedAnswers({ R6: 5 })).find((x) => x.key === "ROLE_FLEX");
+  const flexible = selfReadings(variedAnswers({ R6: 1 })).find((x) => x.key === "ROLE_FLEX");
+  assert.equal(rigid.level, "low");
+  assert.equal(flexible.level, "high");
+});
+
+test("눈여겨볼 방향으로 나온 항목만 watched로 표시된다", () => {
+  // 부담(AN2)은 높을 때, 알아줌(AN1)은 낮을 때가 눈여겨볼 방향이다. 전부 붙이면
+  // 대화 문장이 배경음이 되어 정작 지금 필요한 한 줄이 묻힌다.
+  const heavy = selfReadings(variedAnswers({ AN2a: 5, AN2b: 5, AN1a: 5, AN1b: 5 }));
+  assert.equal(heavy.find((x) => x.key === "AN2").watched, true);
+  assert.equal(heavy.find((x) => x.key === "AN1").watched, false);
+  const unseen = selfReadings(variedAnswers({ AN1a: 1, AN1b: 1 }));
+  assert.equal(unseen.find((x) => x.key === "AN1").watched, true);
+});
+
+test("같은 개념 두 문항이 크게 엇갈리면 단정하지 않는다", () => {
+  const shaky = selfReadings(variedAnswers({ AN3a: 1, AN3b: 5 })).find((x) => x.key === "AN3");
+  assert.equal(shaky.consistent, false);
+  const steady = selfReadings(variedAnswers({ AN3a: 4, AN3b: 4 })).find((x) => x.key === "AN3");
+  assert.equal(steady.consistent, true);
 });
