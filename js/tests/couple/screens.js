@@ -17,7 +17,10 @@ import {
   ANCHOR_ITEMS,
   ANCHOR_CONCEPTS,
   BEHAVIOR_LABELS,
+  BEHAVIOR_AXIS_MEANING,
+  BEHAVIOR_DEEP,
   ATTACH_TYPES,
+  ATTACH_DEEP,
   CONFLICT_STYLES,
   AXIS_LABELS,
   COUPLE_TYPES,
@@ -365,7 +368,7 @@ export function foldMarkup(title, body) {
 
 // 백분위·석차 표현은 쓰지 않는다. 비교할 규준 표본이 없는 상태에서 "상위 20%"라고 쓰는
 // 것은 허위 정보다 — 절대값과 기준선만 보여주고 사용자가 직접 위치를 읽게 한다(§6.2).
-function barMarkup(label, value, { midline = false } = {}) {
+function barMarkup(label, value, { midline = false, desc = "" } = {}) {
   return `
     <div class="cp-bar-row">
       <div class="cp-bar-head"><span>${label}</span><b>${Math.round(value)}점</b></div>
@@ -373,6 +376,7 @@ function barMarkup(label, value, { midline = false } = {}) {
         ${midline ? '<span class="cp-bar-mid"></span>' : ""}
         <span class="cp-bar-fill" style="width:${Math.max(2, Math.round(value))}%;"></span>
       </div>
+      ${desc ? `<div class="cp-bar-desc">${desc}</div>` : ""}
     </div>
   `;
 }
@@ -381,7 +385,9 @@ function profileMarkup(r) {
   return `
     <div class="cp-profile">
       <div class="cp-block-title">네 가지 성향 점수</div>
-      ${BEHAVIOR_AXES.map((ax) => barMarkup(BEHAVIOR_LABELS[ax], r.norm[ax])).join("")}
+      ${BEHAVIOR_AXES.map((ax) =>
+        barMarkup(BEHAVIOR_LABELS[ax], r.norm[ax], { desc: BEHAVIOR_AXIS_MEANING[ax] })
+      ).join("")}
       <p class="cp-note">${confidenceText(r.behavior)}</p>
       <div class="cp-block-title" style="margin-top:18px;">가까움과 거리</div>
       <p class="cp-block-sub">가운데 선이 중간이에요.</p>
@@ -399,14 +405,61 @@ function profileMarkup(r) {
   `;
 }
 
+// 심화 서술의 한 조각(제목 + 문단들). 개인 성향 카드와 갈등 접기 블록이 같이 쓴다 —
+// 두 곳에 따로 쓰면 문단 간격·제목 크기가 갈라진다.
+function deepSection(label, paragraphs) {
+  const body = paragraphs.filter(Boolean).map((p) => `<p class="cp-note">${p}</p>`).join("");
+  return `
+    <div class="cp-deep-sec">
+      <div class="cp-deep-label">${label}</div>
+      ${body}
+    </div>
+  `;
+}
+
+// 유형 카드 한 문단 + 막대 여덟 개만으로는 "그래서 나는 어떤 배우자인가"가 남지 않는다는
+// 지적(2026-08-11)에 대응한 블록. 성향(가장 높게 나온 축)과 애착(가까움·거리 조합)을
+// 같은 네 갈래로 나란히 읽어준다 — 두 체계를 따로 두 문단씩 늘어놓는 것보다, 같은 질문에
+// 대한 두 답으로 묶는 편이 읽는 사람에게 하나의 상으로 맺힌다.
+//
+// 접지 않고 펼쳐두는 이유: 이 블록이 없어서 결과가 부실하다는 지적이 나온 자리다.
+// 접어두면 지적받은 내용이 그대로 안 보이는 상태로 남는다(§7-2의 정보 계층은 유지 —
+// 역할·자녀 서사와 갈등 스타일은 여전히 접혀 있다).
+function personaMarkup(r) {
+  const b = BEHAVIOR_DEEP[r.behavior.primary];
+  const a = ATTACH_DEEP[r.attachment.key];
+  // 두 성향이 가깝게 나온 경우(§5.3 확신도 clear가 아님) 1위만 길게 설명하면 설명의
+  // 절반이 틀린 말이 된다. 확신도 문장(confidenceText)이 이미 위에 있지만, 그건 점수
+  // 얘기라 "그래서 어떤 모습이 더 나오나"까지는 말해주지 않는다.
+  const blend =
+    r.behavior.confidence === "clear"
+      ? ""
+      : `${BEHAVIOR_LABELS[r.behavior.secondary]} 성향도 가깝게 나왔어요 — ${BEHAVIOR_DEEP[r.behavior.secondary].short} 상황에 따라 이쪽이 더 크게 나올 수 있습니다.`;
+
+  return `
+    <div class="cp-profile cp-persona">
+      <div class="cp-block-title">나는 어떤 배우자일까요</div>
+      <p class="cp-block-sub">가장 높게 나온 ${BEHAVIOR_LABELS[r.behavior.primary]} 성향과
+      가까움·거리에서 나온 ${ATTACH_TYPES[r.attachment.key].name}을 함께 읽은 설명이에요.</p>
+      ${deepSection("🧩 평소 관계에서는", [b.nature, a.nature, blend])}
+      ${deepSection("💭 속으로 자주 하는 생각", [b.thought, a.thought])}
+      ${deepSection("🌧️ 힘든 일이 닥쳤을 때", [b.crisis, a.crisis])}
+      ${deepSection("🗣️ 이렇게 말하면 잘 통해요", [b.talk, a.talk])}
+    </div>
+  `;
+}
+
 // 갈등 스타일은 §6.4의 리포트 블록에 없다 — 대화 스크립트를 고르는 재료다. 표면에
 // 성향 유형·애착 유형·갈등 스타일 세 체계를 한꺼번에 내놓으면 읽는 사람이 무엇을 기억해야
 // 하는지 알 수 없어져서, 축 점수 막대는 빼고 접어둔다. 필요한 사람만 펼쳐본다.
 function conflictBody(r) {
+  const style = CONFLICT_STYLES[r.conflict.style];
   return `
-    <p class="cp-note">부딪혔을 때 <b>${CONFLICT_STYLES[r.conflict.style].name}</b>에 가까워요.
+    <p class="cp-note">부딪혔을 때 <b>${style.name}</b>에 가까워요.
     ${r.conflict.confidence === "edge" ? "다만 경계에 가까워서 상황에 따라 달라질 수 있어요." : ""}</p>
-    <p class="cp-note">${CONFLICT_STYLES[r.conflict.style].desc}</p>
+    <p class="cp-note">${style.desc}</p>
+    ${deepSection("🌪️ 다툼이 커질 때", [style.crisis])}
+    ${deepSection("🩹 다투고 난 뒤에는", [style.repair])}
     ${barMarkup(AXIS_LABELS.SC, r.norm.SC)}
     ${barMarkup(AXIS_LABELS.OC, r.norm.OC)}
   `;
@@ -562,6 +615,7 @@ export function renderCoupleResult() {
       </div>
 
       ${profileMarkup(r)}
+      ${personaMarkup(r)}
       ${foldMarkup("지금 이 상황에서는", narrativeBody(r))}
       ${foldMarkup("갈등이 생겼을 때", conflictBody(r))}
       ${actionMarkup(r)}

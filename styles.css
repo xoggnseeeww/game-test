@@ -1824,6 +1824,14 @@ button.meta-chip {
 
 .cp-bar-desc { font-size: 11.5px; color: #5C5964; line-height: 1.6; margin-top: 5px; }
 
+/* 심화 서술 한 조각(평소 모습 · 속마음 · 위기 대처 · 대화법). 개인 성향 카드와 갈등
+   접기 블록이 같이 쓴다 — 문단이 길어서 구분선이 없으면 어디부터 다른 이야기인지 안 보인다. */
+/* 구분선은 모든 조각에 둔다 — `:first-of-type`으로 첫 조각만 빼면, 두 호출부의 앞 형제
+   구성이 달라서(카드는 제목 div, 접기 블록은 문단 p) 한쪽에서만 적용되어 더 어긋난다. */
+.cp-deep-sec { margin-top: 14px; padding-top: 13px; border-top: 1px solid #EFEDF3; }
+.cp-deep-label { font-size: 13px; font-weight: 800; color: var(--accent-ink); }
+.cp-deep-sec .cp-note { margin-top: 7px; }
+
 .cp-do-list { display: flex; flex-direction: column; gap: 7px; }
 
 .cp-do, .cp-dont {

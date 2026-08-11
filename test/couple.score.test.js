@@ -19,6 +19,9 @@ import {
   COUPLE_TYPES,
   COUPLE_SLUG_TO_KEY,
   ATTACH_TYPES,
+  ATTACH_DEEP,
+  BEHAVIOR_AXIS_MEANING,
+  BEHAVIOR_DEEP,
   CONFLICT_STYLES,
   ROLE_NARRATIVE,
   CHILD_NARRATIVE,
@@ -430,6 +433,19 @@ test("절단점 바로 옆 원점수는 경계로 표시된다", () => {
 
 // ---------------------------------------------------------------- 결과 콘텐츠
 
+// 사용자에게 그대로 렌더되는 문구 전부. 금지어 검사 두 개가 같은 목록을 봐야 한다 —
+// 목록을 검사마다 따로 두면 새 문구 뱅크를 한쪽에만 추가하는 실수가 난다.
+function userFacingCopy() {
+  return [
+    ...Object.values(COUPLE_TYPES).flatMap((t) => [t.name, t.desc]),
+    ...Object.values(ATTACH_TYPES).flatMap((t) => [t.name, t.desc]),
+    ...Object.values(CONFLICT_STYLES).flatMap((t) => [t.name, t.desc, t.crisis, t.repair]),
+    ...Object.values(BEHAVIOR_AXIS_MEANING),
+    ...Object.values(BEHAVIOR_DEEP).flatMap((d) => [d.short, ...DEEP_PARTS.map((p) => d[p])]),
+    ...Object.values(ATTACH_DEEP).flatMap((d) => DEEP_PARTS.map((p) => d[p])),
+  ];
+}
+
 test("16유형 표와 슬러그가 서로 빠짐없이 대응한다", () => {
   const keys = Object.keys(COUPLE_TYPES);
   assert.equal(keys.length, 16);
@@ -446,12 +462,45 @@ test("사용자에게 보이는 문구에 원 척도 유형명이 없다", () =>
   // §2.1 B등급 방침("유형 코드 전면 재작성")과 §8.5(자기비난 유발 표현 금지)를 함께 지킨다.
   // 원 척도의 표준 번역어를 그대로 쓰면 명칭만 바꾼 껍데기가 된다.
   const banned = ["집착형", "두려움형", "회피형", "안정형 애착", "경쟁형", "순응형", "협력형", "타협형"];
-  const surfaces = [
-    ...Object.values(COUPLE_TYPES).flatMap((t) => [t.name, t.desc]),
-    ...Object.values(ATTACH_TYPES).flatMap((t) => [t.name, t.desc]),
-    ...Object.values(CONFLICT_STYLES).flatMap((t) => [t.name, t.desc]),
-  ];
-  for (const text of surfaces) {
+  for (const text of userFacingCopy()) {
+    for (const w of banned) assert.ok(!text.includes(w), `"${w}"가 노출 문구에 있다: ${text}`);
+  }
+});
+
+// 심화 서술(2026-08-11) — 점수 막대 밑 설명이 부실하다는 지적으로 추가한 문구 뱅크.
+// 조각이 하나라도 비면 화면에 undefined가 그대로 찍히거나 섹션이 빈 채로 남는다.
+const DEEP_PARTS = ["nature", "thought", "crisis", "talk"];
+
+test("네 성향·애착 유형에 심화 서술 네 조각이 빠짐없이 있다", () => {
+  for (const ax of BEHAVIOR_AXES) {
+    assert.ok(BEHAVIOR_AXIS_MEANING[ax]?.length > 5, `${ax} 축 설명`);
+    const deep = BEHAVIOR_DEEP[ax];
+    assert.ok(deep, `${ax} 심화 서술`);
+    // 두 성향이 가깝게 나온 경우 2위 몫으로 한 줄 붙는다 — 없으면 그 문장이 반쯤 빈다.
+    assert.ok(deep.short?.length > 10, `${ax} 요약 한 줄`);
+    for (const part of DEEP_PARTS) {
+      // 길이 하한이 있는 이유: 자리만 채운 한 문장짜리 값은 있으나 마나라, 있음 검사만
+      // 하면 이번에 지적받은 상태(설명이 부실함)로 조용히 되돌아갈 수 있다.
+      assert.ok(deep[part]?.length >= 60, `${ax}의 ${part}가 너무 짧다: ${deep[part]}`);
+    }
+  }
+  for (const key of Object.keys(ATTACH_TYPES)) {
+    const deep = ATTACH_DEEP[key];
+    assert.ok(deep, `${key} 심화 서술`);
+    for (const part of DEEP_PARTS) {
+      assert.ok(deep[part]?.length >= 60, `${key}의 ${part}가 너무 짧다: ${deep[part]}`);
+    }
+  }
+  for (const [key, style] of Object.entries(CONFLICT_STYLES)) {
+    assert.ok(style.crisis?.length >= 60, `${key}의 다툼이 커질 때 서술`);
+    assert.ok(style.repair?.length >= 60, `${key}의 다투고 난 뒤 서술`);
+  }
+});
+
+test("심화 서술에 진단처럼 읽히는 표현이 없다 (§2.2 · D-3)", () => {
+  // "성향 체크"까지만 간다. 임상 용어가 한 번 섞이면 결과 전체가 진단서처럼 읽힌다.
+  const banned = ["진단", "장애", "증상", "치료", "환자", "정상", "비정상"];
+  for (const text of userFacingCopy()) {
     for (const w of banned) assert.ok(!text.includes(w), `"${w}"가 노출 문구에 있다: ${text}`);
   }
 });
