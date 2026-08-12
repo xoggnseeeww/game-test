@@ -9,15 +9,18 @@ import {
   BEHAVIOR_ITEMS,
   ATTACH_ITEMS,
   CONFLICT_ITEMS,
+  LOVE_ITEMS,
   ANCHOR_ITEMS,
   ANCHOR_CONCEPTS,
   QC_ITEMS,
   ROLE_ITEMS,
   CHILD_ITEMS,
+  ITEM_TOTAL,
 } from "./data.js";
 import { REVERSE_CODES } from "./score.js";
 
-// 앵커 6개를 놓는 자리(1-based). 35~49번 15칸 안에서, 아래 두 제약을 동시에 만족한다.
+// 앵커 6개를 놓는 자리(1-based). 문항지의 **마지막 15칸** 안에서, 아래 두 제약을 동시에
+// 만족한다.
 //
 //  - 앵커끼리 붙지 않는다(사이에 일반 문항 최소 1개). 붙어 나오면 "여기가 배우자와 비교되는
 //    구간이구나"를 알아차리고 그 구간에서만 방어적으로 답하게 된다.
@@ -27,7 +30,15 @@ import { REVERSE_CODES } from "./score.js";
 // 6 + 5×2 = 16칸이 필요한데 구간은 15칸뿐이라 배치가 성립하지 않는다. 실질적으로 중요한
 // 제약은 같은 개념 a·b의 4문항 이격 쪽이고, 앵커-앵커는 1칸만 띄워도 "덩어리로 보이지 않게"
 // 하려던 목적은 달성된다.
-const ANCHOR_ZONE_START = 35;
+//
+// **절대 위치(35)가 아니라 `ITEM_TOTAL`에서 파생시킨다**(D-102). 문항 수는 세 축 조합과
+// 무관하게 항상 같지만, 애정 표현 5유형(LOVE_ITEMS) 같은 새 모듈이 늘어나면 총 문항 수
+// 자체가 바뀐다 — 그때도 앵커 구간이 "후반부 15칸"을 계속 가리키게 하려면 절대 숫자가
+// 아니라 총 문항 수를 기준으로 역산해야 한다. 예전에 35를 그대로 박아뒀다면, 문항이
+// 49 → 59로 늘어난 지금 35번은 후반부가 아니라 중반부가 되어 배치 의도 자체가 깨졌을
+// 것이다.
+const ANCHOR_ZONE_SIZE = 15;
+const ANCHOR_ZONE_START = ITEM_TOTAL - ANCHOR_ZONE_SIZE + 1;
 // 구간 안에서의 상대 위치(0-based). 앞 두 칸(35·36번)은 비워둔다 — 35번이 재고지 자리이고,
 // 재고지 **바로 다음**이 앵커여도 "이 문항이 민감하다"는 신호가 되므로 한 칸 더 띄운다.
 // 같은 개념 짝은 슬롯 (0,2)·(1,4)·(3,5)에 놓이므로 실제 간격은 4·6·5문항이 된다.
@@ -165,6 +176,7 @@ export function assembleQuestionnaire(setup, { shuffleFn = shuffle } = {}) {
     ...BEHAVIOR_ITEMS,
     ...ATTACH_ITEMS,
     ...CONFLICT_ITEMS,
+    ...LOVE_ITEMS,
     ...ROLE_ITEMS.map((i) => variantOf(i, setup.r)),
     ...CHILD_ITEMS.map((i) => variantOf(i, setup.k)),
   ].map(({ code, factor, concept, text }) => ({ code, factor, concept, text }));

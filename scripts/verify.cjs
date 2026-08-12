@@ -984,6 +984,36 @@ async function playNumpathRun(page) {
     cpBody.slice(0, 140)
   );
 
+  // === D-102: 애정 표현 5유형이 다른 세 체계(성향·애착·갈등)와 엮여서 나오는가 ===
+  // "결과들이 따로 놀면 안 된다"는 요청에 답해 만든 두 연결 지점을 구조로 확인한다.
+  const loveFold = await page.$$eval(".cp-fold", (folds) =>
+    folds.find((f) => f.querySelector("summary")?.textContent.trim() === "무엇으로 사랑받는다고 느끼나요")
+  );
+  check("애정 표현 유형 접기 블록이 결과에 있다", Boolean(loveFold));
+  const loveBars = await page.$$eval(
+    ".cp-fold summary",
+    (summaries) => summaries.find((s) => s.textContent.trim() === "무엇으로 사랑받는다고 느끼나요")
+      ?.nextElementSibling?.querySelectorAll(".cp-bar-row").length ?? 0
+  );
+  check("애정 표현 유형 블록에 다섯 축 막대가 전부 나온다", loveBars === 5, `${loveBars}개`);
+  // 연결 지점 ①: "배우자에게 보여주세요" DOS/DONTS 목록에 애정 표현 유형 몫이 합류한다.
+  // actionMarkup은 DOS_BEHAVIOR(2개)·DOS_ATTACH(1개)·DOS_LOVE(1개)를 합치므로 4개씩이다 —
+  // D-102 이전에는 3개였다.
+  const doCount = await page.$$eval(".cp-do", (n) => n.length);
+  const dontCount = await page.$$eval(".cp-dont", (n) => n.length);
+  check(
+    "실행 제안에 애정 표현 유형 몫이 합류한다 (성향 2 + 애착 1 + 애정 표현 1 = 4개씩)",
+    doCount === 4 && dontCount === 4,
+    `Do ${doCount}개 · Don't ${dontCount}개`
+  );
+  // 연결 지점 ②: 갈등 접기 블록에 애정 표현 유형 기반 화해법이 붙는다(25개 조합을
+  // 새로 쓰지 않고 5개 문장을 얹는 방식, screens.js conflictBody 주석 참고).
+  const conflictHasLoveRepair = await page.$$eval(".cp-fold", (folds) => {
+    const f = folds.find((x) => x.querySelector("summary")?.textContent.trim() === "갈등이 생겼을 때");
+    return Boolean(f && [...f.querySelectorAll(".cp-deep-label")].some((l) => l.textContent.includes("화해법")));
+  });
+  check("갈등 블록에 애정 표현 유형 기반 화해법이 엮여 있다", conflictHasLoveRepair);
+
   check("결과에 상시 안내 링크 노출 (§9.2)", await page.isVisible(".cp-support"));
   check("결과에 서비스 성격 고지 노출 (§9.3)", cpBody.includes("진단하거나 관계의 미래를 예측하지 않습니다"));
 

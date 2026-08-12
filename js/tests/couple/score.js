@@ -1,11 +1,14 @@
 // 부부 관계 성향 체크의 개인 채점 (기획서 §5). DOM을 모르는 순수 함수만 둔다 —
 // 그래야 node --test로 브라우저 없이 채점 불변식을 검증할 수 있다.
-import { BEHAVIOR_ITEMS, ATTACH_ITEMS, CONFLICT_ITEMS, ANCHOR_CONCEPTS } from "./data.js";
+import { BEHAVIOR_ITEMS, ATTACH_ITEMS, CONFLICT_ITEMS, LOVE_ITEMS, LOVE_AXES, ANCHOR_CONCEPTS } from "./data.js";
 
 // 역채점 대상(§4). 모든 문항이 같은 방향이면 읽지 않고 한쪽으로만 찍는 응답을
 // 걸러낼 수 없고 점수가 실제보다 부풀려진다. 요인마다 최소 1개씩 들어 있다.
 // 앵커에는 넣지 않는다 — 두 사람의 응답을 직접 빼는 용도라 방향 일관성이 더 중요하다(§4.4).
-export const REVERSE_CODES = new Set(["D4", "I4", "S4", "C4", "A4", "V4", "SC3", "OC3", "R6"]);
+export const REVERSE_CODES = new Set([
+  "D4", "I4", "S4", "C4", "A4", "V4", "SC3", "OC3", "R6",
+  "LW2", "LT2", "LG2", "LS2", "LP2",
+]);
 
 export const BEHAVIOR_AXES = ["D", "I", "S", "C"];
 
@@ -24,6 +27,11 @@ export const FACTOR_ITEMS = {
   AVO: codesOf(ATTACH_ITEMS, "AVO"),
   SC: codesOf(CONFLICT_ITEMS, "SC"),
   OC: codesOf(CONFLICT_ITEMS, "OC"),
+  LW: codesOf(LOVE_ITEMS, "LW"),
+  LT: codesOf(LOVE_ITEMS, "LT"),
+  LG: codesOf(LOVE_ITEMS, "LG"),
+  LS: codesOf(LOVE_ITEMS, "LS"),
+  LP: codesOf(LOVE_ITEMS, "LP"),
 };
 
 const QC1_EXPECTED = 2;
@@ -75,7 +83,8 @@ export function stepOf(itemCount) {
 // 국소적 위양성에도 강하다(§5.0 응답 일관성 ②).
 //
 // 갈등 두 축(SC·OC)은 정방향이 2문항뿐이라 평균이 거칠어 위양성이 늘 수 있으므로
-// 기획서가 지정한 6개 요인만 본다.
+// 기획서가 지정한 6개 요인만 본다. 애정 표현 5유형(LW/LT/LG/LS/LP, D-102)은 정방향이
+// **1문항뿐**이라 SC·OC보다도 더 거칠다 — 같은 이유로 여기 넣지 않는다.
 const REVERSE_CHECK_FACTORS = ["D", "I", "S", "C", "ANX", "AVO"];
 
 export function reverseMismatchCount(answers) {
@@ -157,8 +166,12 @@ export function seedFromRaw(raw) {
   return h >>> 0;
 }
 
-export function tieBreakOrder(seed) {
-  const order = BEHAVIOR_AXES.slice();
+// 축 배열을 시드로 섞는다. `tieBreakOrder(seed)`는 이 로직을 BEHAVIOR_AXES에 고정해
+// 쓰던 기존 시그니처를 그대로 유지한다(외부에서 `tieBreakOrder(seed)`로 호출하는
+// 기존 코드·테스트를 안 건드리기 위해서) — 애정 표현 5유형(D-102)처럼 다른 축 배열에도
+// 같은 셔플이 필요해지면서 내부 로직만 `shuffleAxes()`로 뽑아냈다.
+function shuffleAxes(axes, seed) {
+  const order = axes.slice();
   let s = seed >>> 0;
   for (let i = order.length - 1; i > 0; i--) {
     s = (Math.imul(s, 1103515245) + 12345) >>> 0;
@@ -168,9 +181,23 @@ export function tieBreakOrder(seed) {
   return order;
 }
 
-export function resolveBehavior(norm, seed = 0) {
-  const tieBreak = tieBreakOrder(seed);
-  const ranked = BEHAVIOR_AXES.slice().sort(
+export function tieBreakOrder(seed) {
+  return shuffleAxes(BEHAVIOR_AXES, seed);
+}
+
+// 요인 배열 하나에서 최댓값 하나를 primary로 뽑는다. resolveBehavior(4요인)와
+// resolveLoveLanguage(5요인, D-102)가 축 개수만 다르고 로직은 완전히 같아서 공유한다.
+//
+// 유형 라벨은 언제나 primary 하나로만 정한다. 경계 사례를 감추는 대신 확신도로 드러낸다 —
+// 유형을 더 잘게 쪼개면 오분류만 늘어난다.
+//
+// 임계값이 3칸/2칸인 이유(§5.3 v3.1 재조정): 정규화 점수가 한 칸 단위의 이산값이라
+// "1칸 이상이면 보통"으로 두면 원점수 1점 차이 — 문항 하나에 4점 대신 5점을 누른 것 —
+// 까지 단정적으로 서술하게 된다. 가장 불안정한 사례를 오히려 확신 있게 전달하는 구조라,
+// 1칸 차이는 "경계"로 흡수한다.
+function resolveTopFactor(axes, norm, seed) {
+  const tieBreak = shuffleAxes(axes, seed);
+  const ranked = axes.slice().sort(
     (a, b) => norm[b] - norm[a] || tieBreak.indexOf(a) - tieBreak.indexOf(b)
   );
   const primary = ranked[0];
@@ -178,18 +205,15 @@ export function resolveBehavior(norm, seed = 0) {
   const margin = norm[primary] - norm[secondary];
   const step = stepOf(FACTOR_ITEMS[primary].length);
 
-  // 유형 라벨은 언제나 primary 하나로만 정한다. 경계 사례를 감추는 대신 확신도로 드러낸다 —
-  // 유형을 더 잘게 쪼개면 오분류만 늘어난다.
-  //
-  // 임계값이 3칸/2칸인 이유(§5.3 v3.1 재조정): 정규화 점수가 한 칸(6.25점) 단위의 이산값이라
-  // "1칸 이상이면 보통"으로 두면 원점수 1점 차이 — 문항 하나에 4점 대신 5점을 누른 것 —
-  // 까지 단정적으로 서술하게 된다. 가장 불안정한 사례를 오히려 확신 있게 전달하는 구조라,
-  // 1칸 차이는 "경계"로 흡수한다.
   let confidence = "edge";
   if (margin >= step * 3) confidence = "clear";
   else if (margin >= step * 2) confidence = "moderate";
 
   return { primary, secondary, ranked, margin, confidence };
+}
+
+export function resolveBehavior(norm, seed = 0) {
+  return resolveTopFactor(BEHAVIOR_AXES, norm, seed);
 }
 
 // ---------------------------------------------------------------- §5.4 애착 4분류
@@ -255,6 +279,16 @@ export function resolveConflict(scRaw, ocRaw) {
     scRaw,
     ocRaw,
   };
+}
+
+// ---------------------------------------------------------------- 애정 표현 5유형 (D-102)
+
+// 성향(§5.3)과 로직이 완전히 같다 — 축이 4개에서 5개로 바뀌었을 뿐이라 `resolveTopFactor()`를
+// 그대로 재사용한다. 다른 세 유형 체계(성향·애착·갈등)와 곱해서 COUPLE_TYPES 같은 조합
+// 유형을 만들지 않는다 — 16 × 5 = 80개는 이 방식(문구 손수 작성)으로 감당할 수 없는
+// 규모라, 완전히 독립된 결과로만 낸다(§6 참고, `docs/couple-architecture.md`).
+export function resolveLoveLanguage(norm, seed = 0) {
+  return resolveTopFactor(LOVE_AXES, norm, seed);
 }
 
 // ---------------------------------------------------------------- 개인 읽을거리 (§7.3·§7.4를 1인용으로)
@@ -338,9 +372,11 @@ export function computeCouple(answers, { elapsedMs = null, setup = null } = {}) 
     norm[factor] = normalize(raw[factor], codes.length);
   }
 
-  const behavior = resolveBehavior(norm, seedFromRaw(raw));
+  const seed = seedFromRaw(raw);
+  const behavior = resolveBehavior(norm, seed);
   const attachment = resolveAttachment(raw.ANX, raw.AVO);
   const conflict = resolveConflict(raw.SC, raw.OC);
+  const love = resolveLoveLanguage(norm, seed);
 
   return {
     setup,
@@ -350,6 +386,7 @@ export function computeCouple(answers, { elapsedMs = null, setup = null } = {}) 
     behavior,
     attachment,
     conflict,
+    love,
     typeKey: `${behavior.primary}-${attachment.key}`,
     anchors: anchorScores(answers),
     // 앵커·역할·자녀 문항을 개인 결과에서 읽어주는 구간 값(D-99). 예전의 `comparable`

@@ -33,6 +33,12 @@ import {
   CONFLICT_SCRIPTS,
   READING_TEXT,
   ROLE_IDENTITY_NOTE,
+  LOVE_AXES,
+  LOVE_LABELS,
+  LOVE_AXIS_MEANING,
+  LOVE_TYPES,
+  DOS_LOVE,
+  DONTS_LOVE,
 } from "./data.js";
 import { computeCouple, BEHAVIOR_AXES } from "./score.js";
 import { assembleQuestionnaire, NOTICE_POSITION } from "./assemble.js";
@@ -120,7 +126,7 @@ export function renderCoupleIntro() {
         <p>문항 ${ITEM_TOTAL}개에 답하면 나의 관계 성향이 나와요.<br/>혼자 조용히 보는 결과예요.</p>
       </div>
       <div class="meta-chips">
-        <div class="meta-chip"><div class="value">${ITEM_TOTAL}문항</div><div class="label">약 6분 30초</div></div>
+        <div class="meta-chip"><div class="value">${ITEM_TOTAL}문항</div><div class="label">약 8분</div></div>
         <div class="meta-chip"><div class="value">${COMBO_COUNT}가지</div><div class="label">상황 조합</div></div>
         <div class="meta-chip"><div class="value">${Object.keys(COUPLE_TYPES).length}가지</div><div class="label">결과 유형</div></div>
       </div>
@@ -431,6 +437,11 @@ function personaMarkup(r) {
 // 갈등 스타일은 §6.4의 리포트 블록에 없다 — 대화 스크립트를 고르는 재료다. 표면에
 // 성향 유형·애착 유형·갈등 스타일 세 체계를 한꺼번에 내놓으면 읽는 사람이 무엇을 기억해야
 // 하는지 알 수 없어져서, 축 점수 막대는 빼고 접어둔다. 필요한 사람만 펼쳐본다.
+//
+// "🕊️ 나에게 와닿는 화해법"은 애정 표현 유형(D-102)을 여기 엮은 것이다. 갈등 스타일(5) ×
+// 애정 표현(5) = 25개 문장을 새로 쓰는 대신, 애정 표현 유형 쪽의 `repair` 문장 하나를
+// 그대로 얹었다 — 두 체계가 서로 무관하게 따로 놀지 않으면서도 조합 폭발을 피하는
+// 자리다("결과들이 서로 엮여야지 따로 놀면 안 된다"는 지적에 대한 구체적 답).
 function conflictBody(r) {
   const style = CONFLICT_STYLES[r.conflict.style];
   return `
@@ -440,8 +451,25 @@ function conflictBody(r) {
     ${deepSection("🌪️ 다툼이 커질 때", [style.crisis])}
     ${deepSection("🩹 다투고 난 뒤에는", [style.repair])}
     ${deepSection("🙊 이런 말은 조심하세요", [style.avoid])}
+    ${deepSection("🕊️ 나에게 와닿는 화해법", [LOVE_TYPES[r.love.primary].repair])}
     ${barMarkup(AXIS_LABELS.SC, r.norm.SC)}
     ${barMarkup(AXIS_LABELS.OC, r.norm.OC)}
+  `;
+}
+
+// 애정 표현 5유형(D-102) 결과 블록. 유형 하나(가장 높게 나온 것)만 배지처럼 보여주지
+// 않고, 다른 유형 체계와 같은 무게로 다섯 축 막대 + 구간 설명을 전부 편다 — "구체적인
+// 결과값"을 원한 요청에 답하는 자리라, 여기서마저 아끼면 목적이 무색해진다.
+function loveBody(r) {
+  const t = LOVE_TYPES[r.love.primary];
+  return `
+    <p class="cp-note">사랑받는다고 느끼는 방식은 <b>${t.emoji} ${t.name}</b>에 가까워요.
+    ${r.love.confidence === "edge" ? "다만 경계에 가까워서 다른 방식도 비슷하게 크게 느낄 수 있어요." : ""}</p>
+    <p class="cp-note">${t.desc}</p>
+    ${deepSection("💡 이런 오해는 조심하세요", [t.avoid])}
+    ${LOVE_AXES.map((ax) =>
+      barMarkup(LOVE_LABELS[ax], r.norm[ax], { desc: LOVE_AXIS_MEANING[ax] })
+    ).join("")}
   `;
 }
 
@@ -508,8 +536,11 @@ function childBody(r) {
 }
 
 function actionMarkup(r) {
-  const dos = [...DOS_BEHAVIOR[r.behavior.primary], DOS_ATTACH[r.attachment.key]];
-  const donts = [...DONTS_BEHAVIOR[r.behavior.primary], DONTS_ATTACH[r.attachment.key]];
+  // 애정 표현 유형(D-102)의 실행 제안도 여기 세 번째 항목으로 합류한다 — 새 블록을
+  // 만들지 않고 기존 목록에 얹는 방식이라 "배우자에게 보여주세요" 자리 하나로 세
+  // 체계(성향·애착·애정 표현)의 결론이 모인다.
+  const dos = [...DOS_BEHAVIOR[r.behavior.primary], DOS_ATTACH[r.attachment.key], DOS_LOVE[r.love.primary]];
+  const donts = [...DONTS_BEHAVIOR[r.behavior.primary], DONTS_ATTACH[r.attachment.key], DONTS_LOVE[r.love.primary]];
   return `
     <div class="cp-action">
       <div class="cp-block-title">배우자에게 보여주세요</div>
@@ -579,6 +610,7 @@ export function renderCoupleResult() {
       ${profileMarkup(r)}
       ${personaMarkup(r)}
       ${feelingsMarkup(r)}
+      ${foldMarkup("무엇으로 사랑받는다고 느끼나요", loveBody(r))}
       ${foldMarkup("지금의 역할, 나에게는", roleBody(r))}
       ${foldMarkup("자녀 시기와 두 사람", childBody(r))}
       ${foldMarkup("갈등이 생겼을 때", conflictBody(r))}

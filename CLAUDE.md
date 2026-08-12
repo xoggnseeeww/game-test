@@ -258,12 +258,17 @@ docs/design-draft.html  최초 디자인 목업. 배포·동작과 무관 (.clau
 - `AXIS_HIGH_THRESHOLD` 변경 → `axisIntensityText()`의 구간 경계(`60`)도 같이 조정
 - `CPT_ROUNDS` / `CPT_NOGO_COUNT` 변경 → `gameBonuses()`의 오류율 구간이 여전히 의미 있는지 확인
 - 새 `theme` 값 추가 → `js/core/router.js`의 `THEME_CLASSES` 배열 + `styles.css`의 `theme-*` 변수 블록
-- 부부 체크 문항 추가/삭제 → 그 문항이 결과 어디에 나오는지 정한다. 성향 4축·애착·갈등이
-  아니면 `score.js`의 `SELF_READINGS`와 `data.js`의 `READING_TEXT`에 넣는 자리다.
-  `test/couple.score.test.js`의 "답한 문항은 전부 결과 어딘가에서 쓰인다"가 빠뜨림을 잡는다
-- 부부 체크 앵커 문항 수 변경 → `assemble.js`의 `ANCHOR_ZONE_START`/`ANCHOR_STRIDE`가 문항지
-  끝을 넘지 않는지 확인한다(6개×3칸이 34번에서 시작해 정확히 49번에 끝난다). 넘으면 조립이
-  조용히 앞으로 밀린다
+- 부부 체크 문항(또는 새 문항 모듈) 추가/삭제 → 그 문항이 결과 어디에 나오는지 정한다.
+  성향 4축·애착·갈등·애정 표현 5유형이 아니면 `score.js`의 `SELF_READINGS`와 `data.js`의
+  `READING_TEXT`에 넣는 자리다. `test/couple.score.test.js`의 "답한 문항은 전부 결과
+  어딘가에서 쓰인다"가 빠뜨림을 잡는다. **총 문항 수(`ITEM_TOTAL`)가 바뀌면 앵커 배치도
+  같이 움직인다** — `assemble.js`의 `ANCHOR_ZONE_START`는 `ITEM_TOTAL - 15 + 1`로 파생되므로
+  손댈 필요 없지만(D-102), 이 파생을 다시 절대 숫자로 되돌리면 문항이 늘어날 때마다 앵커가
+  "후반부"가 아니라 중반부에 놓이는 채로 조용히 깨진다
+- 부부 체크에 성향·애착·갈등과 별개인 새 유형 체계 추가(애정 표현 5유형처럼) → 다른 체계와
+  곱해서 조합 유형을 만들지 않는다(16×5=80처럼 손으로 쓸 수 없는 규모가 된다). 대신
+  `docs/couple-architecture.md` §4-1의 패턴(실행 제안 목록에 항목 하나 얹기·다른 접기
+  블록에 문장 하나 얹기)으로 **곱하지 않고 엮는다**
 - 부부 체크 자기보고 항목(`SELF_READINGS`) 추가 → `READING_TEXT`에 같은 키로 구간 서술
   셋(low·mid·high)과 대화 문장을 함께 넣는다. 하나만 하면 화면에 undefined가 찍힌다
 - 다른 테스트/게임도 출시 전 관리자 전용으로 두려면 → `js/tests/couple/index.js`의

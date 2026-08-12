@@ -8,6 +8,13 @@ import {
   BEHAVIOR_ITEMS,
   ATTACH_ITEMS,
   CONFLICT_ITEMS,
+  LOVE_ITEMS,
+  LOVE_AXES,
+  LOVE_LABELS,
+  LOVE_AXIS_MEANING,
+  LOVE_TYPES,
+  DOS_LOVE,
+  DONTS_LOVE,
   ANCHOR_ITEMS,
   ANCHOR_CONCEPTS,
   QC_ITEMS,
@@ -51,6 +58,7 @@ import {
   resolveBehavior,
   resolveAttachment,
   resolveConflict,
+  resolveLoveLanguage,
   computeCouple,
 } from "../js/tests/couple/score.js";
 import { assembleQuestionnaire, NOTICE_POSITION } from "../js/tests/couple/assemble.js";
@@ -87,12 +95,23 @@ test("문항 수가 모듈 합계와 일치한다", () => {
   assert.equal(BEHAVIOR_ITEMS.length, 16);
   assert.equal(ATTACH_ITEMS.length, 8);
   assert.equal(CONFLICT_ITEMS.length, 6);
+  // 애정 표현 5유형(D-102) — 유형당 2문항(정방향 1 + 역채점 1).
+  assert.equal(LOVE_ITEMS.length, LOVE_AXES.length * 2);
   // 앵커는 개념 3개 × 2문항. 서비스 차별점인 인지 격차를 단일 문항에 걸어두지 않는다.
   assert.equal(ANCHOR_ITEMS.length, ANCHOR_CONCEPTS.length * 2);
   assert.equal(QC_ITEMS.length, 2);
   assert.equal(ROLE_ITEMS.length, 6);
   assert.equal(CHILD_ITEMS.length, 5);
-  assert.equal(ITEM_TOTAL, 49);
+  assert.equal(ITEM_TOTAL, 59);
+});
+
+test("애정 표현 유형은 유형당 정방향 1 + 역채점 1로 균등하다", () => {
+  for (const ax of LOVE_AXES) {
+    assert.equal(FACTOR_ITEMS[ax].length, 2, `${ax} 문항 수`);
+    const codes = FACTOR_ITEMS[ax];
+    const reverseCount = codes.filter((c) => REVERSE_CODES.has(c)).length;
+    assert.equal(reverseCount, 1, `${ax}는 정방향 1 + 역채점 1이어야 한다`);
+  }
 });
 
 test("앵커는 개념마다 정확히 2문항이고 역채점이 섞이지 않는다", () => {
@@ -115,7 +134,7 @@ test("요인마다 문항 수가 균등하다", () => {
 });
 
 test("역채점 코드가 전부 실제 문항에 있고, 요인마다 최소 하나씩 있다", () => {
-  const all = [...BEHAVIOR_ITEMS, ...ATTACH_ITEMS, ...CONFLICT_ITEMS, ...ROLE_ITEMS].map((i) => i.code);
+  const all = [...BEHAVIOR_ITEMS, ...ATTACH_ITEMS, ...CONFLICT_ITEMS, ...LOVE_ITEMS, ...ROLE_ITEMS].map((i) => i.code);
   for (const code of REVERSE_CODES) assert.ok(all.includes(code), `${code}는 문항 뱅크에 없다`);
   for (const [factor, codes] of Object.entries(FACTOR_ITEMS)) {
     assert.ok(codes.some((c) => REVERSE_CODES.has(c)), `${factor}에 역채점 문항이 없다`);
@@ -198,8 +217,11 @@ test("앵커는 후반부에 흩어져 배치된다", () => {
     const items = assembleQuestionnaire(SETUP);
     const at = items.map((it, i) => (it.factor === "AN" ? i + 1 : null)).filter(Boolean);
     assert.equal(at.length, ANCHOR_ITEMS.length);
-    // 후반부(35번 이후) 구간 안에 전부 들어간다
-    assert.ok(at[0] >= 35, `앵커가 너무 앞(${at[0]}번째)에서 시작한다`);
+    // 후반부(마지막 15칸) 안에 전부 들어간다. NOTICE_POSITION이 아니라 ITEM_TOTAL로
+    // 직접 계산한다 — NOTICE_POSITION은 assemble.js 안에서 파생되는 값이라, 그
+    // 파생 로직 자체가 깨지면(예: ITEM_TOTAL 대신 절대 숫자로 되돌아가면) NOTICE_POSITION과
+    // 비교하는 검사는 같은 버그를 공유해 못 잡는다(2026-08-11 실제로 겪음 — 되돌려서 확인).
+    assert.ok(at[0] >= ITEM_TOTAL - 15 + 1, `앵커가 너무 앞(${at[0]}번째)에서 시작한다`);
     assert.ok(at[at.length - 1] <= items.length, `앵커가 문항지를 벗어났다(${at[at.length - 1]})`);
     // 앵커끼리 붙지 않는다(사이에 일반 문항 최소 1개)
     for (let i = 1; i < at.length; i++) {
@@ -436,6 +458,36 @@ test("절단점 바로 옆 원점수는 경계로 표시된다", () => {
   }
 });
 
+// ---------------------------------------------------------------- 애정 표현 5유형 (D-102)
+
+test("애정 표현 5유형도 성향과 같은 확신도 규칙을 따른다", () => {
+  // resolveTopFactor()를 공유하므로 로직은 동일하고, 유형당 2문항이라 칸 크기(step)만 다르다.
+  const step = stepOf(2); // 100 / (4*2) = 12.5
+  const base = { LW: 50, LT: 50, LG: 50, LS: 50, LP: 50 };
+  assert.equal(resolveLoveLanguage({ ...base, LW: 50 + step }).confidence, "edge");
+  assert.equal(resolveLoveLanguage({ ...base, LW: 50 + step * 2 }).confidence, "moderate");
+  assert.equal(resolveLoveLanguage({ ...base, LW: 50 + step * 3 }).confidence, "clear");
+  assert.equal(resolveLoveLanguage(base).confidence, "edge");
+});
+
+test("애정 표현 유형의 동점도 시드에 따라 갈리되 같은 시드면 항상 같다", () => {
+  const tied = { LW: 60, LT: 60, LG: 60, LS: 60, LP: 60 };
+  for (const seed of [0, 1, 12345, 987654321]) {
+    assert.equal(resolveLoveLanguage(tied, seed).primary, resolveLoveLanguage(tied, seed).primary);
+  }
+  const winners = new Set();
+  for (let seed = 0; seed < 400; seed++) winners.add(resolveLoveLanguage(tied, seed).primary);
+  assert.deepEqual([...winners].sort(), [...LOVE_AXES].sort(), "동점이 특정 유형으로만 쏠린다");
+});
+
+test("애정 표현 유형은 성향·애착·갈등과 곱해지지 않는다 (조합 폭발 방지)", () => {
+  // typeKey(COUPLE_TYPES 조회 키)에 love가 섞이면 16×5=80개를 손으로 써야 한다 — 그럴
+  // 여력이 없다는 게 D-102의 설계 전제였으므로, 결과 객체가 그 전제를 지키는지 확인한다.
+  const r = computeCouple(variedAnswers(), { elapsedMs: 400000, setup: SETUP });
+  assert.equal(r.typeKey, `${r.behavior.primary}-${r.attachment.key}`, "typeKey에 love가 섞이면 안 된다");
+  assert.ok(LOVE_AXES.includes(r.love.primary), "love.primary는 LOVE_AXES 중 하나여야 한다");
+});
+
 // ---------------------------------------------------------------- 결과 콘텐츠
 
 // 사용자에게 그대로 렌더되는 문구 전부. 금지어 검사 두 개가 같은 목록을 봐야 한다 —
@@ -450,6 +502,10 @@ function userFacingCopy() {
     ...Object.values(ATTACH_DEEP).flatMap((d) => DEEP_PARTS.map((p) => d[p])),
     ...Object.values(READING_TEXT).flatMap((t) => [t.label, t.desc, t.low, t.mid, t.high, t.script]),
     ...Object.values(ROLE_IDENTITY_NOTE),
+    ...Object.values(LOVE_AXIS_MEANING),
+    ...Object.values(LOVE_TYPES).flatMap((t) => [t.name, t.desc, t.avoid, t.repair]),
+    ...Object.values(DOS_LOVE),
+    ...Object.values(DONTS_LOVE),
   ];
 }
 
@@ -520,6 +576,30 @@ test("피해야 할 대화법은 구체적인 말을 인용부호로 짚는다",
   }
 });
 
+// 애정 표현 5유형(D-102) 문구 뱅크. LOVE_AXES가 단일 소스라 유형이 늘거나 줄어도
+// 이 검사는 그대로 따라간다.
+test("애정 표현 5유형에 결과 문구가 빠짐없이 있다", () => {
+  for (const ax of LOVE_AXES) {
+    assert.ok(LOVE_LABELS[ax]?.length > 1, `${ax} 막대 라벨`);
+    assert.ok(LOVE_AXIS_MEANING[ax]?.length > 5, `${ax} 축 설명`);
+    const t = LOVE_TYPES[ax];
+    assert.ok(t, `${ax} 유형 정의`);
+    assert.ok(t.emoji, `${ax} 이모지`);
+    assert.ok(t.name?.length > 1, `${ax} 유형명`);
+    assert.ok(t.desc?.length >= 40, `${ax}의 desc가 너무 짧다: ${t.desc}`);
+    assert.ok(t.avoid?.length >= 40, `${ax}의 avoid가 너무 짧다: ${t.avoid}`);
+    assert.ok(t.repair?.length >= 40, `${ax}의 repair가 너무 짧다: ${t.repair}`);
+    assert.ok(DOS_LOVE[ax]?.length > 5, `${ax} Do 문구`);
+    assert.ok(DONTS_LOVE[ax]?.length > 5, `${ax} Don't 문구`);
+  }
+});
+
+test("애정 표현 유형의 avoid·repair도 구체적인 말을 인용부호로 짚는다", () => {
+  for (const [ax, t] of Object.entries(LOVE_TYPES)) {
+    assert.ok(t.avoid.includes("\"") || t.avoid.includes("'"), `${ax}의 avoid에 인용된 말이 없다`);
+  }
+});
+
 test("심화 서술에 진단처럼 읽히는 표현이 없다 (§2.2 · D-3)", () => {
   // "성향 체크"까지만 간다. 임상 용어가 한 번 섞이면 결과 전체가 진단서처럼 읽힌다.
   const banned = ["진단", "장애", "증상", "치료", "환자", "정상", "비정상"];
@@ -552,6 +632,8 @@ test("결과가 유형 라벨·연속 프로필·확신도를 항상 함께 낸�
   for (const factor of Object.keys(FACTOR_ITEMS)) assert.equal(typeof r.norm[factor], "number");
   assert.ok(["clear", "moderate", "edge"].includes(r.behavior.confidence));
   assert.ok(["clear", "edge"].includes(r.attachment.confidence));
+  assert.ok(["clear", "moderate", "edge"].includes(r.love.confidence));
+  assert.ok(LOVE_TYPES[r.love.primary], `${r.love.primary}가 애정 표현 5유형 표에 없다`);
   assert.equal(r.validity.verdict, "ok");
   assert.deepEqual(Object.keys(r.anchors).sort(), ["AN1", "AN2", "AN3"]);
   // 부부 비교용 문항값 묶음(comparable)은 결합 리포트와 함께 사라졌다(D-99).
