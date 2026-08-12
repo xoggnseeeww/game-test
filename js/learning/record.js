@@ -5,9 +5,11 @@
 // 대상 사용자(초등학생·보호자 폰)에서 아이폰 비중을 생각하면 사실상 절반이 못 쓰는 상태였다.
 //
 // 폴백: 내 목소리를 녹음해서 다시 듣고 스스로 비교한다(shadowing). 채점은 없다 —
-// 서버 STT를 붙이면 백엔드·비용·개인정보 처리방침이 전부 딸려오는데(이 저장소는 백엔드가
-// 부부 체크 KV 하나뿐이다), 자가평가는 이미 produce 문장·대화 연습에서 쓰고 있는 방식이라
-// 새로 만들 게 없다. `MediaRecorder`는 iOS 14.3+에서 지원돼 별도 의존성이 필요 없다.
+// 서버 STT를 붙이면 백엔드·비용·개인정보 처리방침이 전부 딸려오는데(이 저장소는 서버 호출이
+// 아예 없다, D-99), 자가평가는 이미 produce 문장·대화 연습에서 쓰고 있는 방식이라 새로 만들
+// 게 없다. `MediaRecorder`는 iOS 14.3+에서 지원돼 별도 의존성이 필요 없다.
+import { cancelSpeech } from "./speech.js";
+
 export function supportsRecording() {
   return typeof window !== "undefined" && !!(window.MediaRecorder && navigator.mediaDevices?.getUserMedia);
 }
@@ -56,7 +58,7 @@ export function bindRecordFallback(root, { onDone }) {
         resultEl.querySelector("#learning-rec-good").addEventListener("click", () => onDone(true));
         resultEl.querySelector("#learning-rec-retry").addEventListener("click", () => onDone(false));
       };
-      window.speechSynthesis?.cancel(); // listen()과 같은 이유 — 재생 중인 소리가 녹음에 섞인다
+      cancelSpeech(); // listen()과 같은 이유 — 재생 중인 소리가 녹음에 섞인다
       rec.start();
       btn.textContent = "⏹ 녹음 끝내기";
       statusEl.textContent = "녹음 중이에요...";

@@ -10,7 +10,7 @@ import { el, bindNav } from "../../core/dom.js";
 import { state } from "../../core/state.js";
 import { saveLearningProgress } from "../cloud.js";
 import { SCENES } from "./data.js";
-import { supportsSpeech, supportsRecognition, speak, listen } from "../speech.js";
+import { supportsSpeech, supportsRecognition, speak, listen, cancelSpeech } from "../speech.js";
 import { recordFallbackMarkup, bindRecordFallback } from "../record.js";
 import { markWrong, markCorrect } from "../srs.js";
 
@@ -53,7 +53,7 @@ export function renderDialogueScene(scene) {
 
   let activeRecognition = null;
   onLeave(() => {
-    window.speechSynthesis?.cancel();
+    cancelSpeech();
     activeRecognition?.abort();
   });
 

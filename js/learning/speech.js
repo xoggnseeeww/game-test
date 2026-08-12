@@ -40,8 +40,26 @@ export function pickVoice(voices, lang) {
   return best;
 }
 
-export function speak(text, rate, lang = "en-US") {
+// 목록이 안 찼을 때 speak()가 거는 재시도 리스너. 모듈 스코프에 하나만 두는 이유는
+// cancelSpeech()가 화면을 나갈 때 이 리스너를 지울 수 있어야 하기 때문이다 — `{ once: true }`
+// 옵션은 "한 번만 실행됨"만 보장하지, 실행되기 전에 리스너를 취소하는 수단은 별도로 필요하다.
+let pendingVoiceRetry = null;
+
+// speak()가 등록한 voiceschanged 대기까지 함께 취소한다. `speechSynthesis.cancel()` 단독으로는
+// **재생 중인 소리만** 멈추고 예약된 리스너는 그대로 남는다 — 그 리스너가 나중에 발동하면
+// 이미 떠난 화면의 문장이 지금 보고 있는 화면 위에서 재생된다. 화면을 나갈 때 부르는
+// `onLeave` 콜백은 전부 이 함수로 정리한다(speech.js를 쓰는 화면 4곳 공용).
+export function cancelSpeech() {
+  if (typeof window === "undefined" || !window.speechSynthesis) return;
+  if (pendingVoiceRetry) {
+    window.speechSynthesis.removeEventListener("voiceschanged", pendingVoiceRetry);
+    pendingVoiceRetry = null;
+  }
   window.speechSynthesis.cancel();
+}
+
+export function speak(text, rate, lang = "en-US") {
+  cancelSpeech();
 
   // Chrome은 목록을 비동기로 채워서 **첫 호출에 `getVoices()`가 빈 배열**인 경우가 있다.
   // 그때 그냥 재생하면 음성 지정 없이 기기 기본으로 읽는데, 한국어 엔진이 기본인 기기에서는
@@ -49,11 +67,11 @@ export function speak(text, rate, lang = "en-US") {
   // 목록이 아직 비었으면 채워질 때 한 번만 다시 시도한다.
   const voices = window.speechSynthesis.getVoices();
   if (!voices.length) {
-    window.speechSynthesis.addEventListener(
-      "voiceschanged",
-      () => speak(text, rate, lang),
-      { once: true }
-    );
+    pendingVoiceRetry = () => {
+      pendingVoiceRetry = null;
+      speak(text, rate, lang);
+    };
+    window.speechSynthesis.addEventListener("voiceschanged", pendingVoiceRetry, { once: true });
     return;
   }
 
@@ -73,7 +91,7 @@ export function listen(onResult, onError) {
   // 주워 담아 인식 결과가 엉킨다. produce 카드(D-84)와 대화 연습의 상대 대사(D-87)가 자동
   // 재생을 하게 되면서 "다 듣기 전에 마이크를 누르는" 경로가 흔해져 실제로 부딪히기 쉬워졌다.
   // 모든 호출부가 이 함수를 지나므로 여기 한 줄이면 두 도구 전부 해결된다.
-  window.speechSynthesis?.cancel();
+  cancelSpeech();
   const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   const rec = new Recognition();
   rec.lang = "en-US";
