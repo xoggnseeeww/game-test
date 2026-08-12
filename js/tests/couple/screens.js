@@ -423,6 +423,7 @@ function personaMarkup(r) {
       ${deepSection("💭 속으로 자주 하는 생각", [b.thought, a.thought])}
       ${deepSection("🌧️ 힘든 일이 닥쳤을 때", [b.crisis, a.crisis])}
       ${deepSection("🗣️ 이렇게 말하면 잘 통해요", [b.talk, a.talk])}
+      ${deepSection("🙊 이런 말은 조심하세요", [b.avoid, a.avoid])}
     </div>
   `;
 }
@@ -438,6 +439,7 @@ function conflictBody(r) {
     <p class="cp-note">${style.desc}</p>
     ${deepSection("🌪️ 다툼이 커질 때", [style.crisis])}
     ${deepSection("🩹 다투고 난 뒤에는", [style.repair])}
+    ${deepSection("🙊 이런 말은 조심하세요", [style.avoid])}
     ${barMarkup(AXIS_LABELS.SC, r.norm.SC)}
     ${barMarkup(AXIS_LABELS.OC, r.norm.OC)}
   `;

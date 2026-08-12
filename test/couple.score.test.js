@@ -444,7 +444,7 @@ function userFacingCopy() {
   return [
     ...Object.values(COUPLE_TYPES).flatMap((t) => [t.name, t.desc]),
     ...Object.values(ATTACH_TYPES).flatMap((t) => [t.name, t.desc]),
-    ...Object.values(CONFLICT_STYLES).flatMap((t) => [t.name, t.desc, t.crisis, t.repair]),
+    ...Object.values(CONFLICT_STYLES).flatMap((t) => [t.name, t.desc, t.crisis, t.repair, t.avoid]),
     ...Object.values(BEHAVIOR_AXIS_MEANING),
     ...Object.values(BEHAVIOR_DEEP).flatMap((d) => [d.short, ...DEEP_PARTS.map((p) => d[p])]),
     ...Object.values(ATTACH_DEEP).flatMap((d) => DEEP_PARTS.map((p) => d[p])),
@@ -475,10 +475,11 @@ test("사용자에게 보이는 문구에 원 척도 유형명이 없다", () =>
 });
 
 // 심화 서술(2026-08-11) — 점수 막대 밑 설명이 부실하다는 지적으로 추가한 문구 뱅크.
-// 조각이 하나라도 비면 화면에 undefined가 그대로 찍히거나 섹션이 빈 채로 남는다.
-const DEEP_PARTS = ["nature", "thought", "crisis", "talk"];
+// `avoid`(피해야 할 대화법)는 같은 날 후속 질문에 답해 추가했다. 조각이 하나라도 비면
+// 화면에 undefined가 그대로 찍히거나 섹션이 빈 채로 남는다.
+const DEEP_PARTS = ["nature", "thought", "crisis", "talk", "avoid"];
 
-test("네 성향·애착 유형에 심화 서술 네 조각이 빠짐없이 있다", () => {
+test("네 성향·애착 유형에 심화 서술 다섯 조각이 빠짐없이 있다", () => {
   for (const ax of BEHAVIOR_AXES) {
     assert.ok(BEHAVIOR_AXIS_MEANING[ax]?.length > 5, `${ax} 축 설명`);
     const deep = BEHAVIOR_DEEP[ax];
@@ -501,6 +502,21 @@ test("네 성향·애착 유형에 심화 서술 네 조각이 빠짐없이 있�
   for (const [key, style] of Object.entries(CONFLICT_STYLES)) {
     assert.ok(style.crisis?.length >= 60, `${key}의 다툼이 커질 때 서술`);
     assert.ok(style.repair?.length >= 60, `${key}의 다투고 난 뒤 서술`);
+    assert.ok(style.avoid?.length >= 60, `${key}의 피해야 할 대화법 서술`);
+  }
+});
+
+test("피해야 할 대화법은 구체적인 말을 인용부호로 짚는다", () => {
+  // "짜증 내지 마세요" 식의 막연한 금지는 자기비난만 유발하고 뭘 조심해야 할지 모른다 —
+  // 실제로 조심할 문장을 인용부호로 짚어야 쓸모가 있다는 서술 규칙을 코드로도 확인한다.
+  for (const [ax, deep] of Object.entries(BEHAVIOR_DEEP)) {
+    assert.ok(deep.avoid.includes("\""), `${ax}의 avoid에 인용된 말이 없다`);
+  }
+  for (const [key, deep] of Object.entries(ATTACH_DEEP)) {
+    assert.ok(deep.avoid.includes("\""), `${key}의 avoid에 인용된 말이 없다`);
+  }
+  for (const [key, style] of Object.entries(CONFLICT_STYLES)) {
+    assert.ok(style.avoid.includes("\""), `${key}의 avoid에 인용된 말이 없다`);
   }
 });
 
