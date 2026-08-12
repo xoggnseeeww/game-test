@@ -126,7 +126,7 @@ export function renderCoupleIntro() {
         <p>문항 ${ITEM_TOTAL}개에 답하면 나의 관계 성향이 나와요.<br/>혼자 조용히 보는 결과예요.</p>
       </div>
       <div class="meta-chips">
-        <div class="meta-chip"><div class="value">${ITEM_TOTAL}문항</div><div class="label">약 8분</div></div>
+        <div class="meta-chip"><div class="value">${ITEM_TOTAL}문항</div><div class="label">약 8분 30초</div></div>
         <div class="meta-chip"><div class="value">${COMBO_COUNT}가지</div><div class="label">상황 조합</div></div>
         <div class="meta-chip"><div class="value">${Object.keys(COUPLE_TYPES).length}가지</div><div class="label">결과 유형</div></div>
       </div>
@@ -382,7 +382,7 @@ function profileMarkup(r) {
         ? `<p class="cp-note">${[
             r.attachment.anx.edge ? AXIS_LABELS.ANX : null,
             r.attachment.avo.edge ? AXIS_LABELS.AVO : null,
-          ].filter(Boolean).join("·")}은 딱 가운데쯤이라 어느 쪽이라고 말하기 어려워요.</p>`
+          ].filter(Boolean).join("·")}는 딱 가운데쯤이라 어느 쪽이라고 말하기 어려워요.</p>`
         : ""}
       <p class="cp-note">${ATTACH_TYPES[r.attachment.key].desc}</p>
     </div>
@@ -402,14 +402,19 @@ function deepSection(label, paragraphs) {
 }
 
 // 유형 카드 한 문단 + 막대 여덟 개만으로는 "그래서 나는 어떤 배우자인가"가 남지 않는다는
-// 지적(2026-08-11)에 대응한 블록. 성향(가장 높게 나온 축)과 애착(가까움·거리 조합)을
-// 같은 네 갈래로 나란히 읽어준다 — 두 체계를 따로 두 문단씩 늘어놓는 것보다, 같은 질문에
+// 지적(2026-08-11, D-98)에 대응한 블록. 성향(가장 높게 나온 축)과 애착(가까움·거리 조합)을
+// 같은 다섯 갈래로 나란히 읽어준다 — 두 체계를 따로 두 문단씩 늘어놓는 것보다, 같은 질문에
 // 대한 두 답으로 묶는 편이 읽는 사람에게 하나의 상으로 맺힌다.
 //
-// 접지 않고 펼쳐두는 이유: 이 블록이 없어서 결과가 부실하다는 지적이 나온 자리다.
-// 접어두면 지적받은 내용이 그대로 안 보이는 상태로 남는다(§7-2의 정보 계층은 유지 —
-// 역할·자녀 서사와 갈등 스타일은 여전히 접혀 있다).
-function personaMarkup(r) {
+// **접어둔다(D-104, §7-2 다듬기).** D-98 당시엔 "이 블록이 없어서 결과가 부실하다"는
+// 지적이 막 나온 참이라, 접으면 지적받은 내용이 안 보이는 상태로 남을까 봐 일부러
+// 펼쳐뒀다. 이후 D-101·D-102·D-103으로 결과 전체가 몇 배로 두꺼워졌고, 이 블록(성향×애착
+// 다섯 갈래)이 펼침 구간 중 가장 길어서 첫 화면 체감 분량을 가장 많이 차지하고 있었다 —
+// "그래서 늘어난 콘텐츠를 한 번 정리(다듬기)하자"는 후속 요청에 따라, 이제 결과의 핵심
+// 3요소(유형 라벨·연속 프로필·확신도, §6.1)는 그대로 펼쳐둔 채 이 블록만 다른 심화
+// 서술들(역할·자녀·갈등·애정 표현)과 같은 자리로 옮긴다 — 내용을 줄이는 게 아니라
+// 순서를 다시 준 것이라, 펼치면 전부 그대로 있다(§7-2 원칙 그대로).
+function personaBody(r) {
   const b = BEHAVIOR_DEEP[r.behavior.primary];
   const a = ATTACH_DEEP[r.attachment.key];
   // 두 성향이 가깝게 나온 경우(§5.3 확신도 clear가 아님) 1위만 길게 설명하면 설명의
@@ -421,16 +426,13 @@ function personaMarkup(r) {
       : `${BEHAVIOR_LABELS[r.behavior.secondary]} 성향도 가깝게 나왔어요 — ${BEHAVIOR_DEEP[r.behavior.secondary].short} 상황에 따라 이쪽이 더 크게 나올 수 있습니다.`;
 
   return `
-    <div class="cp-profile cp-persona">
-      <div class="cp-block-title">나는 어떤 배우자일까요</div>
-      <p class="cp-block-sub">가장 높게 나온 ${BEHAVIOR_LABELS[r.behavior.primary]} 성향과
-      가까움·거리에서 나온 ${ATTACH_TYPES[r.attachment.key].name}을 함께 읽은 설명이에요.</p>
-      ${deepSection("🧩 평소 관계에서는", [b.nature, a.nature, blend])}
-      ${deepSection("💭 속으로 자주 하는 생각", [b.thought, a.thought])}
-      ${deepSection("🌧️ 힘든 일이 닥쳤을 때", [b.crisis, a.crisis])}
-      ${deepSection("🗣️ 이렇게 말하면 잘 통해요", [b.talk, a.talk])}
-      ${deepSection("🙊 이런 말은 조심하세요", [b.avoid, a.avoid])}
-    </div>
+    <p class="cp-block-sub">가장 높게 나온 ${BEHAVIOR_LABELS[r.behavior.primary]} 성향과
+    가까움·거리에서 나온 ${ATTACH_TYPES[r.attachment.key].name}을 함께 읽은 설명이에요.</p>
+    ${deepSection("🧩 평소 관계에서는", [b.nature, a.nature, blend])}
+    ${deepSection("💭 속으로 자주 하는 생각", [b.thought, a.thought])}
+    ${deepSection("🌧️ 힘든 일이 닥쳤을 때", [b.crisis, a.crisis])}
+    ${deepSection("🗣️ 이렇게 말하면 잘 통해요", [b.talk, a.talk])}
+    ${deepSection("🙊 이런 말은 조심하세요", [b.avoid, a.avoid])}
   `;
 }
 
@@ -608,8 +610,8 @@ export function renderCoupleResult() {
       </div>
 
       ${profileMarkup(r)}
-      ${personaMarkup(r)}
       ${feelingsMarkup(r)}
+      ${foldMarkup("나는 어떤 배우자일까요", personaBody(r))}
       ${foldMarkup("무엇으로 사랑받는다고 느끼나요", loveBody(r))}
       ${foldMarkup("지금의 역할, 나에게는", roleBody(r))}
       ${foldMarkup("자녀 시기와 두 사람", childBody(r))}

@@ -95,22 +95,22 @@ test("문항 수가 모듈 합계와 일치한다", () => {
   assert.equal(BEHAVIOR_ITEMS.length, 16);
   assert.equal(ATTACH_ITEMS.length, 8);
   assert.equal(CONFLICT_ITEMS.length, 6);
-  // 애정 표현 5유형(D-102) — 유형당 2문항(정방향 1 + 역채점 1).
-  assert.equal(LOVE_ITEMS.length, LOVE_AXES.length * 2);
+  // 애정 표현 5유형(D-102, D-103) — 유형당 3문항(정방향 2 + 역채점 1).
+  assert.equal(LOVE_ITEMS.length, LOVE_AXES.length * 3);
   // 앵커는 개념 3개 × 2문항. 서비스 차별점인 인지 격차를 단일 문항에 걸어두지 않는다.
   assert.equal(ANCHOR_ITEMS.length, ANCHOR_CONCEPTS.length * 2);
   assert.equal(QC_ITEMS.length, 2);
   assert.equal(ROLE_ITEMS.length, 6);
   assert.equal(CHILD_ITEMS.length, 5);
-  assert.equal(ITEM_TOTAL, 59);
+  assert.equal(ITEM_TOTAL, 64);
 });
 
-test("애정 표현 유형은 유형당 정방향 1 + 역채점 1로 균등하다", () => {
+test("애정 표현 유형은 유형당 정방향 2 + 역채점 1로 균등하다", () => {
   for (const ax of LOVE_AXES) {
-    assert.equal(FACTOR_ITEMS[ax].length, 2, `${ax} 문항 수`);
+    assert.equal(FACTOR_ITEMS[ax].length, 3, `${ax} 문항 수`);
     const codes = FACTOR_ITEMS[ax];
     const reverseCount = codes.filter((c) => REVERSE_CODES.has(c)).length;
-    assert.equal(reverseCount, 1, `${ax}는 정방향 1 + 역채점 1이어야 한다`);
+    assert.equal(reverseCount, 1, `${ax}는 정방향 2 + 역채점 1이어야 한다`);
   }
 });
 
@@ -462,7 +462,7 @@ test("절단점 바로 옆 원점수는 경계로 표시된다", () => {
 
 test("애정 표현 5유형도 성향과 같은 확신도 규칙을 따른다", () => {
   // resolveTopFactor()를 공유하므로 로직은 동일하고, 유형당 2문항이라 칸 크기(step)만 다르다.
-  const step = stepOf(2); // 100 / (4*2) = 12.5
+  const step = stepOf(3); // 100 / (4*3) ≈ 8.33
   const base = { LW: 50, LT: 50, LG: 50, LS: 50, LP: 50 };
   assert.equal(resolveLoveLanguage({ ...base, LW: 50 + step }).confidence, "edge");
   assert.equal(resolveLoveLanguage({ ...base, LW: 50 + step * 2 }).confidence, "moderate");

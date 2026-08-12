@@ -83,8 +83,8 @@ export function stepOf(itemCount) {
 // 국소적 위양성에도 강하다(§5.0 응답 일관성 ②).
 //
 // 갈등 두 축(SC·OC)은 정방향이 2문항뿐이라 평균이 거칠어 위양성이 늘 수 있으므로
-// 기획서가 지정한 6개 요인만 본다. 애정 표현 5유형(LW/LT/LG/LS/LP, D-102)은 정방향이
-// **1문항뿐**이라 SC·OC보다도 더 거칠다 — 같은 이유로 여기 넣지 않는다.
+// 기획서가 지정한 6개 요인만 본다. 애정 표현 5유형(LW/LT/LG/LS/LP, D-102)도 정방향이
+// 2문항이라(D-103으로 1→2) SC·OC와 같은 이유로 여기 넣지 않는다.
 const REVERSE_CHECK_FACTORS = ["D", "I", "S", "C", "ANX", "AVO"];
 
 export function reverseMismatchCount(answers) {
