@@ -95,6 +95,14 @@ export function renderNumpathIntro() {
           <button class="np-tile np-tile--block" tabindex="-1">✕</button>
           <span><b>차단 칸</b> — 지나갈 수 없어요</span>
         </div>
+        <div class="np-legend-item">
+          <button class="np-tile np-tile--tile np-tile--lock" tabindex="-1">🔒12</button>
+          <span><b>잠금 칸</b> — 현재값이 표시된 수 이상일 때만 밟을 수 있어요</span>
+        </div>
+        <div class="np-legend-item">
+          <button class="np-tile np-tile--tile np-tile--warp" tabindex="-1">🌀</button>
+          <span><b>워프 칸</b> — 밟으면 계산이 적용된 뒤 짝지어진 칸으로 순간이동해요</span>
+        </div>
       </div>
       <p class="disclaimer">막히거나 이동 횟수를 다 쓰면 Undo나 Reset으로 바로 다시 도전할 수 있어요.<br/>최적 경로로 클리어하면 ⭐⭐⭐, 여유 있게 클리어하면 ⭐⭐, 그냥 클리어해도 ⭐예요.</p>
       <div class="cta">

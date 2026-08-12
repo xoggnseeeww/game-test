@@ -1,7 +1,8 @@
 // 백트래킹 DFS 솔버: 해 개수(상한까지)와 최적 이동수를 구한다.
-// engine.js의 applyOp/isValidEntry를 그대로 재사용한다 — 이동 가능 판정 규칙(나눗셈 정수·
-// 뺄셈 양수 유지)을 여기서 다시 정의하면 engine과 solve가 서로 다른 규칙으로 갈라질 수 있다.
-import { DIRS, applyOp, isValidEntry, posKey } from "./engine.js";
+// engine.js의 applyOp/isValidEntry/warpLanding을 그대로 재사용한다 — 이동 가능 판정 규칙
+// (나눗셈 정수·뺄셈 양수 유지·Lock·Warp 착지)을 여기서 다시 정의하면 engine과 solve가 서로
+// 다른 규칙으로 갈라질 수 있다.
+import { DIRS, applyOp, isValidEntry, posKey, warpLanding } from "./engine.js";
 
 // 그리드가 아무리 커도(5×5, 깊이 8, 분기 4) 반드시 끝나도록 노드 예산을 둔다.
 // 역산 생성이라 해가 최소 1개 있는 것은 보장되므로, 예산에 걸려도 "그 전까지 찾은 것"으로 충분하다.
@@ -40,9 +41,13 @@ export function solve(puzzle, { maxSolutions = DEFAULT_MAX_SOLUTIONS, nodeBudget
       const cell = puzzle.board[nr][nc];
       if (!isValidEntry(cell, value)) continue;
       const nextValue = applyOp(value, cell.op, cell.operand);
+      const { r: landR, c: landC } = warpLanding(puzzle, nr, nc);
+      const landKey = posKey(landR, landC);
       visited.add(key);
-      dfs(nr, nc, nextValue, moves + 1);
+      visited.add(landKey);
+      dfs(landR, landC, nextValue, moves + 1);
       visited.delete(key);
+      visited.delete(landKey);
       if (exhausted || solutions >= maxSolutions) return;
     }
   }

@@ -19,7 +19,10 @@ const STAGE_ADVANCE_DELAY_MS = 900;
 function tileLabel(cell) {
   if (cell.type === "start") return String(cell.value);
   if (cell.type === "block") return "✕";
-  return `${OP_LABEL[cell.op]}${cell.operand}`;
+  const opLabel = `${OP_LABEL[cell.op]}${cell.operand}`;
+  if (cell.gimmick === "lock") return `<span class="np-tile-badge">🔒${cell.lockMin}</span>${opLabel}`;
+  if (cell.gimmick === "warp") return `<span class="np-tile-badge">🌀</span>${opLabel}`;
+  return opLabel;
 }
 
 export function renderNumpathPlay() {
@@ -136,6 +139,9 @@ export function renderNumpathPlay() {
         const dataAttrs = [`data-r="${r}"`, `data-c="${c}"`, `data-type="${cell.type}"`];
         if (cell.op) dataAttrs.push(`data-op="${cell.op}"`, `data-operand="${cell.operand}"`);
         if (cell.type === "start") dataAttrs.push(`data-value="${cell.value}"`);
+        if (cell.gimmick) dataAttrs.push(`data-gimmick="${cell.gimmick}"`);
+        if (cell.gimmick === "lock") dataAttrs.push(`data-lock-min="${cell.lockMin}"`);
+        if (cell.gimmick === "warp") dataAttrs.push(`data-warp-id="${cell.warpId}"`);
 
         const btn = el(`<button class="${classes.join(" ")}" ${dataAttrs.join(" ")}>${tileLabel(cell)}</button>`);
         btn.addEventListener("click", () => attemptMove(r, c));

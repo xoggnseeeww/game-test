@@ -5,13 +5,16 @@
 // 기획서의 Difficulty Rating = GridArea*1.5 + OpComplexity*2.0 + GimmickCount*3.0 산출식은 이 표를
 // 만들 때 순위를 매기는 데만 참고했고, 런타임에는 이 표를 직접 읽는다 — 공식을 다시 계산하는 것보다
 // 표가 더 명확하고, 표를 보면 바로 다음 레벨과 비교할 수 있다.
+// lock: 값이 lockMin 이상일 때만 진입 가능한 더미 칸 수. warp: 서로 순간이동으로 이어진
+// 짝 칸의 "쌍" 개수(warp:1 = 보드에 워프 칸 2개) — 둘 다 경로 밖 더미로만 배치된다(1차 범위,
+// D-61). 가장 쉬운 레벨(0)만 기믹 없이 순수 사칙연산으로 남겨 입문 난이도를 지킨다.
 export const LEVELS = [
-  { size: 3, ops: ["+", "-"], pathLen: 4, slack: 2, gimmicks: { block: 0, multiplier: 0 }, targetRange: [10, 30], maxSolutions: 6 },
-  { size: 3, ops: ["+", "-"], pathLen: 5, slack: 2, gimmicks: { block: 1, multiplier: 0 }, targetRange: [10, 30], maxSolutions: 6 },
-  { size: 4, ops: ["+", "-", "*"], pathLen: 6, slack: 2, gimmicks: { block: 2, multiplier: 1 }, targetRange: [20, 100], maxSolutions: 8 },
-  { size: 4, ops: ["+", "-", "*", "/"], pathLen: 7, slack: 2, gimmicks: { block: 2, multiplier: 1 }, targetRange: [20, 150], maxSolutions: 8 },
-  { size: 5, ops: ["+", "-", "*", "/"], pathLen: 8, slack: 3, gimmicks: { block: 3, multiplier: 2 }, targetRange: [30, 300], maxSolutions: 10 },
-  { size: 5, ops: ["+", "-", "*", "/"], pathLen: 9, slack: 3, gimmicks: { block: 4, multiplier: 2 }, targetRange: [30, 500], maxSolutions: 10 },
+  { size: 3, ops: ["+", "-"], pathLen: 4, slack: 2, gimmicks: { block: 0, multiplier: 0, lock: 0, warp: 0 }, targetRange: [10, 30], maxSolutions: 6 },
+  { size: 3, ops: ["+", "-"], pathLen: 5, slack: 2, gimmicks: { block: 1, multiplier: 0, lock: 1, warp: 0 }, targetRange: [10, 30], maxSolutions: 6 },
+  { size: 4, ops: ["+", "-", "*"], pathLen: 6, slack: 2, gimmicks: { block: 2, multiplier: 1, lock: 1, warp: 1 }, targetRange: [20, 100], maxSolutions: 8 },
+  { size: 4, ops: ["+", "-", "*", "/"], pathLen: 7, slack: 2, gimmicks: { block: 2, multiplier: 1, lock: 1, warp: 1 }, targetRange: [20, 150], maxSolutions: 8 },
+  { size: 5, ops: ["+", "-", "*", "/"], pathLen: 8, slack: 3, gimmicks: { block: 3, multiplier: 2, lock: 2, warp: 1 }, targetRange: [30, 300], maxSolutions: 10 },
+  { size: 5, ops: ["+", "-", "*", "/"], pathLen: 9, slack: 3, gimmicks: { block: 4, multiplier: 2, lock: 2, warp: 2 }, targetRange: [30, 500], maxSolutions: 10 },
 ];
 
 // 난이도 하나 = 레벨 표(LEVELS)를 참조하는 스테이지 커브 하나. stages는 LEVELS의 인덱스 배열이라

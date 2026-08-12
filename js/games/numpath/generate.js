@@ -145,6 +145,9 @@ function assignPathValues(rng, path, level) {
   return { startValue, assignments, target: value, multiplierUsed };
 }
 
+// 경로 밖 칸을 정해진 순서(block → multiplier → lock → warp → 순수 더미)로 채운다. lock/warp
+// 배치 자리가 모자라면(레벨 설정 실수 등) 조용히 순수 더미로 남는다 — 기믹은 "있으면 더
+// 재미있는" 장식이라 필수 조건이 아니다(경로 자체는 항상 풀리게 보장돼 있다).
 function buildBoard(rng, level, path, assignment) {
   const size = level.size;
   const board = Array.from({ length: size }, () => Array(size).fill(null));
@@ -164,23 +167,38 @@ function buildBoard(rng, level, path, assignment) {
     }
   }
   const shuffledRest = seededShuffle(rng, rest);
+  let cursor = 0;
+  const take = (n) => {
+    const slice = shuffledRest.slice(cursor, cursor + n);
+    cursor += slice.length;
+    return slice;
+  };
 
-  const blockCount = Math.min(level.gimmicks.block, shuffledRest.length);
-  const blockCells = shuffledRest.slice(0, blockCount);
-  for (const { r, c } of blockCells) {
+  for (const { r, c } of take(level.gimmicks.block)) {
     board[r][c] = { type: "block", op: null, operand: null, gimmick: null, value: null };
   }
 
   const multiplierRemaining = Math.max(0, level.gimmicks.multiplier - assignment.multiplierUsed);
-  const afterBlocks = shuffledRest.slice(blockCount);
-  const multiplierCount = Math.min(multiplierRemaining, afterBlocks.length);
-  const multiplierCells = afterBlocks.slice(0, multiplierCount);
-  for (const { r, c } of multiplierCells) {
+  for (const { r, c } of take(multiplierRemaining)) {
     board[r][c] = { type: "tile", op: "*", operand: pick(rng, [2, 3]), gimmick: "multiplier", value: null };
   }
 
-  const decoyCells = afterBlocks.slice(multiplierCount);
-  for (const { r, c } of decoyCells) {
+  // Lock 더미의 lockMin은 경로값과 무관하게 초반~중반에 흔히 보이는 값 범위(6~16)에서 뽑는다 —
+  // 정확한 튜닝보다 "지금 값으론 아직 못 지나간다"는 감각을 주는 게 목적이라 느슨해도 된다.
+  for (const { r, c } of take(level.gimmicks.lock)) {
+    const op = pick(rng, level.ops);
+    board[r][c] = { type: "tile", op, operand: decoyOperand(rng, op), gimmick: "lock", lockMin: randInt(rng, 6, 16), value: null };
+  }
+
+  for (let p = 0; p < level.gimmicks.warp; p++) {
+    const warpId = `w${p}`;
+    for (const { r, c } of take(2)) {
+      const op = pick(rng, level.ops);
+      board[r][c] = { type: "tile", op, operand: decoyOperand(rng, op), gimmick: "warp", warpId, value: null };
+    }
+  }
+
+  for (const { r, c } of shuffledRest.slice(cursor)) {
     const op = pick(rng, level.ops);
     board[r][c] = { type: "tile", op, operand: decoyOperand(rng, op), gimmick: null, value: null };
   }

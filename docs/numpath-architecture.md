@@ -43,6 +43,29 @@
 거기서 moveLimit까지 검사하면 `isStuck()`(갈 곳 없음)과 `isOutOfMoves()`(제한 소진)가 항상
 동시에 true가 돼 "서로 배타적으로 판정된다"는 기존 계약이 깨진다.
 
+## Lock/Warp 기믹 (D-61)
+
+D-31에서 1차 범위를 좁히며 뺐던 두 기믹. **경로 밖 더미로만** 배치한다 — 경로 생성 로직
+자체는 그대로다.
+
+- **Lock**: `isValidEntry(cell, value)`에 `cell.gimmick === "lock" && value < cell.lockMin`
+  조건이 하나 더 붙는다. 나눗셈 정수·뺄셈 양수 조건이 이미 만들던 "값 의존 간선"을 게임
+  요소로 드러낸 것뿐이라 새 판정 체계가 아니다. `engine.js`(canEnter)·`solve.js`·
+  `scripts/verify.cjs`의 독립 솔버가 전부 이 함수(또는 그 이식)만 보므로 세 곳이 갈라질
+  걱정이 없다.
+- **Warp**: 같은 `warpId`를 가진 두 칸이 짝이다. 먼저 밟힌 쪽이 트리거(자기 op 적용 후 즉시
+  짝 칸으로 이동), 나머지는 도착 지점(자기 op 미적용) — 양쪽 다 트리거로 두면 서로를 계속
+  트리거하는 무한 루프 위험이 있어 역할을 고정했다. `engine.warpLanding(puzzle, r, c)`가
+  착지 좌표를 찾고(짝이 없으면 자기 자신), `applyMove()`가 트리거+착지 칸을 함께 visited
+  처리하며 위치를 착지 칸으로 옮긴다. 이동 횟수는 1만 쓴다. `undo()`도 둘 다 되돌린다.
+  `solve.js`는 `warpLanding()`을 그대로 가져다 쓰고, `scripts/verify.cjs`는 파일 관례대로
+  (페이지 엔진 재사용 안 함) 같은 로직을 독립적으로 재구현한다.
+
+레벨 표(`data.js`)의 `gimmicks.lock`/`gimmicks.warp`(warp는 칸 수가 아니라 "쌍" 개수)로
+난이도별 밀도를 정한다. 가장 쉬운 레벨(0)만 기믹 없이 순수 사칙연산으로 남아 있다. 자리가
+모자라면(레벨 설정 실수 등) `generate.js`의 `buildBoard()`가 조용히 순수 더미로 남긴다 —
+기믹은 장식이라 필수 조건이 아니고, 경로 자체는 항상 풀리게 보장돼 있다.
+
 ## 런 타이머 + 개인 최고 기록 (D-59)
 
 플레이 HUD에 실시간 타이머(m:ss, `formatTime()`)가 흐르고, 결과 화면에 이번 런 소요 시간과
@@ -72,8 +95,8 @@
 ```
 js/games/numpath/
   data.js       레벨 커브(LEVELS) · 난이도(DIFFICULTIES·stageCountFor·levelFor) · MAX_STARS · starsFor() · formatTime()
-  engine.js     순차 연산 · 이동 가능 판정 · 이동/Undo · 클리어/막힘 판정 (DOM 모름)
-  generate.js   역산 생성기: 스테이지별 시드 파생(stageSeed) → 경로 → 수식 배치 → 더미/기믹 채우기 → solve()로 검증 (DOM 모름)
+  engine.js     순차 연산 · 이동 가능 판정(Lock 포함) · 이동/Undo(Warp 착지 포함) · 클리어/막힘 판정 (DOM 모름)
+  generate.js   역산 생성기: 스테이지별 시드 파생(stageSeed) → 경로 → 수식 배치 → 더미/기믹(Block·Multiplier·Lock·Warp) 채우기 → solve()로 검증 (DOM 모름)
   solve.js      DFS 솔버: 해 개수(상한까지) · 최적 이동수, 노드 예산으로 종료 보장 (DOM 모름)
   audio.js      Web Audio 피치 스케일링 SFX (외부 파일 없음)
   play.js       플레이 화면 — in-place 렌더, 타이머 tick 포함 (screens.js와 분리)
@@ -86,14 +109,16 @@ js/games/numpath/
 기획서의 NUM/OP 분리 대신, 타일 하나가 `{ op, operand }`를 함께 들고 모든 이동이 값 하나를
 바꾼다(경로가 OP→NUM 교대를 강제받아 막다른 길이 되는 문제를 피한다). Multiplier Tile은 새 규칙이
 아니라 `op:"*"` 타일의 특수화(표시용 태그일 뿐 연산은 동일)이고, Block Tile은 진입 불가 칸이다.
-Lock·Warp 기믹은 1차 범위에서 뺐다.
+Lock·Warp도 이제 있다(D-61, 아래 절 참고) — 둘 다 op/operand는 그대로 두고 진입·이동 처리에만
+조건/부가효과가 붙는 특수화라, gimmick 필드 하나로 표현 가능한 이 모델의 확장으로 자연스럽게 들어갔다.
 
 ### v1 불변식 — 값은 항상 양의 정수
 
 `engine.isValidEntry()`가 나눗셈이 정수로 안 떨어지거나 뺄셈이 0 이하로 내려가는 칸의 진입을
-막는다. 이게 Lock Tile 없이도 "진행 순서 강제"를 만든다. `generate.js`는 경로 위에서 이 조건을
-지키며 숫자/연산자를 배치하고(÷는 그 시점 값의 약수만 골라 배치), 경로 밖 더미 타일은 값과
-무관한 범위로 채운다(플레이 중 `canEnter()`가 그때그때 판정한다).
+막는다. 이게 "진행 순서 강제"의 기본형이고, Lock Tile(D-61)의 `lockMin` 조건도 같은 함수
+안에 한 줄로 얹혀 있다. `generate.js`는 경로 위에서 이 조건을 지키며 숫자/연산자를
+배치하고(÷는 그 시점 값의 약수만 골라 배치), 경로 밖 더미 타일은 값과 무관한 범위로
+채운다(플레이 중 `canEnter()`가 그때그때 판정한다).
 
 ### 생성 → 검증 루프
 
@@ -101,7 +126,7 @@ Lock·Warp 기믹은 1차 범위에서 뺐다.
 시드를 파생한다 — 예전엔 런 시드를 그대로 써서 레벨 설정이 같은 두 스테이지가 완전히 같은
 보드로 나오는 버그가 있었다(회귀 테스트 있음) ①시드 PRNG로 self-avoiding 경로를 백트래킹으로
 찾는다 ②경로에 순차 배치하며 목표값 산출, 레벨의 `targetRange` 밖이면 재시도 ③경로 밖 칸에
-Block/Multiplier 기믹과 더미 타일 배치 ④`solve()`로 해 개수 검증 — 상한을 넘으면 다음 시도로,
+Block/Multiplier/Lock/Warp 기믹과 더미 타일 배치 ④`solve()`로 해 개수 검증 — 상한을 넘으면 다음 시도로,
 시도 예산(`GENERATION_ATTEMPTS`)을 다 쓰면 마지막 후보를 그대로 채택한다(역산이라 해가 최소
 1개는 있다는 게 보장돼 있다).
 

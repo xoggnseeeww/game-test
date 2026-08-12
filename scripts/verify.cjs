@@ -90,7 +90,8 @@ async function playCptGame(page) {
   }
 }
 
-// NumPath 보드를 DOM(data-r/data-c/data-type/data-op/data-operand/data-value)에서 읽어
+// NumPath 보드를 DOM(data-r/data-c/data-type/data-op/data-operand/data-value/data-gimmick/
+// data-lock-min/data-warp-id)에서 읽어
 // 순수 객체로 재구성한다. 페이지 안 엔진(js/games/numpath/engine.js)을 그대로 가져다 쓰지
 // 않고 아래 solveNumpath()가 완전히 독립된 DFS를 새로 구현하는 이유: 페이지 엔진 자체에
 // 버그가 있으면 페이지 엔진을 재사용한 검증은 그 버그를 같이 통과시켜버린다.
@@ -105,6 +106,9 @@ async function readNumpathBoard(page) {
       op: n.dataset.op || null,
       operand: n.dataset.operand ? parseInt(n.dataset.operand, 10) : null,
       value: n.dataset.value ? parseInt(n.dataset.value, 10) : null,
+      gimmick: n.dataset.gimmick || null,
+      lockMin: n.dataset.lockMin ? parseInt(n.dataset.lockMin, 10) : null,
+      warpId: n.dataset.warpId || null,
     }))
   );
   const board = Array.from({ length: size }, () => Array(size).fill(null));
@@ -133,6 +137,30 @@ function numpathApplyOp(v, op, operand) {
   throw new Error(`numpathApplyOp: 알 수 없는 연산자 ${op}`);
 }
 
+// engine.js의 isValidEntry/warpLanding과 같은 규칙을 이 파일 안에서 독립적으로 다시 구현한다
+// (파일 헤더 설명대로 — 페이지 엔진을 재사용하지 않는다). Lock은 값 조건, Warp은 착지 좌표.
+function numpathIsValidEntry(cell, value) {
+  if (!cell || cell.type === "block") return false;
+  if (cell.gimmick === "lock" && value < cell.lockMin) return false;
+  const next = numpathApplyOp(value, cell.op, cell.operand);
+  if (cell.op === "/" && !Number.isInteger(next)) return false;
+  if (next <= 0) return false;
+  return true;
+}
+
+function numpathWarpLanding(puzzle, r, c) {
+  const cell = puzzle.board[r][c];
+  if (!cell || cell.gimmick !== "warp") return { r, c };
+  for (let pr = 0; pr < puzzle.size; pr++) {
+    for (let pc = 0; pc < puzzle.size; pc++) {
+      if (pr === r && pc === c) continue;
+      const other = puzzle.board[pr][pc];
+      if (other && other.gimmick === "warp" && other.warpId === cell.warpId) return { r: pr, c: pc };
+    }
+  }
+  return { r, c };
+}
+
 // 시작 칸에서 한 수만 두되, 그 수 자체로 target을 맞춰버리지 않는 이동을 고른다. solveNumpath()가
 // 찾은 첫 해가 우연히 1수짜리(시작 칸 바로 옆이 곧 target)일 수 있는데, 그 경우 Undo/Reset 검사가
 // "1수 두고 아직 안 끝났는지" 확인하려던 게 클리어로 끝나버려 Undo 버튼이 비활성 상태로 굳는다
@@ -143,10 +171,9 @@ function firstNonClearingMove(puzzle) {
     const nc = puzzle.start.c + dc;
     if (nr < 0 || nr >= puzzle.size || nc < 0 || nc >= puzzle.size) continue;
     const cell = puzzle.board[nr][nc];
-    if (!cell || cell.type === "block") continue;
+    if (!numpathIsValidEntry(cell, puzzle.start.value)) continue;
     const next = numpathApplyOp(puzzle.start.value, cell.op, cell.operand);
-    if (cell.op === "/" && !Number.isInteger(next)) continue;
-    if (next <= 0 || next === puzzle.target) continue;
+    if (next === puzzle.target) continue;
     return { r: nr, c: nc };
   }
   return null;
@@ -172,15 +199,17 @@ function solveNumpath(puzzle) {
       const key = `${nr},${nc}`;
       if (visited.has(key)) continue;
       const cell = puzzle.board[nr][nc];
-      if (!cell || cell.type === "block") continue;
+      if (!numpathIsValidEntry(cell, value)) continue;
       const next = applyOp(value, cell.op, cell.operand);
-      if (cell.op === "/" && !Number.isInteger(next)) continue;
-      if (next <= 0) continue;
+      const { r: landR, c: landC } = numpathWarpLanding(puzzle, nr, nc);
+      const landKey = `${landR},${landC}`;
       visited.add(key);
+      visited.add(landKey);
       path.push({ r: nr, c: nc });
-      dfs(nr, nc, next, moves + 1, path);
+      dfs(landR, landC, next, moves + 1, path);
       path.pop();
       visited.delete(key);
+      visited.delete(landKey);
       if (found) return;
     }
   }

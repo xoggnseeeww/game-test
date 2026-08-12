@@ -3,7 +3,33 @@
 > 이 파일은 1~2k 토큰 이하를 유지한다 — "언젠가 할 일"이 아니라 "지금 유효한 작업"만.
 
 ## 현재 작업
-2026-08-11: **NumPath 이동 제한을 실제로 강제**(D-60). "재미가 없고 성취감이 없다"는 피드백에
+2026-08-12: **NumPath Lock/Warp 기믹 추가**(D-61). D-31에서 "1차 범위를 좁히며" 뺐던 두 기믹을
+재검토 조건대로 다시 넣었다 — D-60으로 이동 제한을 강제해도 "다양성이 없다, 매 스테이지가
+결국 다 사칙연산 순서 맞추기"라는 대화 결론에 따라 진행. 둘 다 **경로 밖 더미로만** 배치한다
+(1차 범위 유지, 경로 생성 로직 자체는 안 건드림).
+- **Lock**: `isValidEntry()`에 `cell.gimmick === "lock" && value < cell.lockMin` 조건 한 줄
+  추가 — 나눗셈/뺄셈이 이미 하던 "값 의존 간선"(D-31 용어)을 명시적 게임 요소로 드러낸
+  것뿐이라 새 개념이 아니다. `engine.js`/`solve.js`/`scripts/verify.cjs`의 진입 판정이 전부
+  이 한 곳(또는 그 이식)만 보므로 세 곳이 갈라질 걱정이 없다.
+- **Warp**: 같은 `warpId`를 가진 두 칸이 짝이다. 트리거 칸의 op만 적용되고 착지 칸의 op는
+  무시된다(착지 칸은 "도착 지점"일 뿐) — 안 그러면 두 워프가 서로를 트리거하는 무한 루프
+  위험이 생긴다. `engine.js`에 `warpLanding()` 신설, `applyMove`가 트리거+착지 칸을 함께
+  visited 처리하고 위치를 착지 칸으로 옮긴다. `undo()`도 둘 다 되돌린다. `solve.js`는
+  `warpLanding()`을 그대로 가져다 쓰고, `scripts/verify.cjs`의 독립 솔버는 관례대로
+  자체 재구현.
+`data.js`의 `LEVELS`에 `gimmicks.lock`/`gimmicks.warp`(warp는 "쌍" 개수) 추가 — 가장 쉬운
+레벨(0)만 기믹 없이 순수 사칙연산으로 남김. `generate.js`의 `buildBoard()`를 반복되는
+`.slice()` 오프셋 계산 대신 `take(n)` 커서 헬퍼로 정리하면서 lock/warp 배치를 끼워 넣었다
+(자리 부족하면 조용히 순수 더미로 남는 안전망 — 기믹은 장식이라 필수 조건 아님). `play.js`의
+`tileLabel()`에 🔒lockMin/🌀 배지, `data-gimmick`/`data-lock-min`/`data-warp-id` 속성 추가
+(verify.cjs 교차검증용). `screens.js` 인트로 "칸 종류" 범례에 두 항목 추가. `styles.css`에
+`.np-tile--lock`/`.np-tile--warp`/`.np-tile-badge`.
+실제 브라우저(임시 스크립트)로 Lock 미달 시 진입 차단, Warp 클릭 시 착지 칸 이동+트리거 소멸+
+값 정확성+Undo 완전 원복까지 확인.
+`npm test` 138/138(엔진 테스트 3개·생성기 구조 검증 확장), `scripts/verify.cjs` `serve.py`로
+5연속 통과.
+
+이전(2026-08-11): **NumPath 이동 제한을 실제로 강제**(D-60). "재미가 없고 성취감이 없다"는 피드백에
 대화로 원인을 좁힌 결과 — 퍼즐이 항상 풀리게 생성되는 데다(역산 생성) `moveLimit`을 다 써도
 실패로 이어지지 않아, 클리어에 실패 리스크 자체가 없었다. `isOutOfMoves()`·HUD 표시·"다 썼어요"
 메시지·`solve.js`의 moveLimit 하드 바운드는 이미 다 있었는데 `play.js`가 그걸 실제 이동

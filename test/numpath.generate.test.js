@@ -92,6 +92,24 @@ for (const diff of DIFFICULTIES) {
         assert.ok(result.minMoves <= puzzle.moveLimit, "최적 이동수가 이동 제한을 넘음");
         assert.equal(result.minMoves, minMoves, "generatePuzzle이 보고한 minMoves와 solve() 결과가 달라야 할 이유가 없다");
         assert.ok(solutionCount >= 1);
+
+        // Lock/Warp 기믹 형태 검증(D-61): Lock은 양의 정수 lockMin, Warp은 항상 같은 warpId를
+        // 공유하는 정확히 2칸으로 나온다 — 자리 부족으로 조용히 생략될 수는 있어도, 짝이 안
+        // 맞는 워프(혼자 남은 워프칸)는 절대 없어야 한다.
+        const warpGroups = new Map();
+        for (const row of puzzle.board) {
+          for (const cell of row) {
+            if (cell.gimmick === "lock") {
+              assert.ok(Number.isInteger(cell.lockMin) && cell.lockMin > 0, `Lock 칸의 lockMin이 이상함: ${cell.lockMin}`);
+            } else if (cell.gimmick === "warp") {
+              assert.ok(cell.warpId, "Warp 칸에 warpId가 없음");
+              warpGroups.set(cell.warpId, (warpGroups.get(cell.warpId) || 0) + 1);
+            }
+          }
+        }
+        for (const [warpId, count] of warpGroups) {
+          assert.equal(count, 2, `${diff.id} 스테이지 ${stage} 시드 ${seed}: warpId=${warpId}가 ${count}칸(짝이 안 맞음)`);
+        }
       }
     }
   });

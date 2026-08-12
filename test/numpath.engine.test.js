@@ -13,6 +13,7 @@ import {
   isCleared,
   isStuck,
   isOutOfMoves,
+  warpLanding,
 } from "../js/games/numpath/engine.js";
 
 test("순차 연산은 우선순위 없이 왼쪽부터 적용된다 (기획서 예시)", () => {
@@ -179,4 +180,61 @@ test("이동 제한을 다 쓰고 목표값에 못 미치면 isOutOfMoves가 tru
   assert.equal(state.movesUsed, 1);
   assert.equal(isCleared(puzzle, state), false);
   assert.equal(isOutOfMoves(puzzle, state), true);
+});
+
+test("isValidEntry: Lock 칸은 lockMin 미만이면 무효, 이상이면 op 조건만 그대로 적용", () => {
+  const lock = { type: "tile", op: "+", operand: 1, gimmick: "lock", lockMin: 10 };
+  assert.equal(isValidEntry(lock, 9), false); // 10 미만 — 잠김
+  assert.equal(isValidEntry(lock, 10), true); // 정확히 lockMin — 열림
+  assert.equal(isValidEntry(lock, 20), true);
+
+  // Lock은 op 조건 위에 얹히는 추가 조건이다 — 나눗셈 정수 조건은 lockMin 통과 여부와 무관하게 그대로 검사된다.
+  const lockedDivision = { type: "tile", op: "/", operand: 3, gimmick: "lock", lockMin: 5 };
+  assert.equal(isValidEntry(lockedDivision, 4), false); // lockMin(5) 미달 — op까지 볼 것도 없이 무효
+  assert.equal(isValidEntry(lockedDivision, 6), true); // lockMin 통과 + 6/3=2 정수 — 유효
+  assert.equal(isValidEntry(lockedDivision, 7), false); // lockMin 통과했지만 7/3 비정수 — 무효
+});
+
+test("warpLanding: 짝이 있으면 짝 좌표, 워프가 아니거나 짝이 없으면 자기 자신", () => {
+  const puzzle = {
+    size: 2,
+    board: [
+      [{ type: "start", value: 5 }, { type: "tile", op: "+", operand: 3, gimmick: "warp", warpId: "pair" }],
+      [{ type: "tile", op: "+", operand: 9 }, { type: "tile", op: "+", operand: 5, gimmick: "warp", warpId: "pair" }],
+    ],
+    start: { r: 0, c: 0, value: 5 },
+    target: 999,
+    moveLimit: 4,
+  };
+  assert.deepEqual(warpLanding(puzzle, 0, 1), { r: 1, c: 1 });
+  assert.deepEqual(warpLanding(puzzle, 1, 1), { r: 0, c: 1 }); // 반대 방향도 대칭
+  assert.deepEqual(warpLanding(puzzle, 1, 0), { r: 1, c: 0 }); // 워프 아닌 칸은 자기 자신
+});
+
+test("applyMove: 워프 칸을 밟으면 착지 칸까지 함께 소멸되고 위치가 착지 칸으로 옮겨간다", () => {
+  const puzzle = {
+    size: 2,
+    board: [
+      [{ type: "start", value: 5 }, { type: "tile", op: "+", operand: 3, gimmick: "warp", warpId: "pair" }],
+      [{ type: "tile", op: "+", operand: 9 }, { type: "tile", op: "+", operand: 5, gimmick: "warp", warpId: "pair" }],
+    ],
+    start: { r: 0, c: 0, value: 5 },
+    target: 999,
+    moveLimit: 4,
+  };
+  const state = applyMove(puzzle, initState(puzzle), 0, 1);
+
+  assert.equal(state.value, 8); // 5 + 3(트리거 칸의 op) — 착지 칸의 op(+5)는 적용 안 됨
+  assert.equal(state.r, 1);
+  assert.equal(state.c, 1); // 착지 칸(짝)으로 이동
+  assert.equal(state.movesUsed, 1); // 워프는 공짜 추가 이동이 아니라 이번 한 수 안에 포함
+  assert.deepEqual([...state.visited].sort(), ["0,0", "0,1", "1,1"]); // 트리거·착지 둘 다 소멸
+
+  const undone = undo(state);
+  assert.equal(undone.r, 0);
+  assert.equal(undone.c, 0);
+  assert.equal(undone.value, 5);
+  assert.equal(undone.movesUsed, 0);
+  assert.deepEqual([...undone.visited], ["0,0"]); // 트리거·착지 모두 방문 해제
+  assert.deepEqual(undone.history, []);
 });
