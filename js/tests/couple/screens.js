@@ -22,6 +22,7 @@ import {
   ATTACH_TYPES,
   ATTACH_DEEP,
   CONFLICT_STYLES,
+  CS5_SHADES,
   AXIS_LABELS,
   COUPLE_TYPES,
   ROLE_NARRATIVE,
@@ -446,10 +447,14 @@ function personaBody(r) {
 // 자리다("결과들이 서로 엮여야지 따로 놀면 안 된다"는 지적에 대한 구체적 답).
 function conflictBody(r) {
   const style = CONFLICT_STYLES[r.conflict.style];
+  // 절충형(CS5)에만 붙는 한 문단(D-105). CS1~CS4는 shape과 스타일이 1:1이라
+  // 여기서 undefined가 되고, 그때는 문단 자체가 안 나간다.
+  const shade = CS5_SHADES[r.conflict.shape];
   return `
     <p class="cp-note">부딪혔을 때 <b>${style.name}</b>에 가까워요.
     ${r.conflict.confidence === "edge" ? "다만 경계에 가까워서 상황에 따라 달라질 수 있어요." : ""}</p>
     <p class="cp-note">${style.desc}</p>
+    ${shade ? `<p class="cp-note cp-shade"><b>${shade.lean}.</b> ${shade.text}</p>` : ""}
     ${deepSection("🌪️ 다툼이 커질 때", [style.crisis])}
     ${deepSection("🩹 다투고 난 뒤에는", [style.repair])}
     ${deepSection("🙊 이런 말은 조심하세요", [style.avoid])}

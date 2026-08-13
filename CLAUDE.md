@@ -271,6 +271,11 @@ docs/design-draft.html  최초 디자인 목업. 배포·동작과 무관 (.clau
   블록에 문장 하나 얹기)으로 **곱하지 않고 엮는다**
 - 부부 체크 자기보고 항목(`SELF_READINGS`) 추가 → `READING_TEXT`에 같은 키로 구간 서술
   셋(low·mid·high)과 대화 문장을 함께 넣는다. 하나만 하면 화면에 undefined가 찍힌다
+- 부부 체크 갈등 절단점(`CONFLICT_LOW_MAX`/`CONFLICT_HIGH_MIN`)이나 스타일 배정 규칙 변경 →
+  `CS5_SHADES`(data.js)의 키 집합도 같이 본다. 절충형으로 오는 조합이 바뀌는데 서술이 없으면
+  **화면에서 그 문단만 조용히 사라진다**(에러도 레이아웃 붕괴도 없어 눈으로는 못 잡는다).
+  `test/couple.score.test.js`가 원점수 3~15 전 범위를 돌려 양쪽 집합이 일치하는지 검사하므로
+  `npm test`가 잡아주긴 한다 → `docs/couple-architecture.md` §4-2 (D-105)
 - 다른 테스트/게임도 출시 전 관리자 전용으로 두려면 → `js/tests/couple/index.js`의
   `comingSoonGuard()` 패턴을 그대로 복사해 모든 화면 `guard`에 씌우고, `card.comingSoon = true`
   추가(D-56). 관리자 이메일은 `js/core/auth.js`의 `ADMIN_EMAIL` 하나뿐이라 공용 유틸리티로

@@ -1014,6 +1014,29 @@ async function playNumpathRun(page) {
   });
   check("갈등 블록에 애정 표현 유형 기반 화해법이 엮여 있다", conflictHasLoveRepair);
 
+  // === D-105: 절충형(CS5) 안을 다시 나누는 기울기 문단 ===
+  // 어떤 응답이 어떤 스타일로 떨어질지는 문항 조립 순서에 달려 있어 여기서 고정할 수
+  // 없다. 그래서 "절충형이면 문단이 있고, 아니면 없다"는 대응 관계를 검사한다 —
+  // 어느 쪽으로 떨어져도 의미가 있고, 문단을 아무 스타일에나 붙이는 실수도 걸린다.
+  const shadeState = await page.$$eval(".cp-fold", (folds) => {
+    const f = folds.find((x) => x.querySelector("summary")?.textContent.trim() === "갈등이 생겼을 때");
+    if (!f) return null;
+    const head = f.querySelector(".cp-note");
+    const shade = f.querySelector(".cp-shade");
+    return {
+      isBlend: Boolean(head?.textContent.includes("절충형")),
+      hasShade: Boolean(shade),
+      shadeLen: shade ? shade.textContent.trim().length : 0,
+    };
+  });
+  check(
+    "절충형일 때만 기울기 문단이 붙는다 (D-105)",
+    Boolean(shadeState) &&
+      shadeState.isBlend === shadeState.hasShade &&
+      (!shadeState.hasShade || shadeState.shadeLen > 40),
+    JSON.stringify(shadeState)
+  );
+
   check("결과에 상시 안내 링크 노출 (§9.2)", await page.isVisible(".cp-support"));
   check("결과에 서비스 성격 고지 노출 (§9.3)", cpBody.includes("진단하거나 관계의 미래를 예측하지 않습니다"));
 

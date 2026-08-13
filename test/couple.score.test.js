@@ -30,6 +30,7 @@ import {
   BEHAVIOR_AXIS_MEANING,
   BEHAVIOR_DEEP,
   CONFLICT_STYLES,
+  CS5_SHADES,
   ROLE_NARRATIVE,
   CHILD_NARRATIVE,
   DOS_BEHAVIOR,
@@ -458,6 +459,55 @@ test("절단점 바로 옆 원점수는 경계로 표시된다", () => {
   }
 });
 
+// 절충형(CS5) 안을 다시 나누는 서술(D-105). 5000명 시뮬레이션에서 CS5 하나가 54%를
+// 가져가 절반 넘는 사람이 같은 문단을 보고 있었다 — 그 안이 다섯 조합으로 고르게
+// 갈려 있다는 걸 확인하고 서술만 나눴다.
+// 3문항 척도라 원점수는 3~15만 나온다. 수준 이름(low/mid/high)을 가정하지 않고 이
+// 범위를 통째로 돌려서 CS5로 오는 shape을 모은다 — 절단점을 옮기든 스타일 배정
+// 규칙을 바꾸든, 서술 없는 조합이 생기면 여기서 걸린다(화면에서는 그 문단만 조용히
+// 사라져서 눈으로는 알아채기 어렵다).
+function cs5ShapesFromScoring() {
+  const shapes = new Set();
+  for (let sc = 3; sc <= 15; sc++) {
+    for (let oc = 3; oc <= 15; oc++) {
+      const r = resolveConflict(sc, oc);
+      if (r.style === "CS5") shapes.add(r.shape);
+    }
+  }
+  return [...shapes];
+}
+
+test("절충형으로 오는 조합에 빠짐없이 서술이 있고, 남는 서술도 없다", () => {
+  const cs5Shapes = cs5ShapesFromScoring();
+  // 아홉 조합 중 네 모서리는 CS1~CS4로 빠지고 나머지가 절충형이다.
+  assert.equal(cs5Shapes.length, 5, "절충형으로 오는 조합 수가 달라졌다");
+  assert.deepEqual(
+    Object.keys(CS5_SHADES).slice().sort(),
+    cs5Shapes.slice().sort(),
+    "절충형 조합과 서술 목록이 어긋난다"
+  );
+});
+
+test("shape은 두 축의 수준 조합 그대로다", () => {
+  assert.equal(resolveConflict(3, 15).shape, "low-high");
+  assert.equal(resolveConflict(9, 9).shape, "mid-mid");
+  assert.equal(resolveConflict(15, 9).shape, "high-mid");
+});
+
+test("절충형 서술 다섯이 서로 다르고, 새 유형처럼 읽히지 않는다", () => {
+  const texts = new Set();
+  for (const [shape, shade] of Object.entries(CS5_SHADES)) {
+    assert.ok(shade.lean?.length > 1, `${shape}의 기울기 라벨`);
+    assert.ok(shade.text?.length >= 60, `${shape}의 서술이 너무 짧다: ${shade.text}`);
+    // `lean`은 기울기를 가리키는 말이지 유형 이름이 아니다 — "~형"으로 끝나면
+    // 화면에서 절충형 옆에 새 유형이 하나 더 생긴 것처럼 읽힌다(§8.2).
+    assert.ok(!/형$/.test(shade.lean), `${shape}의 기울기 라벨이 유형명처럼 끝난다: ${shade.lean}`);
+    texts.add(shade.text);
+  }
+  // 다섯을 나눠놓고 문구가 겹치면 나눈 의미가 없다.
+  assert.equal(texts.size, Object.keys(CS5_SHADES).length, "절충형 서술이 서로 겹친다");
+});
+
 // ---------------------------------------------------------------- 애정 표현 5유형 (D-102)
 
 test("애정 표현 5유형도 성향과 같은 확신도 규칙을 따른다", () => {
@@ -497,6 +547,7 @@ function userFacingCopy() {
     ...Object.values(COUPLE_TYPES).flatMap((t) => [t.name, t.desc]),
     ...Object.values(ATTACH_TYPES).flatMap((t) => [t.name, t.desc]),
     ...Object.values(CONFLICT_STYLES).flatMap((t) => [t.name, t.desc, t.crisis, t.repair, t.avoid]),
+    ...Object.values(CS5_SHADES).flatMap((s) => [s.lean, s.text]),
     ...Object.values(BEHAVIOR_AXIS_MEANING),
     ...Object.values(BEHAVIOR_DEEP).flatMap((d) => [d.short, ...DEEP_PARTS.map((p) => d[p])]),
     ...Object.values(ATTACH_DEEP).flatMap((d) => DEEP_PARTS.map((p) => d[p])),

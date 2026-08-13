@@ -1838,6 +1838,14 @@ button.meta-chip {
 .cp-deep-label { font-size: 13px; font-weight: 800; color: var(--accent-ink); }
 .cp-deep-sec .cp-note { margin-top: 7px; }
 
+/* 절충형 안에서 어느 쪽으로 기울었는지 짚어주는 한 문단(D-105). 같은 절충형이라도
+   사람마다 다른 문단이 나가는 자리라, 앞의 공통 서술과 눈으로 구분되게 살짝 들여 쓴다. */
+.cp-shade {
+  border-left: 2px solid var(--accent);
+  padding-left: 10px;
+  margin-top: 10px;
+}
+
 .cp-do-list { display: flex; flex-direction: column; gap: 7px; }
 
 .cp-do, .cp-dont {

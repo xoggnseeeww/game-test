@@ -265,7 +265,8 @@ export function resolveConflict(scRaw, ocRaw) {
   const oc = conflictLevel(ocRaw);
 
   // 절충형(CS5)은 "양축이 모두 중간"이 아니라 **한 축만 중간인 조합까지 포함**하는
-  // 나머지 전부다. 그래서 실제 분포에서 비중이 커질 수 있다.
+  // 나머지 전부다. 그래서 실제 분포에서 비중이 커진다 — 5000명 시뮬레이션에서 54%였다.
+  // 라벨은 그대로 두고 `shape`로 그 안을 다시 나눈다(D-105, data.js `CS5_SHADES`).
   let style = "CS5";
   if (sc === "high" && oc === "low") style = "CS1"; // 관철형
   else if (sc === "low" && oc === "high") style = "CS2"; // 맞춰주기형
@@ -274,6 +275,9 @@ export function resolveConflict(scRaw, ocRaw) {
 
   return {
     style,
+    // 두 축의 수준 조합 그대로. CS1~CS4는 조합과 스타일이 1:1이라 쓰이지 않고,
+    // 여러 조합이 한 스타일로 모이는 CS5에서만 서술을 가르는 데 쓴다(D-105).
+    shape: `${sc}-${oc}`,
     confidence:
       CONFLICT_EDGE_RAWS.includes(scRaw) || CONFLICT_EDGE_RAWS.includes(ocRaw) ? "edge" : "clear",
     scRaw,
