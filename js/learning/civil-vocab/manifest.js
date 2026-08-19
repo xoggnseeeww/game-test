@@ -15,6 +15,11 @@ export const TOOL_ID = "civil-vocab";
 // 콘텐츠를 새로 만들지 않고, 단어가 늘면 문제도 저절로 는다(D-95에서 쓴 방식).
 export const QUIZ_CHOICES = 4;
 
+// 하루에 새로 시작할 단어 수의 기본값(D-99). 상한이 없으면 신규만 몰아서 하다가 며칠 뒤
+// 복습이 눈덩이가 된다 — 8000단어에서 이 값이 사실상 코스의 속도다(30개면 하루 30분 안팎,
+// 전체 약 9개월). 학습자가 바꿀 수 있게 state.vocab.newPerDay로 복사해 둔다.
+export const DEFAULT_NEW_PER_DAY = 20;
+
 export const STAGES = [
   {
     id: "stage-1",

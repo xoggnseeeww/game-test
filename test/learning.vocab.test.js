@@ -12,7 +12,11 @@ import path from "node:path";
 import { DAYS, STAGES, TOTAL_WORDS, QUIZ_CHOICES, findDay } from "../js/learning/civil-vocab/manifest.js";
 import { ROOTS, ROOT_BY_ID } from "../js/learning/civil-vocab/roots.js";
 import { dayIdOf, loadDay } from "../js/learning/civil-vocab/loader.js";
-import { makeRng, buildQuiz, makeQuestion, primaryMeaning, accuracy, shuffleWith } from "../js/learning/civil-vocab/session.js";
+import {
+  makeRng, buildQuiz, makeQuestion, primaryMeaning, accuracy, shuffleWith,
+  makeCloze, checkCloze, buildDailyQueue, retrievalMode, CLOZE_BLANK,
+} from "../js/learning/civil-vocab/session.js";
+import { newEntry, schedule, isDue, dueIds, summarize, EASE_MIN, MAX_INTERVAL_DAYS } from "../js/learning/civil-vocab/srs.js";
 
 const ROOT_DIR = path.join(import.meta.dirname, "..");
 
@@ -192,4 +196,122 @@ test("스테이지·DAY 메타데이터가 화면에 필요한 값을 갖는다"
     assert.ok(day.label && day.theme && day.stage, `${day.id}: 메타데이터가 비었다`);
     assert.equal(findDay(day.id), day);
   }
+});
+
+// ── 간격 반복(D-99) ─────────────────────────────────────────────────────────
+test("연속 정답이면 간격이 길어지고, 졸업(삭제)은 없다", () => {
+  let e = newEntry(0);
+  const seen = [];
+  for (let i = 0; i < 6; i++) {
+    e = schedule(e, "good", 0);
+    seen.push(e.ivl);
+  }
+  assert.deepEqual(seen.slice(0, 2), [1, 3], "처음 두 번은 고정 간격(1일 → 3일)이어야 한다");
+  for (let i = 1; i < seen.length; i++) assert.ok(seen[i] > seen[i - 1], `간격이 안 늘어난다: ${seen.join(",")}`);
+  assert.ok(seen.every((d) => d <= MAX_INTERVAL_DAYS));
+  // js/learning/srs.js와 결정적으로 다른 점: 아무리 잘 맞혀도 엔트리가 사라지지 않는다
+  assert.ok(e && Number.isFinite(e.due), "잘 맞힌 단어가 일정에서 사라졌다");
+});
+
+test("틀리면 간격이 처음으로 돌아가고 ease가 깎인다", () => {
+  let e = newEntry(0);
+  for (let i = 0; i < 4; i++) e = schedule(e, "good", 0);
+  const before = e.ease;
+  const after = schedule(e, "again", 0);
+  assert.equal(after.ivl, 0, "틀렸는데 간격이 남아 있다");
+  assert.equal(after.due, 0, "틀린 단어는 오늘 다시 나와야 한다");
+  assert.ok(after.ease < before);
+  assert.equal(after.lapses, 1);
+  assert.ok(after.ease >= EASE_MIN);
+});
+
+test("ease는 하한 아래로 내려가지 않는다", () => {
+  let e = newEntry(0);
+  for (let i = 0; i < 20; i++) e = schedule(e, "again", 0);
+  assert.equal(e.ease, EASE_MIN);
+});
+
+test("hard는 good보다 간격이 짧다", () => {
+  let base = newEntry(0);
+  for (let i = 0; i < 3; i++) base = schedule(base, "good", 0);
+  assert.ok(schedule(base, "hard", 0).ivl < schedule(base, "good", 0).ivl);
+});
+
+test("깨진 엔트리가 들어와도 정상 일정으로 읽는다", () => {
+  for (const broken of [null, undefined, true, {}, { due: "x", ivl: -3, ease: 0.1, reps: "2" }]) {
+    const next = schedule(broken, "good", 0);
+    assert.ok(Number.isFinite(next.due) && next.ivl >= 1 && next.ease >= EASE_MIN, JSON.stringify(broken));
+  }
+  assert.equal(isDue(null, 0), true);
+});
+
+test("오늘 볼 목록은 밀린 순서대로 나온다", () => {
+  const now = 1000000;
+  const cards = {
+    "v001-01": { due: now - 500, ivl: 1, ease: 2.5, reps: 1, lapses: 0 },
+    "v001-02": { due: now + 5000, ivl: 3, ease: 2.5, reps: 2, lapses: 0 },
+    "v001-03": { due: now - 9000, ivl: 1, ease: 2.5, reps: 1, lapses: 0 },
+  };
+  assert.deepEqual(dueIds(cards, now), ["v001-03", "v001-01"]);
+  const s = summarize(cards, now);
+  assert.equal(s.seen, 3);
+  assert.equal(s.due, 2);
+  assert.equal(s.learned, 3);
+});
+
+// ── 빈칸 채우기(D-99) ───────────────────────────────────────────────────────
+test("모든 단어가 예문에서 빈칸 문제를 만들 수 있다", async () => {
+  for (const w of await allWords()) {
+    const cloze = makeCloze(w);
+    assert.ok(cloze, `${w.id}(${w.word}): 예문에서 표제어를 못 찾았다`);
+    assert.ok(cloze.sentence.includes(CLOZE_BLANK), `${w.id}: 빈칸이 안 뚫렸다`);
+    // 빈칸 문장에 답이 그대로 남아 있으면 문제가 성립하지 않는다(같은 단어가 두 번 나오는 예문)
+    assert.ok(
+      !cloze.sentence.toLowerCase().includes(cloze.answer.toLowerCase()),
+      `${w.id}: 빈칸 문장에 답이 남아 있다 — ${cloze.sentence}`
+    );
+    assert.equal(cloze.shape[0], cloze.answer[0]);
+    assert.equal(cloze.shape.length, cloze.answer.length);
+  }
+});
+
+// 지금 예문에는 같은 단어가 두 번 나오는 경우가 없어서, 실제 데이터로는 이 규칙이 검증되지
+// 않는다(전역 치환을 없애도 초록불이었다). 콘텐츠가 8000개로 늘면 반드시 생기는 경우라
+// 합성 데이터로 규칙 자체를 잠근다.
+test("같은 단어가 두 번 나오는 예문은 두 자리 모두 빈칸이 된다", () => {
+  const word = { id: "v999-01", word: "test", pos: "n.", ko: ["시험"], roots: [], hint: "",
+                 ex: { en: "A test is only a test.", ko: "시험은 시험일 뿐이다." } };
+  const cloze = makeCloze(word);
+  assert.ok(!cloze.sentence.includes("test"), `답이 남아 있다 — ${cloze.sentence}`);
+  assert.equal(cloze.sentence.match(new RegExp(CLOZE_BLANK, "g")).length, 2);
+});
+
+test("빈칸 채점은 굴절형·대소문자·구두점을 받아준다", async () => {
+  const words = await loadDay(DAYS[0].id);
+  const apply = words.find((w) => w.word === "apply");     // 예문은 applies
+  const cloze = makeCloze(apply);
+  assert.equal(cloze.answer, "applies");
+  assert.ok(checkCloze(cloze, "applies", apply));
+  assert.ok(checkCloze(cloze, " Apply. ", apply), "표제어 형태도 받아줘야 한다");
+  assert.ok(!checkCloze(cloze, "", apply));
+  assert.ok(!checkCloze(cloze, "appeal", apply));
+});
+
+// ── 오늘 큐(D-99) ───────────────────────────────────────────────────────────
+test("오늘 큐는 복습 사이에 새 단어를 끼운다", async () => {
+  const words = await loadDay(DAYS[0].id);
+  const due = words.slice(0, 6);
+  const fresh = words.slice(10, 12);
+  const queue = buildDailyQueue(due, fresh, makeRng(5));
+  assert.equal(queue.length, 8);
+  assert.equal(queue.filter((i) => i.kind === "new").length, 2);
+  // 새 단어가 전부 뒤에 몰려 있으면 안 된다(복습만 연속으로 나오는 구간을 만들지 않는다)
+  assert.ok(queue.slice(0, 4).some((i) => i.kind === "new"), JSON.stringify(queue.map((i) => i.kind)));
+  assert.deepEqual(buildDailyQueue([], [], makeRng(1)), []);
+});
+
+test("인출 강도는 익숙해질수록 올라간다(고르기 → 빈칸)", () => {
+  assert.equal(retrievalMode(undefined), "choice");
+  assert.equal(retrievalMode({ reps: 1 }), "choice");
+  assert.equal(retrievalMode({ reps: 2 }), "cloze");
 });

@@ -64,3 +64,67 @@ export function buildQuiz(words, rng, size = QUIZ_CHOICES) {
 export function accuracy(right, total) {
   return total === 0 ? 0 : Math.round((right / total) * 100);
 }
+
+// ── 빈칸 채우기(철자·산출 연습) ─────────────────────────────────────────────
+// 4지선다는 **재인(알아보기)**만 훈련한다 — 보기 중에 답이 있으니 떠올리지 않아도 맞힐 수
+// 있다. 시험은 빈칸·유의어·문맥이라 산출까지 가야 하는데, 문제를 새로 저작하지 않고
+// **이미 있는 예문에서 표제어를 지워** 만든다. "예문에 표제어가 (굴절형 포함) 들어 있다"를
+// test/learning.vocab.test.js가 보장하고 있어서 성립하는 방식이다(콘텐츠 추가 0).
+
+// 예문 안에서 표제어가 실제로 쓰인 형태를 찾는다(applies·applied처럼 변형돼 있다).
+export function clozeToken(word) {
+  const stem = word.word.replace(/(y|e)$/i, "").toLowerCase();
+  for (const token of word.ex.en.match(/[A-Za-z]+/g) || []) {
+    if (token.toLowerCase().startsWith(stem)) return token;
+  }
+  return null;
+}
+
+export const CLOZE_BLANK = "_____";
+
+export function makeCloze(word) {
+  const token = clozeToken(word);
+  if (!token) return null;
+  return {
+    id: word.id,
+    word: word.word,
+    // 같은 단어가 두 번 나오면 둘 다 지운다 — 하나만 지우면 나머지가 답을 그대로 보여준다.
+    sentence: word.ex.en.replace(new RegExp(`\\b${token}\\b`, "g"), CLOZE_BLANK),
+    ko: word.ex.ko,
+    meaning: primaryMeaning(word),
+    answer: token,
+    // 첫 글자와 길이만 준다 — 완전 백지는 이 난이도에서 좌절이 크고, 철자 연습은 남는다.
+    shape: token[0] + "·".repeat(Math.max(0, token.length - 1)),
+  };
+}
+
+// 채점은 표제어 형태도 받아준다: 예문이 "applies"여도 apply라고 쓴 사람이 뜻을 모르는 건
+// 아니다(철자 연습이 목적이지 굴절 시험이 아니다). 대소문자·구두점·공백은 무시한다.
+export function checkCloze(cloze, input, word) {
+  const norm = (s) => String(s || "").toLowerCase().replace(/[^a-z]/g, "");
+  const given = norm(input);
+  if (!given) return false;
+  return given === norm(cloze.answer) || given === norm(word ? word.word : cloze.word);
+}
+
+// ── 오늘 큐 ────────────────────────────────────────────────────────────────
+// 복습이 먼저지만 신규를 뒤에 몰지 않고 섞는다 — 복습만 20개 연속이면 지루하고, 신규만
+// 20개 연속이면 어렵다. 복습 사이사이에 신규를 끼운다.
+export function buildDailyQueue(dueWords, newWords, rng, reviewsPerNew = 3) {
+  const reviews = shuffleWith(dueWords, rng).map((word) => ({ word, kind: "review" }));
+  const fresh = shuffleWith(newWords, rng).map((word) => ({ word, kind: "new" }));
+  const out = [];
+  let r = 0;
+  let n = 0;
+  while (r < reviews.length || n < fresh.length) {
+    for (let i = 0; i < reviewsPerNew && r < reviews.length; i++) out.push(reviews[r++]);
+    if (n < fresh.length) out.push(fresh[n++]);
+  }
+  return out;
+}
+
+// 인출 강도는 단계적으로 올린다: 처음 몇 번은 뜻 고르기(재인), 익숙해지면 빈칸(산출).
+// 쉬운 문제만 반복하면 "아는 것 같은 느낌"만 쌓인다.
+export function retrievalMode(entry) {
+  return entry && Number.isInteger(entry.reps) && entry.reps >= 2 ? "cloze" : "choice";
+}

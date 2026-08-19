@@ -54,6 +54,15 @@ export const state = {
   // 목표가 8000단어인 어휘 진행률을 그 덩어리에 섞으면 카드 한 장 넘길 때마다 수백 KB를
   // 올리게 된다. 계정별 저장은 단어별 행을 갖는 별도 테이블로 붙일 예정이라
   // (docs/vocab-architecture.md §4), 그때 이 객체가 그 소스가 된다.
-  // 지금은 세션 한정: days[dayId] = { index, best, wrong }.
-  vocab: { days: {} },
+  // 지금은 세션 한정.
+  //   days[dayId]  = { index, best, wrong }        — DAY 화면의 진행
+  //   cards[wordId] = { due, ivl, ease, reps, lapses } — 단어별 간격 반복 일정(D-99).
+  //                   회차마다 초기화되던 옛 wrong과 달리 **누적**된다. 이 모양 그대로가
+  //                   M3에서 만들 vocab_progress 테이블의 한 행이 된다.
+  //   prefs.recall  = 단어 카드에서 뜻을 먼저 가릴지(능동 인출). 표시 설정이라 진행률과 섞지 않는다
+  //   newPerDay     = 하루 신규 상한. **여기서 기본값을 넣지 않는다** — 그 값은 도구의
+  //                   manifest.js에 있고, core가 학습 콘텐츠를 import하면 의존 방향
+  //                   (learning → core)이 뒤집힌다. 도구 화면이 처음 열릴 때 지연 초기화한다
+  //                   (state.learning[chapter.id] ??= {...}와 같은 방식).
+  vocab: { days: {}, cards: {}, prefs: { recall: true }, newPerDay: null },
 };

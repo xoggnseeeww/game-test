@@ -194,8 +194,14 @@ js/learning/civil-vocab/ 9급 공무원 영단어(D-98) — 어원 중심 어휘
                       진행 상태는 state.learning이 아니라 **state.vocab**(세션 한정) —
                       계정별 저장은 단어별 행을 갖는 별도 테이블로 붙일 예정이라 통짜
                       업서트 구조에 섞지 않았다. **resolveReview를 일부러 안 둔다** —
-                      어휘 복습은 "오늘 복습"(D-92)에 섞지 않기로 정했다.
-                      지금 200단어(DAY 4개) · 어원 156항목 → 목표 8000
+                      어휘 복습은 "오늘 복습"(D-92)에 섞지 않고 이 도구 안의
+                      `/learning/civil-vocab/today`가 돈다(D-99). 학습 방식은 D-99에서 셋이
+                      됐다: 카드의 **뜻·어원 지연 노출**(앞면은 단어만 — 토글로 끌 수 있다),
+                      뜻 고르기, **빈칸 채우기**(예문에서 표제어를 지운 산출 문제 — 콘텐츠
+                      추가 0). 모든 응답이 도구 안 `srs.js`(SM-2 변형, 졸업/삭제 없음)
+                      일정에 누적된다 — 문장용 `js/learning/srs.js`와 규칙이 반대라 재사용
+                      안 함. 하루 신규 상한은 manifest의 DEFAULT_NEW_PER_DAY.
+                      지금 200단어(DAY 4개) · 어원 158항목 → 목표 8000
 js/learning/grammar.js 문법 설명 블록(D-96) — 연습·복습 화면 공용. 도구를 모르는 순수 view
                       함수라 D-70 경계를 안 깬다(문법 항목은 resolveReview가 넘겨준다)
 js/learning/record.js STT 없는 브라우저(iOS Safari)의 말하기 폴백(D-95) — MediaRecorder로

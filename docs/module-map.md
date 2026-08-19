@@ -88,11 +88,18 @@ js/learning/civil-vocab/  9급 공무원 영단어(D-98) — 어원 중심 어�
                         죽은 어근 둘 다 테스트가 잡는다(grammarPoints 규칙과 같다)
   loader.js             DAY 캐시 로더. 단어 id(v003-17)에서 DAY를 계산해 색인 파일을 안 만든다.
                         매니페스트에 없는 id는 거부(경로가 되는 값이라)
-  session.js            문제지 생성 — 시드 난수·4지선다(오답 보기는 같은 DAY의 다른 뜻에서
-                        자동 생성). DOM·state를 모르는 순수 함수라 node --test 대상
-  screens.js            목차 화면 + DAY 학습 세션(단어 카드 → 확인 문제 → 결과). 데이터가
+  session.js            문제지·빈칸 문제·오늘 큐 생성 — 시드 난수·4지선다(오답 보기는 같은
+                        DAY의 다른 뜻에서 자동 생성)·makeCloze(예문에서 표제어를 지운 산출
+                        문제, D-99)·buildDailyQueue(복습 사이에 신규를 끼움)·retrievalMode
+                        (익숙해지면 고르기 → 빈칸). DOM·state를 모르는 순수 함수
+  srs.js                어휘 전용 간격 반복(D-99) — SM-2 변형, 1 → 3 → 8 → 20 → 50 → 125일,
+                        틀리면 간격 0 + ease 감소, **졸업(삭제) 없음**. js/learning/srs.js를
+                        재사용하지 않는 이유가 이것(그쪽은 마지막 칸을 넘기면 지운다).
+                        도구 안에 둔 건 쓰는 곳이 어휘뿐이라서다 — 문장 도구가 같이 쓰면 올린다
+  screens.js            목차 + DAY 학습 세션(카드 → 확인 문제 → 빈칸) + 오늘 복습 큐. 데이터가
                         화면보다 늦게 오므로 골격을 먼저 그리고 채운다 — 로딩 중 이탈은
-                        onLeave 플래그로 버린다
+                        onLeave 플래그로 버린다. 카드의 뜻·어원은 기본이 **가림**이고
+                        토글(state.vocab.prefs.recall)로 끌 수 있다
   index.js              디스크립터. **resolveReview를 일부러 두지 않는다**(D-98) — 어휘 복습은
                         도구를 가로지르는 "오늘 복습"에 섞지 않기로 결정
 js/learning/score.js     발음 유사도 판정 — Levenshtein 기반, DOM을 모른다. 도구 폴더

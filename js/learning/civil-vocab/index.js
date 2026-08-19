@@ -8,7 +8,7 @@
 //     이 도구 안에 자체 일정(다음 단계)으로 두기로 사용자와 정했다
 //     (docs/vocab-architecture.md §5). 그래서 여기 없는 건 빠뜨린 게 아니라 결정이다.
 import { DAYS, TOTAL_WORDS } from "./manifest.js";
-import { renderVocabIntro, renderVocabDay } from "./screens.js";
+import { renderVocabIntro, renderVocabDay, renderVocabToday } from "./screens.js";
 
 export const civilVocab = {
   id: "civil-vocab",
@@ -27,6 +27,13 @@ export const civilVocabScreens = [
     path: "/learning/civil-vocab",
     title: "9급 공무원 영단어 | 과몰입구역",
     render: renderVocabIntro,
+    theme: "learning",
+  },
+  {
+    id: "learning-civil-vocab-today",
+    path: "/learning/civil-vocab/today",
+    title: "오늘 복습 · 9급 영단어 | 과몰입구역",
+    render: renderVocabToday,
     theme: "learning",
   },
   // DAY가 늘어나도 이 파일은 안 고친다 — manifest.js의 DAYS에 줄만 추가하면 화면이 생긴다.
