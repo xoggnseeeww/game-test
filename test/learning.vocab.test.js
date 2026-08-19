@@ -94,6 +94,24 @@ test("아무 단어도 쓰지 않는 어근이 없다", async () => {
   assert.equal(new Set(ids).size, ids.length, "어근 id가 겹친다");
 });
 
+// 칩(어근 사전)과 힌트가 서로 다른 얘기를 하면 학습자가 뭘 믿어야 할지 알 수 없다. 뜻이
+// 어긋나는 것까지는 기계가 못 잡지만, **힌트에 그 어근 표기가 아예 없는 것**은 잡을 수 있다.
+test("연상 힌트가 자기 어근 표기를 실제로 담고 있다", async () => {
+  for (const w of await allWords()) {
+    for (const id of w.roots) {
+      const form = ROOT_BY_ID.get(id).form.replace(/-/g, "");
+      assert.ok(w.hint.includes(form), `${w.id}(${w.word}): 힌트에 어근 ${id}(${form})가 안 보인다 — ${w.hint}`);
+    }
+  }
+});
+
+test("어근 사전 항목이 표시에 필요한 값을 갖는다", () => {
+  for (const root of ROOTS) {
+    assert.ok(root.id && root.form && root.ko, `${root.id}: form·ko가 비었다`);
+    assert.ok(root.kind === "prefix" || root.kind === "stem", `${root.id}: kind가 이상하다`);
+  }
+});
+
 test("예문에 표제어가 (굴절형 포함) 들어 있다", async () => {
   for (const w of await allWords()) {
     const stem = w.word.replace(/(y|e)$/, "").toLowerCase();

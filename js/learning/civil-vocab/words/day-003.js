@@ -110,7 +110,7 @@ export const WORDS = [
     syn: ["levy", "force on"] },
   { id: "v003-28", word: "incline", pos: "v./n.", ko: ["마음이 기울다", "경사"], freq: 2,
     roots: ["in", "clin"], hint: "in(~쪽으로) + clin(기울다) → 마음이 한쪽으로 기울다",
-    ex: { en: "I incline to accept their offer.", ko: "나는 그들의 제안을 받아들이는 쪽으로 기운다." },
+    ex: { en: "I am inclined to accept their offer.", ko: "나는 그들의 제안을 받아들이는 쪽으로 기운다." },
     syn: ["tend", "slope"] },
   { id: "v003-29", word: "incorporate", pos: "v.", ko: ["통합하다", "포함하다"], freq: 1,
     roots: ["in", "corpor"], hint: "in(안으로) + corpor(몸) → 한 몸 안으로 받아들이다",

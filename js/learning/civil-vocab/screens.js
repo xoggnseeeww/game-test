@@ -26,7 +26,8 @@ function dayBadge(day) {
   const st = state.vocab.days[day.id];
   if (!st) return `${day.count}단어 · ${day.theme}`;
   if (st.best !== null) return `${day.count}단어 · 최고 정답률 ${st.best}%`;
-  return `${day.count}단어 · 학습 중 (${st.index + 1}번째)`;
+  // 카드를 끝까지 본 상태(index === count)에서 그대로 +1하면 "51번째"가 된다.
+  return `${day.count}단어 · 학습 중 (${Math.min(st.index + 1, day.count)}번째)`;
 }
 
 export function renderVocabIntro() {
@@ -234,7 +235,10 @@ export function renderVocabDay(day) {
 
     function showDone() {
       const pct = accuracy(right, quiz.length);
-      if (st.best === null || pct > st.best) st.best = pct;
+      // "틀린 단어만 다시 보기" 뒤에 푼 회차는 문제지가 그 몇 개뿐이라, 여기서 best를 갱신하면
+      // 3단어 100%가 DAY 전체의 "최고 정답률 100%"로 남는다 — 전체를 푼 회차에서만 기록한다.
+      const fullRun = quiz.length === words.length;
+      if (fullRun && (st.best === null || pct > st.best)) st.best = pct;
       const wrongWords = words.filter((w) => st.wrong[w.id]);
       titleEl.textContent = `${day.label} · 결과`;
       cardEl.innerHTML = `
@@ -242,6 +246,7 @@ export function renderVocabDay(day) {
           <div class="emoji">${pct === 100 ? "🎉" : "📊"}</div>
           <div class="msg">정답률 ${pct}%<br/>${right}/${quiz.length} 맞혔어요</div>
         </div>
+        ${fullRun ? "" : `<p class="learning-warn">복습 회차라 기록에는 남기지 않아요 — 최고 정답률은 전체를 풀 때만 갱신돼요.</p>`}
         ${wrongWords.length
           ? `<p class="vocab-wrong-list">틀린 단어 · ${wrongWords.map((w) => `${w.word}(${primaryMeaning(w)})`).join(", ")}</p>
              <div class="cta"><button class="cta-btn" id="vocab-review-wrong">🔁 틀린 단어만 다시 보기</button></div>`

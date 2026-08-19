@@ -121,7 +121,7 @@ export const WORDS = [
     ex: { en: "He devotes weekends to volunteer work.", ko: "그는 주말을 자원봉사에 쏟는다." },
     syn: ["dedicate", "commit"] },
   { id: "v002-31", word: "diminish", pos: "v.", ko: ["줄이다", "감소하다"], freq: 1,
-    roots: ["dis", "min-small"], hint: "di(=dis, 떨어져) + min(작은) → 조금씩 떼어 작게 만들다",
+    roots: ["de", "min-small"], hint: "di(=de, 아래로) + min(작은) → 조금씩 깎아 작게 만들다",
     ex: { en: "Interest in the sport has diminished.", ko: "그 종목에 대한 관심이 줄었다." },
     syn: ["reduce", "decrease"] },
   { id: "v002-32", word: "discard", pos: "v.", ko: ["버리다", "폐기하다"], freq: 2,
