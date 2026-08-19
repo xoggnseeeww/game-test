@@ -49,4 +49,11 @@ export const state = {
   // 이 앱의 다른 진행 상황과 마찬가지로 통째로 날아가고, 세션 내 이동에서는 몇 번째
   // 문장인지만 잃지 않으면 된다(듣기/말하기 결과는 화면 지역 상태로 충분하다).
   learning: {},
+  // 어휘 학습(js/learning/civil-vocab)은 state.learning에 얹지 않고 따로 둔다. 이유는
+  // 저장 방식이 다르기 때문이다 — state.learning은 통째로 한 행에 업서트되는데(cloud.js),
+  // 목표가 8000단어인 어휘 진행률을 그 덩어리에 섞으면 카드 한 장 넘길 때마다 수백 KB를
+  // 올리게 된다. 계정별 저장은 단어별 행을 갖는 별도 테이블로 붙일 예정이라
+  // (docs/vocab-architecture.md §4), 그때 이 객체가 그 소스가 된다.
+  // 지금은 세션 한정: days[dayId] = { index, best, wrong }.
+  vocab: { days: {} },
 };

@@ -127,7 +127,8 @@ js/learning/<toolId>/ 학습 카테고리 안의 독립 도구 1개 = 폴더 1�
                       안은 챕터(목차) 여러 개로 이뤄질 수 있다 — data.js의 CHAPTERS 배열이
                       단일 소스, index.js가 챕터별 화면을 자동 생성한다. 챕터는 잘게 쪼개지
                       않고 묶는다(D-66) — 새 상황이 생기면 새 챕터부터 만들지 말고 기존
-                      챕터 중 붙일 자리가 있는지 먼저 본다. 도구 셋: **basic-conversation**
+                      챕터 중 붙일 자리가 있는지 먼저 본다. 문장 단위 도구 셋(위 civil-vocab은
+                      단어 단위라 별개): **basic-conversation**
                       (기초 영어회화, 7세 이하 대상) — 챕터 인사/기분 표현·하루 일과(아침+밥+
                       목욕/잠자리 통합)·가족/자기소개·놀이터에서(놀이+날씨 통합) 4개, 총
                       362문장(기본 122 + 중급 120 + 심화 120, D-74). 각 챕터는 기본(입문
@@ -183,6 +184,18 @@ js/learning/<toolId>/ 학습 카테고리 안의 독립 도구 1개 = 폴더 1�
                       버튼도 둔다(D-61). 문장 카드 위 마스코트 일러스트(D-61)는 실물로
                       보니 별로라 D-64에서 뺐다 — 이미지가 필요하면 나중에 실제 이미지
                       에셋으로 따로 넣는다
+js/learning/civil-vocab/ 9급 공무원 영단어(D-98) — 어원 중심 어휘 학습. 학습 도구지만 위
+                      세 도구와 모델이 다르다: 카드가 문장이 아니라 **단어**이고, 목표가
+                      8000단어라 **데이터를 정적으로 안 들고 온다**. manifest.js(스테이지·
+                      DAY 메타데이터)만 정적 import이고 words/day-NNN.js(50단어씩)는
+                      loader.js의 동적 import로만 불린다 — 정적 import는 테스트가 금지한다.
+                      연상은 **어원 우선**(roots.js 어원 사전 + 단어별 한 줄 힌트), 어원이
+                      약한 단어만 소리연상을 쓰고 둘 다 없는 단어는 금지(테스트가 잡는다).
+                      진행 상태는 state.learning이 아니라 **state.vocab**(세션 한정) —
+                      계정별 저장은 단어별 행을 갖는 별도 테이블로 붙일 예정이라 통짜
+                      업서트 구조에 섞지 않았다. **resolveReview를 일부러 안 둔다** —
+                      어휘 복습은 "오늘 복습"(D-92)에 섞지 않기로 정했다.
+                      지금 200단어(DAY 4개) · 어원 156항목 → 목표 8000
 js/learning/grammar.js 문법 설명 블록(D-96) — 연습·복습 화면 공용. 도구를 모르는 순수 view
                       함수라 D-70 경계를 안 깬다(문법 항목은 resolveReview가 넘겨준다)
 js/learning/record.js STT 없는 브라우저(iOS Safari)의 말하기 폴백(D-95) — MediaRecorder로
@@ -225,6 +238,7 @@ docs/design-draft.html  최초 디자인 목업. 배포·동작과 무관 (.clau
 | `docs/disc-architecture.md` | DISC 흐름 · 채점 파이프라인 |
 | `docs/couple-architecture.md` | 부부 관계 성향 체크 흐름 · 문항지 조립 · 채점 · 부부 매칭 · 배우자 코드 · 안전 장치 |
 | `docs/numpath-architecture.md` | NumPath 흐름 · 게임 로직(타일 모델 · 생성기 · 솔버 · 별 판정) 개요 |
+| `docs/vocab-architecture.md` | 9급 공무원 영단어 구조(DAY 파일 동적 로드 · 어원 사전 · 확장 계획 · 아직 안 붙인 SRS/계정 저장) |
 | `docs/learning-architecture.md` | 학습 카테고리 구조(도구 → 목차 → 챕터, D-63) · 지금 자른 것(로그인·SRS·결제·어댑터 패턴·어르신 모드)을 나중에 어떻게 붙일지 |
 | `docs/ERRORS.md` | 오류 패턴 (같은 증상이 재발할 때) |
 | `docs/DECISIONS.md` | 설계 결정 · 기각안 · 되돌림 |
@@ -257,6 +271,7 @@ docs/design-draft.html  최초 디자인 목업. 배포·동작과 무관 (.clau
 - 새 테스트 추가 → `js/main.js`에 `registerTest` + `registerScreens` **둘 다**. 하나만 하면 목록 카드나 공유 URL 한쪽이 조용히 빠진다
 - 새 독립 미니게임 추가(테스트에 속하지 않는 경우) → `js/main.js`에 `registerGame` + `registerScreens` **둘 다**, `test/modules.test.js`의 화면 목록에도 새 `<id>Screens` 추가. 반응속도·딜레마처럼 테스트 하위 단계인 게임은 여기 해당 안 됨(D-4)
 - 새 학습 도구 추가(테스트에 속하지 않는 경우) → `js/main.js`에 `registerLearning` + `registerScreens` **둘 다**, `test/modules.test.js`의 화면 목록에도 새 `<tool>Screens` 추가. 미니게임 레지스트리와 완전히 같은 절차다(D-63). 그 도구의 문장이 **복습(D-92)에도 합류하려면** 디스크립터에 `resolveReview(key, id)`를 넣는다 — 복습 화면(`js/learning/review.js`)은 안 고친다
+- 어휘 도구에 단어 추가(DAY 신설) → `js/learning/civil-vocab/words/day-NNN.js` 추가 + `manifest.js`의 `STAGES`에 줄 하나. **화면·라우팅·테스트는 안 고친다**(D-98). 단어 파일을 정적 import하면 안 된다 — `test/learning.vocab.test.js`가 금지하고, 어기면 8000단어가 부팅에 실린다. 매니페스트의 `count`는 실제 파일 길이와 매번 대조되고, 어근은 사전(`roots.js`)에 있어야 하며 아무도 안 쓰는 어근은 남길 수 없다
 - 학습 도구 안에 새 챕터(목차 항목) 추가 → 그 도구의 `data.js`(`CHAPTERS` 배열)에 항목만 추가한다. 레지스트리에 새로 등록하지 않는다 — 목차 화면·화면 등록 둘 다 `CHAPTERS`에서 자동 생성된다(D-63). 다만 새 챕터부터 만들지 말고 기존 챕터에 붙일 자리가 있는지 먼저 볼 것(D-66) — 목차가 잘게 쪼개진 목록이 되지 않게 한다
 - 결과 유형 추가/삭제 → 같은 `data.js`의 슬러그 맵도 갱신 (없으면 공유 URL이 조용히 홈으로 폴백) — DISC는 `slug` 필드가 단일 소스라 자동
 - 문항 수 변경 → 해당 `score.js`의 만점 분모가 문항 수에서 파생되는지 확인 (ADHD `toPct` 분모 `16` = 축당 4문항 × 4점)

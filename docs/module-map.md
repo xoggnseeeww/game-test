@@ -46,7 +46,7 @@ js/games/<id>/          테스트에 속하지 않는 독립 미니게임(예: n
   screens.js            인트로 · 광고 게이트 · 결과 화면
   index.js               디스크립터: <id>Game(메타) + <id>Screens(화면 배열)
 js/learning/<toolId>/   학습 카테고리 안의 독립 도구 1개 = 폴더 1개(basic-conversation,
-                        elementary-conversation, dialogue). tests/games와 같은 레지스트리
+                        elementary-conversation, dialogue, civil-vocab). tests/games와 같은 레지스트리
                         방식(D-63) — 도구가 여럿이면 학습 목록(`/learning`)에 카드로 나열된다.
                         도구 내부는 챕터(목차) 여러 개로 이뤄질 수 있고, index.js가 챕터별
                         화면을 자동 생성한다. basic-conversation은 챕터 → 단계(D-73),
@@ -77,6 +77,24 @@ js/learning/dialogue/   다중 턴 대화 연습(D-87) — §3-7이 오래 미�
                         해석해 갈래를 고르면 STT 오인식 때 대화가 산으로 간다 — 한 줄기
                         역할극으로 고정). 지나온 턴은 화면 위에 로그(.dialogue-log)로 쌓아
                         앞 맥락을 보여준다 — 문장 단위 도구엔 없는 요구
+js/learning/civil-vocab/  9급 공무원 영단어(D-98) — 어원 중심 어휘 학습. 다른 학습 도구와
+                        모델이 다르다: 문장이 아니라 **단어**가 카드이고, 목표가 8000단어라
+                        데이터를 정적으로 안 들고 온다
+  manifest.js           스테이지 · DAY 메타데이터(개수·제목·미리보기)만 — **유일하게 정적
+                        import되는 데이터 파일**. 화면·카드가 파일을 열지 않고 개수를 쓴다
+  words/day-NNN.js      단어 50개씩. loader.js의 **동적 import로만** 불린다(정적 import는
+                        test/learning.vocab.test.js가 금지). 확장은 이 파일 추가 + manifest 한 줄
+  roots.js              어원 사전(접두사 + 어근). 단어의 roots가 이 id를 가리킨다 — 없는 어근·
+                        죽은 어근 둘 다 테스트가 잡는다(grammarPoints 규칙과 같다)
+  loader.js             DAY 캐시 로더. 단어 id(v003-17)에서 DAY를 계산해 색인 파일을 안 만든다.
+                        매니페스트에 없는 id는 거부(경로가 되는 값이라)
+  session.js            문제지 생성 — 시드 난수·4지선다(오답 보기는 같은 DAY의 다른 뜻에서
+                        자동 생성). DOM·state를 모르는 순수 함수라 node --test 대상
+  screens.js            목차 화면 + DAY 학습 세션(단어 카드 → 확인 문제 → 결과). 데이터가
+                        화면보다 늦게 오므로 골격을 먼저 그리고 채운다 — 로딩 중 이탈은
+                        onLeave 플래그로 버린다
+  index.js              디스크립터. **resolveReview를 일부러 두지 않는다**(D-98) — 어휘 복습은
+                        도구를 가로지르는 "오늘 복습"에 섞지 않기로 결정
 js/learning/score.js     발음 유사도 판정 — Levenshtein 기반, DOM을 모른다. 도구 폴더
                         밖에 있어 여러 학습 도구가 공용으로 쓴다(D-78, 원래
                         basic-conversation 안에 있던 걸 두 번째 도구가 생기며 옮김 —

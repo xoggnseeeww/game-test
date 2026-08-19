@@ -30,6 +30,8 @@
 | `/learning/elementary/lower/school-day/basic` | `learning-elementary-lower-school-day-basic` | learning | — |
 | `/learning/elementary/lower/school-day/basic/listen` | `learning-elementary-lower-school-day-basic-listen` | learning | — (D-95, 듣고 뜻 맞히기 — 단계 완료 화면에서만 들어간다) |
 | `/learning/review` | `learning-review` | learning | — (D-92, 오늘 복습 — 도구를 가로지르는 화면이라 registerLearning은 안 한다) |
+| `/learning/civil-vocab` | `learning-civil-vocab` | learning | — (D-98, 9급 영단어 — DAY 목록) |
+| `/learning/civil-vocab/day-001` | `learning-civil-vocab-day-001` | learning | — (DAY마다 자동 생성, 단어는 동적 로드) |
 | `/learning/dialogue` | `learning-dialogue` | learning | — |
 | `/learning/dialogue/make-plans` | `learning-dialogue-make-plans` | learning | — |
 | `/test/adhd` | `test-intro` | — | — |
