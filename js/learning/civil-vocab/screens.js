@@ -21,6 +21,7 @@ import {
   makeCloze, checkCloze, buildDailyQueue, retrievalMode,
 } from "./session.js";
 import { schedule, dueIds, summarize } from "./srs.js";
+import { queueVocabSave, flushVocabSave } from "./cloud.js";
 
 // ── 상태 헬퍼 ───────────────────────────────────────────────────────────────
 // state.vocab의 기본값 중 **도구가 정하는 것**은 여기서 채운다 — core/state.js가
@@ -39,7 +40,11 @@ function dayState(dayId) {
 // 단어별 SRS 이력. 예전에는 회차가 끝날 때마다 초기화돼서 "무엇이 반복해서 약한지"가 남지
 // 않았다(효율성 검토 #4) — 이제 응답 하나하나가 여기 누적된다.
 function gradeWord(wordId, grade) {
-  state.vocab.cards[wordId] = schedule(state.vocab.cards[wordId], grade);
+  const entry = schedule(state.vocab.cards[wordId], grade);
+  state.vocab.cards[wordId] = entry;
+  // 로그인했으면 계정에 남긴다(D-100). 비로그인이면 큐에 쌓였다가 그냥 버려진다 —
+  // 화면은 로그인 여부를 몰라도 되고, 판단은 cloud.js 한 곳에서만 한다.
+  queueVocabSave(wordId, entry);
 }
 
 function entryOf(wordId) {
@@ -230,6 +235,7 @@ export function renderVocabDay(day) {
   onLeave(() => {
     left = true;
     window.speechSynthesis?.cancel();
+    flushVocabSave();   // 모아둔 응답을 화면을 뜨기 전에 넘긴다
   });
 
   const { titleEl, cardEl } = renderShell(day.label, "learning-civil-vocab");
@@ -448,6 +454,7 @@ export function renderVocabToday() {
   onLeave(() => {
     left = true;
     window.speechSynthesis?.cancel();
+    flushVocabSave();
   });
 
   const { titleEl, cardEl } = renderShell("오늘 복습", "learning-civil-vocab");

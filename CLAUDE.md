@@ -77,6 +77,11 @@
   로그인한 사용자의 `state.learning`을 저장한다. `js/learning/cloud.js`가 로그인 시 병합,
   진행이 바뀔 때마다 업서트. 로그인하지 않았거나 CDN이 막혀 있으면 이 앱의 다른 콘텐츠처럼
   세션 한정으로만 동작한다.
+  **④ 어휘 학습 일정**(Supabase `vocab_progress` 테이블, `(user_id, word_id)` PK, RLS로 본인
+  행만, D-100) — 9급 영단어의 **단어별** 다음 복습 시각·간격·정답/오답 횟수를 저장한다.
+  ③과 달리 통짜 JSON이 아니라 **한 행이 단어 하나**다(8000단어를 매 응답마다 통째로 올리지
+  않기 위해서 — `js/learning/civil-vocab/cloud.js`). 응답은 모아서(10개 또는 4초) 업서트하고
+  화면 이탈·탭 숨김에 flush한다. 입력한 답 자체는 저장하지 않는다.
   반응속도 최고기록(`gt_reaction_best`)은 D-20에서 제거됐고 **되살리지 말 것** — D-20의 금지는
   "검사에서 빠름을 성취로 프레이밍"하는 것이지 게임 진행 저장이 아니다.
   시크릿·환경변수 **없음**은 그대로 유지(Supabase anon key는 공개 키라 시크릿이 아니다 — D-56).
@@ -191,9 +196,9 @@ js/learning/civil-vocab/ 9급 공무원 영단어(D-98) — 어원 중심 어휘
                       loader.js의 동적 import로만 불린다 — 정적 import는 테스트가 금지한다.
                       연상은 **어원 우선**(roots.js 어원 사전 + 단어별 한 줄 힌트), 어원이
                       약한 단어만 소리연상을 쓰고 둘 다 없는 단어는 금지(테스트가 잡는다).
-                      진행 상태는 state.learning이 아니라 **state.vocab**(세션 한정) —
-                      계정별 저장은 단어별 행을 갖는 별도 테이블로 붙일 예정이라 통짜
-                      업서트 구조에 섞지 않았다. **resolveReview를 일부러 안 둔다** —
+                      진행 상태는 state.learning이 아니라 **state.vocab** — 계정별 저장은
+                      단어별 행을 갖는 별도 테이블(`vocab_progress`, D-100)이라 통짜 업서트
+                      구조에 섞지 않았다(비로그인은 세션 한정). **resolveReview를 일부러 안 둔다** —
                       어휘 복습은 "오늘 복습"(D-92)에 섞지 않고 이 도구 안의
                       `/learning/civil-vocab/today`가 돈다(D-99). 학습 방식은 D-99에서 셋이
                       됐다: 카드의 **뜻·어원 지연 노출**(앞면은 단어만 — 토글로 끌 수 있다),
@@ -299,6 +304,7 @@ docs/design-draft.html  최초 디자인 목업. 배포·동작과 무관 (.clau
   `comingSoonGuard()` 패턴을 그대로 복사해 모든 화면 `guard`에 씌우고, `card.comingSoon = true`
   추가(D-56). 관리자 이메일은 `js/core/auth.js`의 `ADMIN_EMAIL` 하나뿐이라 공용 유틸리티로
   뽑지 않았다 — 두 번째로 필요해지면 그때 뽑는다
+- 어휘 일정에 저장하는 값(`state.vocab.cards`의 필드) 변경 → `js/learning/civil-vocab/cloud.js`의 `rowToEntry`/`entryToRow`와 Supabase `vocab_progress` 테이블 열을 **셋 다** 같이 고친다(D-100). 열을 추가하면 마이그레이션이 먼저다 — 클라이언트가 없는 열을 업서트하면 그 요청만 조용히 실패하고 화면엔 아무 표시가 없다
 - `js/core/cloud-auth.js`의 Supabase 프로젝트·anon key 변경 → 관리자 로그인(`js/core/auth.js`)이
   이 클라이언트를 쓰므로 함께 영향받는다. `scripts/verify.cjs`로 재확인할 것
 - 구조 변경(모듈 추가·이동·삭제) → **같은 커밋에** `docs/module-map.md`(D-88에 architecture.md에서 분리)와 위 구조 개요 트리 갱신. 새 **화면**을 추가했으면 `docs/screen-map.md`도

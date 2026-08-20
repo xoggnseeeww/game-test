@@ -32,6 +32,7 @@ js/learning/civil-vocab/
   loader.js        DAY 캐시 로더 + 단어 id → DAY 계산
   session.js       문제지·빈칸 문제·오늘 큐 생성(순수 함수 — node --test 대상)
   srs.js           간격 반복 스케줄(순수 함수, SM-2 변형 — §5-1)
+  cloud.js         단어별 일정을 vocab_progress에 동기화(§4) — 배치 업서트 · 로그인 시 병합
   screens.js       목차 화면 · DAY 학습 세션 · 오늘 복습 큐
   index.js         디스크립터(도구 카드 + 화면 배열)
 ```
@@ -71,16 +72,50 @@ attain·maintain·obtain·pertain·retain···) **어원 사전 + 단어별 한
 
 ## 4. 진행 상태 — 지금과 나중
 
-**지금(M1)**: `state.vocab.days[dayId] = { index, best, wrong }` — 세션 한정 메모리.
+**로그인하지 않았을 때**: `state.vocab` 전체가 세션 한정 메모리다(이 앱의 다른 진행률과 같다).
+`state.vocab.days[dayId] = { index, best, wrong }`(DAY 화면 진행) +
+`state.vocab.cards[wordId] = { due, ivl, ease, reps, lapses, at }`(단어별 일정).
 `state.learning`에 얹지 않았다: 그쪽은 통째로 한 행에 업서트되는 구조라(`js/learning/cloud.js`)
 8000단어를 섞으면 카드 한 장마다 수백 KB를 올리게 된다.
 
-**나중(M3, 계정별 저장)**: `vocab_progress` 테이블 — `(user_id, word_id)` PK,
-`due / interval / ease / reps / lapses`, RLS로 본인 행만, `(user_id, due)` 인덱스.
-응답 1건이 100B 남짓이고 "오늘 볼 것"은 `where due <= now()`로 **서버가 고른다**(8000개를
-클라이언트로 안 내린다). 세션 중에는 메모리에 쌓아 배치 업서트하고 화면 이탈 시 flush.
-⚠️ 이때 **영속 데이터가 하나 더 생기므로** `CLAUDE.md`의 "영속 데이터" 항목과 `/privacy`를
-같은 커밋에서 갱신한다(부부 체크 코드·학습 진행률 때와 같은 절차).
+**로그인했을 때(D-100)**: `vocab_progress` 테이블에 **단어 하나가 한 행**이다.
+
+```sql
+create table public.vocab_progress (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  word_id text not null check (char_length(word_id) <= 32),
+  due        timestamptz not null default now(),
+  ivl        real    not null default 0   check (ivl >= 0),
+  ease       real    not null default 2.5 check (ease >= 1.3),
+  reps       integer not null default 0   check (reps >= 0),
+  lapses     integer not null default 0   check (lapses >= 0),
+  updated_at timestamptz not null default now(),   -- = 엔트리의 at(마지막 응답 시각)
+  primary key (user_id, word_id)
+);
+alter table public.vocab_progress enable row level security;
+create policy "vocab_progress_select_own" on public.vocab_progress for select using (auth.uid() = user_id);
+create policy "vocab_progress_insert_own" on public.vocab_progress for insert with check (auth.uid() = user_id);
+create policy "vocab_progress_update_own" on public.vocab_progress for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create index vocab_progress_due_idx on public.vocab_progress (user_id, due);
+
+-- ⚠️ 이 줄을 빼면 위를 다 해도 저장이 안 된다(docs/ERRORS.md E-16)
+grant select, insert, update on public.vocab_progress to authenticated;
+```
+
+- **왜 통짜 JSONB(learning_progress 방식)가 아닌가**: 8000단어를 한 행에 담으면 카드 한 장
+  넘길 때마다 수백 KB를 올리게 되고, 두 기기에서 같이 공부하면 나중에 올린 쪽이 상대의 진행을
+  통째로 덮어쓴다. 행 단위면 응답 하나가 100바이트 남짓이고, 충돌은 같은 단어를 같은 시각에
+  공부한 경우뿐이다.
+- **클라이언트**(`js/learning/civil-vocab/cloud.js`): 응답을 모아서(10개 또는 4초) 업서트하고,
+  화면 이탈(`onLeave`)·탭 숨김(`visibilitychange`)에 flush한다. 로그인 시에는 서버 행을
+  **페이지를 넘겨 전부** 받아 병합한다 — "이미 만난 단어"를 알아야 오늘 큐가 새 단어를 고를 수
+  있어서, 일부만 받으면 같은 단어가 다시 새 단어로 나온다.
+- **병합 규칙**: 같은 단어면 **마지막 응답이 이긴다**(`entry.at` ↔ `updated_at`). 시각이 같으면
+  더 많이 진행된 쪽. 로그인 전에 이 기기에서 공부한 것은 서버에 없으므로 병합 후 그대로 올린다.
+  멱등이라 재로그인·다른 탭에서 여러 번 돌아도 결과가 같다(`mergeVocabCards`, 순수 함수).
+- **저장하지 않는 것**: 입력한 답, 오답 내용, 어느 화면에서 풀었는지. 일정 계산에 쓰는 숫자만 남는다.
+- 영속 데이터가 늘었으므로 `CLAUDE.md`의 "영속 데이터" 항목 ④와 `/privacy`를 같은 커밋에서
+  갱신했다(부부 체크 코드·학습 진행률 때와 같은 절차).
 
 ## 5. 아직 안 붙인 것 — 붙일 때 이렇게
 

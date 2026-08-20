@@ -17,6 +17,7 @@ import {
   makeCloze, checkCloze, buildDailyQueue, retrievalMode, CLOZE_BLANK,
 } from "../js/learning/civil-vocab/session.js";
 import { newEntry, schedule, isDue, dueIds, summarize, EASE_MIN, MAX_INTERVAL_DAYS } from "../js/learning/civil-vocab/srs.js";
+import { mergeVocabCards, rowToEntry, entryToRow } from "../js/learning/civil-vocab/cloud.js";
 
 const ROOT_DIR = path.join(import.meta.dirname, "..");
 
@@ -314,4 +315,62 @@ test("인출 강도는 익숙해질수록 올라간다(고르기 → 빈칸)", (
   assert.equal(retrievalMode(undefined), "choice");
   assert.equal(retrievalMode({ reps: 1 }), "choice");
   assert.equal(retrievalMode({ reps: 2 }), "cloze");
+});
+
+// ── 계정별 저장(D-100) ──────────────────────────────────────────────────────
+// 병합이 조용히 틀리면 화면엔 아무 표시가 없고 공부한 일정만 사라진다 — js/learning/cloud.js의
+// mergeProgress를 테스트로 묶어둔 것과 같은 이유로 여기만이라도 잠근다.
+test("기기 간 병합은 마지막 응답이 이긴다", () => {
+  const local = {
+    "v001-01": { due: 100, ivl: 1, ease: 2.5, reps: 1, lapses: 0, at: 100 },
+    "v001-02": { due: 900, ivl: 3, ease: 2.5, reps: 2, lapses: 0, at: 900 },
+  };
+  const remote = {
+    "v001-01": { due: 500, ivl: 3, ease: 2.5, reps: 2, lapses: 0, at: 500 },  // 서버가 더 최신
+    "v001-03": { due: 700, ivl: 1, ease: 2.5, reps: 1, lapses: 0, at: 700 },  // 이 기기엔 없음
+  };
+  const merged = mergeVocabCards(local, remote);
+  assert.equal(merged["v001-01"].at, 500, "더 최신 응답(서버)이 이겨야 한다");
+  assert.equal(merged["v001-02"].at, 900, "서버에 없는 로컬 진행이 사라지면 안 된다");
+  assert.ok(merged["v001-03"], "서버에만 있는 단어가 들어와야 한다");
+  // 멱등: 같은 병합을 두 번 해도 결과가 같아야 한다(재로그인·다른 탭)
+  assert.deepEqual(mergeVocabCards(merged, remote), merged);
+});
+
+test("병합 시각이 같으면 더 많이 진행된 쪽을 남긴다", () => {
+  const local = { "v001-01": { due: 1, ivl: 1, ease: 2.5, reps: 1, lapses: 0, at: 100 } };
+  const remote = { "v001-01": { due: 2, ivl: 8, ease: 2.5, reps: 4, lapses: 0, at: 100 } };
+  assert.equal(mergeVocabCards(local, remote)["v001-01"].reps, 4);
+  // at이 아예 없는 옛 레코드도 터지지 않는다
+  assert.ok(mergeVocabCards({ "v001-01": { reps: 0 } }, { "v001-01": { reps: 1 } })["v001-01"]);
+  assert.deepEqual(mergeVocabCards(undefined, undefined), {});
+});
+
+test("행 ↔ 엔트리 변환이 왕복해도 값이 유지된다", () => {
+  const entry = { due: Date.UTC(2026, 7, 20), ivl: 8, ease: 2.35, reps: 3, lapses: 1, at: Date.UTC(2026, 7, 12) };
+  const row = entryToRow("user-1", "v002-13", entry);
+  assert.equal(row.user_id, "user-1");
+  assert.equal(row.word_id, "v002-13");
+  assert.deepEqual(rowToEntry(row), entry);
+});
+
+test("응답 시각(at)이 일정에 기록된다 — 병합의 기준값", () => {
+  const now = 1234567890;
+  assert.equal(newEntry(now).at, now);
+  assert.equal(schedule(newEntry(0), "good", now).at, now);
+  assert.equal(schedule(newEntry(0), "again", now).at, now);
+});
+
+// 개인정보처리방침은 **실제로 저장하는 것만** 적는다는 게 이 저장소의 규칙인데, 반대로
+// 저장을 늘려놓고 방침을 안 고치는 실수는 화면에 아무 표시가 안 난다. 서버 저장이 붙은
+// 이번 변경(D-100)에서 그 짝을 테스트로 묶는다.
+test("서버에 저장하는 항목이 개인정보처리방침에 적혀 있다", () => {
+  const home = fs.readFileSync(path.join(ROOT_DIR, "js", "screens", "home.js"), "utf8");
+  const cloud = fs.readFileSync(path.join(ROOT_DIR, "js", "learning", "civil-vocab", "cloud.js"), "utf8");
+  const table = /from\("([a-z_]+)"\)/.exec(cloud);
+  assert.ok(table, "cloud.js가 어느 테이블을 쓰는지 못 찾았다");
+  assert.ok(
+    /영단어 학습 일정/.test(home),
+    `${table[1]}에 저장하는데 개인정보처리방침(renderPrivacy)에 해당 항목이 없다`
+  );
 });

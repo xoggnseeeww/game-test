@@ -2,6 +2,7 @@
 import { registerScreens, registerTest, registerGame, registerLearning, start } from "./core/router.js";
 import { initHeader } from "./core/header.js";
 import { initLearningSync } from "./learning/cloud.js";
+import { initVocabSync } from "./learning/civil-vocab/cloud.js";
 import { commonScreens } from "./screens/home.js";
 import { adhdTest, adhdScreens } from "./tests/adhd/index.js";
 import { discTest, discScreens } from "./tests/disc/index.js";
@@ -45,4 +46,6 @@ registerScreens(reviewScreens);
 
 initHeader();
 initLearningSync();
+// 어휘 일정은 저장 모양이 달라(단어별 행) 별도 동기화다 — js/learning/civil-vocab/cloud.js
+initVocabSync();
 start();

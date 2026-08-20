@@ -20,6 +20,7 @@
 | 결과 유형이 답변과 모순됨 | E-8 `scoring-flatten` |
 | 광고 슬롯 자리는 있는데 광고가 안 나옴 | E-10 `spa-third-party-script` |
 | 배너가 2개인데 하나만 채워짐 | E-11 `duplicate-ad-unit` |
+| 로그인은 되는데 서버에 아무것도 안 쌓임 | E-16 `rls-without-grant` |
 
 ---
 
@@ -295,6 +296,37 @@ shorthand**로 인라인 지정돼 있었다. 인라인 스타일은 클래스 �
 고쳐도 인라인이 덮어썼다 — 호출부를 `margin-top:6px; margin-bottom:22px;`처럼 **세로만** 지정하도록 바꾸고 나서야
 클래스의 좌우 규칙이 먹었다. 인라인 스타일로 여백을 주는 다른 곳을 고칠 때도 이 우선순위를 먼저 확인할 것.
   샌드박스는 `t1.daumcdn.net`이 막혀 **실제 노출은 확인할 수 없다** — DOM에 스크립트가 붙었는지까지만 본다.
+
+### E-16. `rls-without-grant` — RLS 정책만 만들고 테이블 GRANT를 빼면 조용히 아무것도 저장되지 않는다
+**증상**: 로그인은 정상이고 코드도 맞는데 Supabase 테이블에 행이 하나도 안 쌓인다. 브라우저
+콘솔에는 PostgREST의 `permission denied for table ...`(코드 42501)만 남고, 화면에는 아무 표시가
+없다 — 저장 실패를 화면이 알려주지 않는 구조라면 **몇 달을 모르고 지나갈 수 있다.**
+
+**원인**: Supabase에서 접근 제어는 두 겹이다.
+1. **테이블 GRANT** — `authenticated`/`anon` 역할이 그 테이블을 만질 수 있는가(Postgres 권한)
+2. **RLS 정책** — 만질 수 있는 행이 어느 것인가
+
+대시보드로 테이블을 만들면 1번이 자동으로 붙지만, **SQL(`create table`)로 만들면 안 붙는다.**
+그래서 `alter table ... enable row level security` + `create policy ...`까지 정석대로 해도 요청이
+정책에 닿기도 전에 권한에서 막힌다.
+
+**실제 사례(D-100에서 발견)**: `learning_progress`(D-68, 학습 진행률 동기화)가 이 상태였다 —
+`authenticated`에 `select/insert/update` 권한이 없어서 **기능이 배포된 뒤로 한 번도 저장된 적이
+없었다**(행 0). 같은 프로젝트의 `numpath_village`에는 권한이 있어서 대조로 드러났다.
+
+**고치는 법 / 새 테이블을 만들 때**:
+```sql
+grant select, insert, update on public.<table> to authenticated;
+```
+RLS 정책이 이미 본인 행만 허용하므로, 권한을 준다고 남의 행이 보이지는 않는다.
+
+**확인 방법**(대시보드를 안 열고):
+```sql
+select grantee, string_agg(privilege_type, ',') from information_schema.role_table_grants
+where table_schema='public' and table_name='<table>' group by grantee;
+```
+`authenticated`에 `SELECT,INSERT,UPDATE`가 보여야 한다. Supabase의 보안 어드바이저는 이 경우를
+**잡아주지 않는다**(RLS는 켜져 있고 정책도 있으니 문제가 없다고 본다).
 
 ---
 

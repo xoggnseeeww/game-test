@@ -21,8 +21,10 @@ const DAY = 24 * 60 * 60 * 1000;
 //    쓰이지 않는 분기가 아니라 schedule()의 규칙 자체라 테스트가 직접 검증한다.
 export const GRADES = ["again", "hard", "good"];
 
+// `at`은 마지막 응답 시각이다. 일정 계산에는 안 쓰이고 **기기 간 병합에서만** 쓰인다
+// (cloud.js — 최신 응답이 이긴다). 서버의 updated_at 열과 같은 값이다.
 export function newEntry(now = Date.now()) {
-  return { due: now, ivl: 0, ease: EASE_START, reps: 0, lapses: 0 };
+  return { due: now, ivl: 0, ease: EASE_START, reps: 0, lapses: 0, at: now };
 }
 
 // 옛 레코드·깨진 값도 항상 정상 엔트리로 읽는다(클라우드 저장이 붙는 M3에서 서버가 돌려주는
@@ -35,6 +37,7 @@ function normalize(entry, now) {
     ease: Number.isFinite(entry.ease) ? Math.max(EASE_MIN, entry.ease) : EASE_START,
     reps: Number.isInteger(entry.reps) && entry.reps >= 0 ? entry.reps : 0,
     lapses: Number.isInteger(entry.lapses) && entry.lapses >= 0 ? entry.lapses : 0,
+    at: Number.isFinite(entry.at) ? entry.at : 0,
   };
 }
 
@@ -44,7 +47,7 @@ export function schedule(entry, grade, now = Date.now()) {
   const cur = normalize(entry, now);
   if (grade === "again") {
     // 틀리면 간격을 처음으로 되돌리고 ease를 깎는다. **삭제(졸업)는 없다** — 오늘 안에 다시 나온다.
-    return { due: now, ivl: 0, ease: Math.max(EASE_MIN, cur.ease - 0.2), reps: 0, lapses: cur.lapses + 1 };
+    return { due: now, ivl: 0, ease: Math.max(EASE_MIN, cur.ease - 0.2), reps: 0, lapses: cur.lapses + 1, at: now };
   }
   let ivl;
   if (grade === "hard") ivl = cur.ivl === 0 ? 1 : cur.ivl * 1.2;
@@ -53,7 +56,7 @@ export function schedule(entry, grade, now = Date.now()) {
   else ivl = cur.ivl * cur.ease;
   ivl = Math.min(MAX_INTERVAL_DAYS, Math.max(1, Math.round(ivl)));
   const ease = grade === "hard" ? Math.max(EASE_MIN, cur.ease - 0.15) : cur.ease;
-  return { due: now + ivl * DAY, ivl, ease, reps: cur.reps + 1, lapses: cur.lapses };
+  return { due: now + ivl * DAY, ivl, ease, reps: cur.reps + 1, lapses: cur.lapses, at: now };
 }
 
 export function isDue(entry, now = Date.now()) {
