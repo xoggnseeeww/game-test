@@ -104,7 +104,10 @@ js/learning/civil-vocab/  9급 공무원 영단어(D-98) — 어원 중심 어�
                         화면보다 늦게 오므로 골격을 먼저 그리고 채운다 — 로딩 중 이탈은
                         onLeave 플래그로 버린다. 카드의 뜻·어원은 기본이 **가림**이고
                         토글(state.vocab.prefs.recall)로 끌 수 있다
-  index.js              디스크립터. **resolveReview를 일부러 두지 않는다**(D-98) — 어휘 복습은
+  index.js              디스크립터. 마이페이지 집계용 `summary()` 훅을 갖는다(D-101 — 이 도구의
+                        진행은 state.learning이 아니라 state.vocab에 있어서, 화면이 상태 모양을
+                        직접 아는 대신 도구가 자기 말로 요약해 준다).
+                        **resolveReview는 일부러 두지 않는다**(D-98) — 어휘 복습은
                         도구를 가로지르는 "오늘 복습"에 섞지 않기로 결정
 js/learning/score.js     발음 유사도 판정 — Levenshtein 기반, DOM을 모른다. 도구 폴더
                         밖에 있어 여러 학습 도구가 공용으로 쓴다(D-78, 원래

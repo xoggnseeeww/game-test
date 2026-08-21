@@ -16,7 +16,7 @@ import {
   makeRng, buildQuiz, makeQuestion, primaryMeaning, accuracy, shuffleWith,
   makeCloze, checkCloze, buildDailyQueue, retrievalMode, CLOZE_BLANK,
 } from "../js/learning/civil-vocab/session.js";
-import { newEntry, schedule, isDue, dueIds, summarize, EASE_MIN, MAX_INTERVAL_DAYS } from "../js/learning/civil-vocab/srs.js";
+import { newEntry, schedule, isDue, dueIds, summarize, countNewToday, EASE_MIN, MAX_INTERVAL_DAYS } from "../js/learning/civil-vocab/srs.js";
 import { mergeVocabCards, rowToEntry, entryToRow } from "../js/learning/civil-vocab/cloud.js";
 
 const ROOT_DIR = path.join(import.meta.dirname, "..");
@@ -347,11 +347,36 @@ test("병합 시각이 같으면 더 많이 진행된 쪽을 남긴다", () => {
 });
 
 test("행 ↔ 엔트리 변환이 왕복해도 값이 유지된다", () => {
-  const entry = { due: Date.UTC(2026, 7, 20), ivl: 8, ease: 2.35, reps: 3, lapses: 1, at: Date.UTC(2026, 7, 12) };
+  const entry = { due: Date.UTC(2026, 7, 20), ivl: 8, ease: 2.35, reps: 3, lapses: 1,
+                  at: Date.UTC(2026, 7, 12), first: Date.UTC(2026, 7, 1) };
   const row = entryToRow("user-1", "v002-13", entry);
   assert.equal(row.user_id, "user-1");
   assert.equal(row.word_id, "v002-13");
+  assert.equal(row.first_seen, new Date(Date.UTC(2026, 7, 1)).toISOString());
   assert.deepEqual(rowToEntry(row), entry);
+});
+
+test("하루 신규 상한은 '오늘 처음 만난 단어'로 센다", () => {
+  const now = new Date(2026, 7, 19, 14, 0, 0).getTime();      // 로컬 오후 2시
+  const todayMorning = new Date(2026, 7, 19, 7, 0, 0).getTime();
+  const yesterday = new Date(2026, 7, 18, 23, 0, 0).getTime();
+  const cards = {
+    "v001-01": { ...newEntry(todayMorning), first: todayMorning },
+    "v001-02": { ...newEntry(todayMorning), first: todayMorning },
+    "v001-03": { ...newEntry(yesterday), first: yesterday },     // 어제 시작 → 안 센다
+  };
+  assert.equal(countNewToday(cards, now), 2);
+  // 어제 시작한 단어를 오늘 여러 번 복습해도 "오늘의 새 단어"는 늘지 않는다
+  cards["v001-03"] = schedule(cards["v001-03"], "good", now);
+  assert.equal(countNewToday(cards, now), 2);
+  assert.equal(countNewToday({}, now), 0);
+});
+
+test("first(첫 학습 시각)는 응답이 쌓여도 그대로 유지된다", () => {
+  const first = 1000;
+  let e = newEntry(first);
+  for (const g of ["good", "again", "good", "hard"]) e = schedule(e, g, first + 999999);
+  assert.equal(e.first, first);
 });
 
 test("응답 시각(at)이 일정에 기록된다 — 병합의 기준값", () => {

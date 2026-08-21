@@ -90,6 +90,7 @@ create table public.vocab_progress (
   reps       integer not null default 0   check (reps >= 0),
   lapses     integer not null default 0   check (lapses >= 0),
   updated_at timestamptz not null default now(),   -- = 엔트리의 at(마지막 응답 시각)
+  first_seen timestamptz not null default now(),   -- = 엔트리의 first(처음 만난 시각, 하루 상한 계산용)
   primary key (user_id, word_id)
 );
 alter table public.vocab_progress enable row level security;
@@ -131,6 +132,10 @@ grant select, insert, update on public.vocab_progress to authenticated;
   자리) — 쓰이지 않는 분기가 아니라 스케줄의 일부라 테스트가 직접 검증한다.
 - **하루 신규 상한**(`DEFAULT_NEW_PER_DAY = 20`, manifest.js): 상한이 없으면 신규만 몰아서
   하다가 며칠 뒤 복습이 눈덩이가 된다. 8000단어에서 이 값이 사실상 코스의 속도다.
+  **상한은 "오늘 처음 만난 단어 수"로 센다**(`countNewToday`, 엔트리의 `first`) — 큐를 만들 때마다
+  상한을 새로 적용하면 화면을 다시 열 때마다 새 단어가 20개씩 또 나온다. D-101 전까지 실제로
+  그랬고, 그래서 "오늘 학습에 봤던 단어가 안 나온다"는 지적을 받았다(방금 본 단어는 내일 일정인데
+  새 단어만 무한히 공급되니 화면이 늘 처음 보는 단어로 채워졌다).
 - 큐는 `/learning/civil-vocab/today`가 돈다: 복습(due) + 신규를 섞고(`buildDailyQueue`),
   틀린 항목은 같은 세션에 다시 넣되 **두 번까지만** 되돌린다(무한히 되돌리면 "남은 개수"가
   줄지 않는 화면이 된다 — 오늘 못 외운 단어는 어차피 내일 일정에 올라 있다).
@@ -147,10 +152,16 @@ grant select, insert, update on public.vocab_progress to authenticated;
   "단어 N개"를 노출하는 건 아직 안 했다 — 그 화면들은 `state.learning`만 집계하므로,
   §5-3의 `summary()` 훅과 같이 붙이는 게 맞다.
 
-### 5-3. 마이페이지 집계
-- 홈·마이페이지는 학습 도구를 import하지 않는다(D-70). 어휘 진행은 `state.learning`이 아니라
-  `state.vocab`에 있으므로, 도구 디스크립터에 선택적 `summary()` 훅을 추가해 수치만 돌려받는
-  방식으로 붙인다(화면이 도구를 몰라도 된다는 경계는 그대로).
+### 5-3. 마이페이지 집계 — D-101로 붙임
+- 마이페이지는 `state.learning`만 훑고 있어서 어휘 도구가 **아무것도 안 보였다**(사용자 지적:
+  "마이페이지 학습진행에 연동이 안 되는 것 같다"). 도구 디스크립터에 선택적 **`summary()`** 훅을
+  두고, 마이페이지는 `listLearning()`으로 훑어 그 결과만 배치한다 — 도구를 import하지 않는다는
+  경계(D-70)는 그대로다. 진행이 `state.learning`에 있든 `state.vocab`에 있든 화면은 모른다.
+- `summary()`는 숫자가 아니라 **도구가 자기 말로 쓴 문장**을 돌려준다. 화면이 "만난 단어"·"복습
+  일정" 같은 도구별 개념을 알 필요가 없어야 도구가 늘어도 마이페이지를 안 고친다.
+- **동기화가 끝나면 다시 그린다**: 로그인 동기화는 화면이 그려진 뒤에 끝나므로(CDN 동적 import +
+  네트워크), 알림이 없으면 방금 로그인한 사용자에게 "아직 진행한 학습이 없어요"가 계속 보인다.
+  `js/learning/cloud.js`의 `onLearningSync()`(공용 pub-sub)를 두 도구의 동기화가 함께 쓴다.
 
 ### 5-4. 학습 모드 — 두 가지가 D-99로 붙음
 - 지금은 ①단어 카드(뜻·어원 **지연 노출**) ②뜻 고르기(4지선다) ③**빈칸 채우기**(예문에서

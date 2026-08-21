@@ -12,6 +12,7 @@
 // 네트워크가 막혀도 로그인 관련 기능만 빠지고 학습 자체는 그대로 돈다.
 import { loadCloudAuth } from "../../core/cloud-auth-loader.js";
 import { state } from "../../core/state.js";
+import { notifyLearningSync } from "../cloud.js";
 
 // 한 번에 올릴 최대 행 수와 지연. 카드를 넘길 때마다 요청을 보내면 세션 하나에 수백 번이
 // 되므로 모아서 보낸다 — 대신 화면을 떠날 때·탭이 숨을 때 반드시 flush한다(아래).
@@ -54,6 +55,7 @@ export function rowToEntry(row) {
     reps: Number(row.reps),
     lapses: Number(row.lapses),
     at: Date.parse(row.updated_at),
+    first: Date.parse(row.first_seen ?? row.updated_at),
   };
 }
 
@@ -67,6 +69,7 @@ export function entryToRow(userId, wordId, entry) {
     reps: entry.reps,
     lapses: entry.lapses,
     updated_at: new Date(entry.at ?? Date.now()).toISOString(),
+    first_seen: new Date(entry.first ?? entry.at ?? Date.now()).toISOString(),
   };
 }
 
@@ -112,7 +115,7 @@ async function fetchAll(cloud, userId) {
   for (let from = 0; ; from += PAGE_SIZE) {
     const { data, error } = await cloud.supabase
       .from("vocab_progress")
-      .select("word_id, due, ivl, ease, reps, lapses, updated_at")
+      .select("word_id, due, ivl, ease, reps, lapses, updated_at, first_seen")
       .eq("user_id", userId)
       .order("word_id", { ascending: true })
       .range(from, from + PAGE_SIZE - 1);
@@ -144,6 +147,9 @@ export function initVocabSync() {
             if (!remote[wordId]) pending.set(wordId, entry);
           }
           flushVocabSave();
+          // 화면이 이미 그려진 뒤에 도착하므로 알려야 한다 — 안 그러면 마이페이지·도구 인트로가
+          // 로그인 전 상태(만난 단어 0개)를 계속 보여준다(D-101).
+          notifyLearningSync();
         })
         .catch((err) => console.error("단어 일정 불러오기 실패", err));
     };

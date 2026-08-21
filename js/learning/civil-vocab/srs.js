@@ -24,7 +24,7 @@ export const GRADES = ["again", "hard", "good"];
 // `at`은 마지막 응답 시각이다. 일정 계산에는 안 쓰이고 **기기 간 병합에서만** 쓰인다
 // (cloud.js — 최신 응답이 이긴다). 서버의 updated_at 열과 같은 값이다.
 export function newEntry(now = Date.now()) {
-  return { due: now, ivl: 0, ease: EASE_START, reps: 0, lapses: 0, at: now };
+  return { due: now, ivl: 0, ease: EASE_START, reps: 0, lapses: 0, at: now, first: now };
 }
 
 // 옛 레코드·깨진 값도 항상 정상 엔트리로 읽는다(클라우드 저장이 붙는 M3에서 서버가 돌려주는
@@ -38,6 +38,8 @@ function normalize(entry, now) {
     reps: Number.isInteger(entry.reps) && entry.reps >= 0 ? entry.reps : 0,
     lapses: Number.isInteger(entry.lapses) && entry.lapses >= 0 ? entry.lapses : 0,
     at: Number.isFinite(entry.at) ? entry.at : 0,
+    // 이 단어를 처음 만난 시각. 하루 신규 상한을 세는 기준이라 응답이 쌓여도 그대로 유지된다.
+    first: Number.isFinite(entry.first) ? entry.first : (Number.isFinite(entry.at) ? entry.at : now),
   };
 }
 
@@ -47,7 +49,7 @@ export function schedule(entry, grade, now = Date.now()) {
   const cur = normalize(entry, now);
   if (grade === "again") {
     // 틀리면 간격을 처음으로 되돌리고 ease를 깎는다. **삭제(졸업)는 없다** — 오늘 안에 다시 나온다.
-    return { due: now, ivl: 0, ease: Math.max(EASE_MIN, cur.ease - 0.2), reps: 0, lapses: cur.lapses + 1, at: now };
+    return { due: now, ivl: 0, ease: Math.max(EASE_MIN, cur.ease - 0.2), reps: 0, lapses: cur.lapses + 1, at: now, first: cur.first };
   }
   let ivl;
   if (grade === "hard") ivl = cur.ivl === 0 ? 1 : cur.ivl * 1.2;
@@ -56,7 +58,7 @@ export function schedule(entry, grade, now = Date.now()) {
   else ivl = cur.ivl * cur.ease;
   ivl = Math.min(MAX_INTERVAL_DAYS, Math.max(1, Math.round(ivl)));
   const ease = grade === "hard" ? Math.max(EASE_MIN, cur.ease - 0.15) : cur.ease;
-  return { due: now + ivl * DAY, ivl, ease, reps: cur.reps + 1, lapses: cur.lapses, at: now };
+  return { due: now + ivl * DAY, ivl, ease, reps: cur.reps + 1, lapses: cur.lapses, at: now, first: cur.first };
 }
 
 export function isDue(entry, now = Date.now()) {
@@ -81,3 +83,18 @@ export function summarize(cards, now = Date.now()) {
     leech: entries.filter((e) => normalize(e, now).lapses >= 5).length,
   };
 }
+
+// 오늘 **처음 만난** 단어 수. "하루 새 단어 20개"가 실제로 하루 상한이 되려면 이 수를 세야
+// 한다 — 큐를 만들 때마다 상한을 새로 적용하면 화면을 다시 열 때마다 새 단어가 20개씩 더
+// 나온다(D-101에서 실제로 그랬다: "봤던 단어가 거기 나오는 것도 아닌 것 같다"의 원인).
+// 날짜는 사용자의 로컬 자정 기준이다(시험 공부는 "오늘 몇 개"가 로컬 하루 단위다).
+export function countNewToday(cards, now = Date.now()) {
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  const from = start.getTime();
+  return Object.values(cards || {}).filter((e) => {
+    const first = Number.isFinite(e && e.first) ? e.first : (Number.isFinite(e && e.at) ? e.at : null);
+    return first !== null && first >= from && first <= now;
+  }).length;
+}
+

@@ -20,8 +20,9 @@ import {
   makeRng, buildQuiz, makeQuestion, primaryMeaning, accuracy,
   makeCloze, checkCloze, buildDailyQueue, retrievalMode,
 } from "./session.js";
-import { schedule, dueIds, summarize } from "./srs.js";
+import { schedule, dueIds, summarize, countNewToday } from "./srs.js";
 import { queueVocabSave, flushVocabSave } from "./cloud.js";
+import { onLearningSync } from "../cloud.js";
 
 // ── 상태 헬퍼 ───────────────────────────────────────────────────────────────
 // state.vocab의 기본값 중 **도구가 정하는 것**은 여기서 채운다 — core/state.js가
@@ -151,6 +152,12 @@ function dayBadge(day) {
 export function renderVocabIntro() {
   ensureVocabState();
   const stats = summarize(state.vocab.cards);
+  // 오늘 새로 시작할 수 있는 단어 수 = (하루 상한 − 오늘 이미 시작한 수)와 아직 안 만난 단어 중
+  // 작은 쪽. 상한을 "큐를 만들 때마다"가 아니라 **오늘 하루 기준**으로 적용해야 한다(D-101).
+  const newTodayCount = Math.max(0, Math.min(
+    state.vocab.newPerDay - countNewToday(state.vocab.cards),
+    TOTAL_WORDS - stats.seen
+  ));
   app.appendChild(el(`
     <div>
       <div class="back-row">
@@ -163,17 +170,21 @@ export function renderVocabIntro() {
         <p>단어를 통째로 외우지 않고 <b>접두사 + 어근</b>으로 쪼개서 기억해요.
            지금 준비된 단어 ${TOTAL_WORDS}개 · DAY ${DAYS.length}개.</p>
       </div>
-      <div class="section-title">🔁 오늘 할 공부</div>
+      <div class="section-title">📅 오늘 학습</div>
       <div class="test-list">
         <button class="test-card" data-nav="learning-civil-vocab-today">
-          <div class="icon" style="background:#E8642E;">🔁</div>
+          <div class="icon" style="background:#E8642E;">📅</div>
           <div class="body">
-            <div class="name">오늘 복습 + 새 단어</div>
-            <div class="desc">${stats.due > 0 ? `복습할 단어 ${stats.due}개` : "복습할 단어 없음"} · 새 단어 하루 ${state.vocab.newPerDay}개까지</div>
+            <div class="name">오늘 학습 시작하기</div>
+            <div class="desc">다시 볼 단어 ${stats.due}개 · 새 단어 ${newTodayCount}개</div>
           </div>
           <div class="chevron">›</div>
         </button>
       </div>
+      <p class="learning-warn">
+        <b>DAY</b>는 단어를 처음 훑는 곳이고, <b>오늘 학습</b>은 그렇게 만난 단어를 날짜를 두고
+        다시 만나는 곳이에요. 오늘 본 단어는 내일부터 차례로 다시 올라와요(맞힐수록 간격이 길어져요).
+      </p>
       ${stats.seen > 0 ? `<p class="learning-warn">지금까지 만난 단어 ${stats.seen}개 · 일정에 올라간 단어 ${stats.learned}개${stats.leech > 0 ? ` · 자꾸 틀리는 단어 ${stats.leech}개` : ""}</p>` : ""}
       ${STAGES.map((stage) => `
         <div class="section-title">${stage.emoji} ${stage.label}</div>
@@ -190,10 +201,16 @@ export function renderVocabIntro() {
           `).join("")}
         </div>
       `).join("")}
-      <p class="learning-warn">지금은 진행 상황이 이 브라우저 세션에만 남아요 — 계정별 저장은 준비 중이에요.</p>
+      <p class="learning-warn">로그인하면 이 일정이 계정에 저장돼 다른 기기에서도 이어져요.</p>
     </div>
   `));
   bindNav(app);
+  // 로그인 동기화는 화면이 그려진 뒤에 끝난다 — 그때 다시 그리지 않으면 방금 로그인한
+  // 사용자에게 "만난 단어 0개"가 계속 보인다(D-101).
+  onLeave(onLearningSync(() => {
+    app.innerHTML = "";
+    renderVocabIntro();
+  }));
 }
 
 // 로딩·에러 골격을 두 화면(DAY 세션·오늘 복습)이 같이 쓴다.
@@ -457,21 +474,28 @@ export function renderVocabToday() {
     flushVocabSave();
   });
 
-  const { titleEl, cardEl } = renderShell("오늘 복습", "learning-civil-vocab");
+  const { titleEl, cardEl } = renderShell("오늘 학습", "learning-civil-vocab");
 
   collectToday()
     .then((data) => { if (!left) run(data); })
     .catch((err) => { if (!left) showLoadError(cardEl, err); });
 
-  function run({ queue, poolByDay }) {
+  function run({ queue, poolByDay, dueCount, newCount }) {
     const MAX_RETRIES = 2;
     if (queue.length === 0) {
-      titleEl.textContent = "오늘 복습";
+      titleEl.textContent = "오늘 학습";
+      const stats = summarize(state.vocab.cards);
+      const startedToday = countNewToday(state.vocab.cards);
+      let why;
+      if (stats.seen === 0) why = "아직 시작한 단어가 없어요. 아래에서 DAY를 골라 첫 단어부터 만나보세요.";
+      else if (startedToday >= state.vocab.newPerDay) why = `오늘 새 단어 몫(${state.vocab.newPerDay}개)을 다 했어요. 지금까지 만난 단어 ${stats.seen}개는 각자 정해진 날짜에 다시 올라와요 — 방금 본 단어가 바로 다시 안 나오는 건 그래서예요.`;
+      else why = `오늘 몫은 끝났어요. 지금까지 만난 단어 ${stats.seen}개는 각자 정해진 날짜에 다시 올라와요 — 방금 본 단어가 바로 다시 안 나오는 건 그래서예요.`;
       cardEl.innerHTML = `
         <div class="empty-state">
           <div class="emoji">🌱</div>
-          <div class="msg">오늘 볼 단어가 없어요<br/>DAY를 골라 새 단어를 시작해 보세요</div>
+          <div class="msg">오늘 볼 단어가 없어요</div>
         </div>
+        <p class="learning-warn">${why}</p>
         <div class="cta"><button class="cta-btn" id="vocab-go-days">DAY 목록으로</button></div>`;
       cardEl.querySelector("#vocab-go-days").addEventListener("click", () => go("learning-civil-vocab"));
       return;
@@ -482,6 +506,21 @@ export function renderVocabToday() {
 
     function poolOf(word) {
       return poolByDay.get(dayIdOf(word.id)) || [word];
+    }
+
+    // 지금 카드가 "처음 보는 단어"인지 "다시 만나는 단어"인지 한 줄로 알린다.
+    function itemBadge(item, word) {
+      if (item.kind === "new") return "🌱 처음 만나는 단어";
+      if (item.kind === "again") return "🔁 방금 헷갈린 단어 — 다시 한 번";
+      const reps = entryOf(word.id)?.reps || 0;
+      return `📅 다시 만난 단어 · ${reps + 1}번째`;
+    }
+
+    // 이 답을 고르면 다음에 언제 나오는지. schedule()은 순수 함수라 미리 계산해도 상태가
+    // 안 바뀐다 — "왜 방금 본 단어가 오늘 다시 안 나오나"에 화면이 직접 답하게 하는 장치다.
+    function nextText(word, grade) {
+      const next = schedule(entryOf(word.id), grade);
+      return next.ivl === 0 ? "오늘 안에 다시 나와요" : `다음엔 ${next.ivl}일 뒤에 나와요`;
     }
 
     function advance(word, grade) {
@@ -501,10 +540,14 @@ export function renderVocabToday() {
       if (queue.length === 0) return showDone();
       const item = queue[0];
       const word = item.word;
-      titleEl.textContent = `오늘 복습 · 남은 ${queue.length}`;
+      titleEl.textContent = `오늘 학습 · 남은 ${queue.length}`;
       // 틀린 항목이 다시 들어오면 총량이 늘어난다 — 처음 개수를 분모로 고정하면 진행바가
       // 멈춘 것처럼 보이므로, 지금까지 끝낸 수와 남은 수를 더해 매번 다시 잰다.
-      const head = progressMarkup(done, done + queue.length);
+      // 오늘의 구성(복습 N · 새 단어 M)과 지금 카드가 어느 쪽인지도 같이 보여준다 — 이게
+      // 없으면 "복습 화면인데 처음 보는 단어만 나온다"로 읽힌다(D-101에서 받은 지적).
+      const head = progressMarkup(done, done + queue.length) + `
+        <p class="vocab-plan">오늘 구성 · 다시 볼 단어 ${dueCount}개 + 새 단어 ${newCount}개</p>
+        <div class="vocab-item-badge ${item.kind === "new" ? "is-new" : "is-review"}">${itemBadge(item, word)}</div>`;
 
       // 새 단어는 카드로 만나고, 이미 만난 단어는 문제로 만난다(뜻 고르기 → 익숙해지면 빈칸).
       if (item.kind === "new") {
@@ -514,7 +557,8 @@ export function renderVocabToday() {
                <button class="cta-btn vocab-grade-again" id="vocab-again">😅 헷갈려요</button>
                <button class="cta-btn" id="vocab-good">👍 알겠어요</button>
              </div>`
-          : `<div class="cta"><button class="cta-btn" id="vocab-reveal">뜻 확인하기</button></div>`);
+          : `<div class="cta"><button class="cta-btn" id="vocab-reveal">뜻 확인하기</button></div>`)
+          + (isOpen ? `<p class="vocab-plan">👍는 ${nextText(word, "good")} · 😅는 오늘 안에 다시 나와요</p>` : "");
         cardEl.querySelector("#vocab-listen")?.addEventListener("click", () => speak(word.word, 1));
         cardEl.querySelector("#vocab-pref-recall").addEventListener("click", () => {
           state.vocab.prefs.recall = !state.vocab.prefs.recall;
@@ -540,6 +584,7 @@ export function renderVocabToday() {
           cardEl.querySelector("#vocab-after").innerHTML = `
             <p class="learning-feedback ${correct ? "tier-perfect" : "tier-retry"}">${correct ? "정답이에요!" : `정답은 "${cloze.answer}"예요`}</p>
             <p class="vocab-hint">🧠 ${word.hint}</p>
+            <p class="vocab-plan">${nextText(word, correct ? "good" : "again")}</p>
             <div class="cta"><button class="cta-btn" id="vocab-next-item">다음</button></div>`;
           cardEl.querySelector("#vocab-next-item").addEventListener("click", () => advance(word, correct ? "good" : "again"));
         };
@@ -565,6 +610,7 @@ export function renderVocabToday() {
         cardEl.querySelector("#vocab-after").innerHTML = `
           <p class="learning-feedback ${correct ? "tier-perfect" : "tier-retry"}">${correct ? "정답이에요!" : `정답은 "${q.answer}"예요`}</p>
           <p class="vocab-hint">🧠 ${word.hint}</p>
+          <p class="vocab-plan">${nextText(word, correct ? "good" : "again")}</p>
           <div class="cta"><button class="cta-btn" id="vocab-next-item">다음</button></div>`;
         cardEl.querySelector("#vocab-next-item").addEventListener("click", () => advance(word, correct ? "good" : "again"));
       }));
@@ -572,14 +618,17 @@ export function renderVocabToday() {
 
     function showDone() {
       const stats = summarize(state.vocab.cards);
-      titleEl.textContent = "오늘 복습 · 완료";
+      // 내일 몇 개가 올라오는지 미리 보여준다 — "이 화면이 뭘 위한 건지" 가장 잘 설명하는 숫자다.
+      const tomorrow = Date.now() + 24 * 60 * 60 * 1000;
+      const dueTomorrow = dueIds(state.vocab.cards, tomorrow).length;
+      titleEl.textContent = "오늘 학습 · 완료";
       cardEl.innerHTML = `
         <div class="empty-state">
           <div class="emoji">🎉</div>
           <div class="msg">오늘 몫을 다 했어요!<br/>${done}단어를 확인했어요</div>
         </div>
         <p class="learning-warn">지금까지 만난 단어 ${stats.seen}개 · 일정에 올라간 단어 ${stats.learned}개.
-           다음 복습은 단어마다 정한 날짜에 다시 올라와요.</p>
+           <b>내일은 ${dueTomorrow}개</b>가 다시 올라와요 — 맞힐수록 다음 간격이 길어져요.</p>
         <div class="cta"><button class="cta-btn" id="vocab-go-days">DAY 목록으로</button></div>`;
       cardEl.querySelector("#vocab-go-days").addEventListener("click", () => go("learning-civil-vocab"));
     }
@@ -606,15 +655,24 @@ async function collectToday(now = Date.now()) {
     if (word) dueWords.push(word);
   }
 
+  // **오늘 이미 시작한 신규는 상한에서 뺀다.** 이걸 안 하면 화면을 다시 열 때마다 새 단어가
+  // 상한만큼 또 나오고, 정작 아까 본 단어는 (내일 일정이라) 안 나온다 — 사용자가 "봤던 단어가
+  // 거기 나오는 것도 아닌 것 같다"고 지적한 상태가 정확히 이것이다(D-101).
+  const remainingNew = Math.max(0, state.vocab.newPerDay - countNewToday(state.vocab.cards, now));
   const newWords = [];
   for (const day of DAYS) {
-    if (newWords.length >= state.vocab.newPerDay) break;
+    if (newWords.length >= remainingNew) break;
     for (const word of await load(day.id)) {
       if (state.vocab.cards[word.id]) continue;   // 이미 만난 단어
       newWords.push(word);
-      if (newWords.length >= state.vocab.newPerDay) break;
+      if (newWords.length >= remainingNew) break;
     }
   }
 
-  return { queue: buildDailyQueue(dueWords, newWords, makeRng(now)), poolByDay };
+  return {
+    queue: buildDailyQueue(dueWords, newWords, makeRng(now)),
+    poolByDay,
+    dueCount: dueWords.length,
+    newCount: newWords.length,
+  };
 }

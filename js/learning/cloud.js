@@ -7,6 +7,22 @@ import { state } from "../core/state.js";
 
 let syncedForUser = null;
 
+// 서버에서 받아온 값이 state에 병합된 순간을 알리는 pub-sub. 로그인 동기화는 **화면이 이미
+// 그려진 뒤에** 끝나기 때문에(CDN 동적 import + 네트워크), 알림이 없으면 마이페이지·학습
+// 목록이 "아직 아무것도 안 한 상태"를 계속 보여준다 — 실제로 사용자가 겪은 증상이다(D-101).
+// 어휘 도구(js/learning/civil-vocab/cloud.js)도 자기 병합이 끝나면 이 알림을 쓴다 — 도구별로
+// 알림 채널을 따로 두면 구독하는 쪽이 도구를 알아야 해서 D-70 경계가 깨진다.
+const syncListeners = new Set();
+
+export function onLearningSync(cb) {
+  syncListeners.add(cb);
+  return () => syncListeners.delete(cb);
+}
+
+export function notifyLearningSync() {
+  for (const cb of syncListeners) cb();
+}
+
 // 챕터별로 더 진행된 쪽(index가 큰 쪽)을 남긴다 — 로그인이 여러 번 일어나도(재로그인, 다른
 // 탭) 멱등해야 한다는 게 NumPath 마을 병합(mergeVillages, D-55)과 같은 이유다.
 // export하는 이유: 이 함수만 순수 함수(DOM·CDN을 모른다)라 `node --test`로 직접 검증할 수
@@ -66,6 +82,7 @@ export function initLearningSync() {
             return;
           }
           Object.assign(state.learning, mergeProgress(state.learning, data?.progress));
+          notifyLearningSync();
         });
     };
     sync();

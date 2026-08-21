@@ -2534,3 +2534,37 @@ button.meta-chip {
 }
 .vocab-input:disabled { background: #F7F5F1; color: #8A8794; }
 .vocab-input-row .cta-btn { width: auto; flex: 0 0 auto; padding-left: 22px; padding-right: 22px; }
+
+/* 오늘 학습 화면의 안내 줄(D-101) — "지금 뭘 하고 있는지"와 "다음엔 언제 나오는지"를
+   카드마다 한 줄로 알린다. 사용자가 "이 페이지가 뭘 위한 건지 애매하다"고 지적한 자리. */
+.vocab-plan {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #8A8794;
+  margin: 8px 20px 0;
+  line-height: 1.6;
+}
+.vocab-item-badge {
+  display: block;
+  width: fit-content;
+  margin: 10px auto 0;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+}
+.vocab-item-badge.is-new { background: #E4F1E8; color: #1B8F5C; }
+.vocab-item-badge.is-review { background: var(--accent-soft); color: var(--accent-ink); }
+
+/* 마이페이지의 도구별 요약 블록(D-101) */
+.mypage-tool {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #EFEDE8;
+}
+.mypage-tool-name {
+  font-size: 14px;
+  font-weight: 800;
+  margin-bottom: 6px;
+}

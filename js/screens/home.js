@@ -1,6 +1,7 @@
 // 홈 · 심리테스트 목록 · 미니게임 목록.
 import { app, go, onLeave, listTests, listGames, listLearning } from "../core/router.js";
 import { collectDue, countPending } from "../learning/srs.js";
+import { onLearningSync } from "../learning/cloud.js";
 import { el, bindNav } from "../core/dom.js";
 import { adSlotMarkup } from "../core/ads.js";
 import { currentEmail, currentName, isAdmin, logout, onAuthChange, renderSignInButton } from "../core/auth.js";
@@ -216,6 +217,22 @@ export function renderMyPage() {
     }
   }
 
+  // 도구가 스스로 요약한 것(디스크립터의 summary())을 모은다 — 학습 진행이 state.learning에
+  // 있는 도구(문장)와 state.vocab에 있는 도구(어휘)가 섞여 있어서, 화면이 상태 모양을 직접
+  // 알려고 하면 도구가 늘 때마다 여기를 고쳐야 한다(D-101).
+  function toolSummaryMarkup() {
+    return listLearning()
+      .map((tool) => (tool.summary ? tool.summary() : null))
+      .filter(Boolean)
+      .map((sum) => `
+        <div class="mypage-tool">
+          <div class="mypage-tool-name">${sum.emoji || "📘"} ${sum.name}</div>
+          ${sum.lines.map((line) => `<p>${line}</p>`).join("")}
+          <div class="cta"><button class="cta-btn" data-nav="${sum.screen}">${sum.actionLabel}</button></div>
+        </div>`)
+      .join("");
+  }
+
   function renderLearning() {
     const entries = Object.entries(state.learning);
     const total = entries.reduce((sum, [, ch]) => sum + ch.index, 0);
@@ -226,18 +243,21 @@ export function renderMyPage() {
     // "챕터 제목은 안 본다" 원칙과 같다.
     const weakTotal = countPending(state.learning);
     const dueNow = collectDue(state.learning).length;
-    learningEl.innerHTML = entries.length === 0
+    const toolBlocks = toolSummaryMarkup();
+    learningEl.innerHTML = entries.length === 0 && !toolBlocks
       ? `<div class="empty-state">
            <div class="emoji">📚</div>
            <div class="msg">아직 진행한 학습이 없어요</div>
          </div>
          <div class="cta"><button class="cta-btn" id="mypage-go-learning">학습하러 가기</button></div>`
-      : `<p>진행 중인 챕터 ${entries.length}개 · 완료한 문장 총 ${total}개</p>
+      : `${entries.length > 0 ? `<p>진행 중인 챕터 ${entries.length}개 · 완료한 문장 총 ${total}개</p>` : ""}
          ${weakTotal > 0 ? `<p>🔁 복습 목록에 문장 ${weakTotal}개가 있어요${dueNow > 0 ? ` — 그중 ${dueNow}개는 오늘 볼 차례예요.` : " — 오늘 볼 차례는 없어요. 며칠 뒤에 다시 나와요."}</p>` : ""}
          ${dueNow > 0 ? `<div class="cta"><button class="cta-btn" id="mypage-go-review">🔁 오늘 복습 시작하기</button></div>` : ""}
+         ${toolBlocks}
          <p>${currentEmail ? "로그인 상태라 진행 상황이 계정에 저장돼요." : "로그인하면 진행 상황이 기기를 바꿔도 이어져요."}</p>
          <div class="cta"><button class="cta-btn" id="mypage-go-learning">이어하기</button></div>`;
-    learningEl.querySelector("#mypage-go-learning").addEventListener("click", () => go("learning-list"));
+    bindNav(learningEl);   // 도구 요약 블록의 data-nav 버튼
+    learningEl.querySelector("#mypage-go-learning")?.addEventListener("click", () => go("learning-list"));
     // D-79에서 "복습 진입로가 그 챕터 완료 화면에만 있어 놓치면 사라진다"고 짚었던 문제의
     // 실제 해결(D-92) — 이제 도구·챕터와 무관하게 여기서 바로 들어간다.
     learningEl.querySelector("#mypage-go-review")?.addEventListener("click", () => go("learning-review"));
@@ -251,6 +271,9 @@ export function renderMyPage() {
     renderAccount();
     renderLearning();
   }));
+  // 로그인 동기화는 화면이 그려진 **뒤에** 끝난다 — 그때 다시 그리지 않으면 방금 로그인한
+  // 사용자에게 계속 "아직 진행한 학습이 없어요"가 보인다(D-101).
+  onLeave(onLearningSync(renderLearning));
 }
 
 // 실제로 저장·처리하는 것만 적는다 — 아직 안 하는 걸(계정, 회원 데이터 등) 미리 적어두면

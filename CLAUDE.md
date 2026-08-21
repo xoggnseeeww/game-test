@@ -304,6 +304,7 @@ docs/design-draft.html  최초 디자인 목업. 배포·동작과 무관 (.clau
   `comingSoonGuard()` 패턴을 그대로 복사해 모든 화면 `guard`에 씌우고, `card.comingSoon = true`
   추가(D-56). 관리자 이메일은 `js/core/auth.js`의 `ADMIN_EMAIL` 하나뿐이라 공용 유틸리티로
   뽑지 않았다 — 두 번째로 필요해지면 그때 뽑는다
+- 새 학습 도구를 마이페이지 "학습 진행"에도 노출하려면 → 그 도구 디스크립터에 `summary()`를 넣는다(D-101). 마이페이지(`js/screens/home.js`)는 안 고친다 — `listLearning()`으로 훑어 도구가 돌려준 문장을 배치만 한다
 - 어휘 일정에 저장하는 값(`state.vocab.cards`의 필드) 변경 → `js/learning/civil-vocab/cloud.js`의 `rowToEntry`/`entryToRow`와 Supabase `vocab_progress` 테이블 열을 **셋 다** 같이 고친다(D-100). 열을 추가하면 마이그레이션이 먼저다 — 클라이언트가 없는 열을 업서트하면 그 요청만 조용히 실패하고 화면엔 아무 표시가 없다
 - `js/core/cloud-auth.js`의 Supabase 프로젝트·anon key 변경 → 관리자 로그인(`js/core/auth.js`)이
   이 클라이언트를 쓰므로 함께 영향받는다. `scripts/verify.cjs`로 재확인할 것
