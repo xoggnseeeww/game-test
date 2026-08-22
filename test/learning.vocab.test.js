@@ -9,7 +9,8 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 
-import { DAYS, STAGES, TOTAL_WORDS, QUIZ_CHOICES, findDay } from "../js/learning/civil-vocab/manifest.js";
+import { DAYS, STAGES, TOTAL_WORDS, QUIZ_CHOICES, findDay,
+         NEW_PER_DAY_OPTIONS, MIN_NEW_PER_DAY, MAX_NEW_PER_DAY, DEFAULT_NEW_PER_DAY, normalizeNewPerDay } from "../js/learning/civil-vocab/manifest.js";
 import { ROOTS, ROOT_BY_ID } from "../js/learning/civil-vocab/roots.js";
 import { dayIdOf, loadDay } from "../js/learning/civil-vocab/loader.js";
 import {
@@ -399,3 +400,30 @@ test("서버에 저장하는 항목이 개인정보처리방침에 적혀 있다
     `${table[1]}에 저장하는데 개인정보처리방침(renderPrivacy)에 해당 항목이 없다`
   );
 });
+
+// ── 하루 목표 설정(D-102) ───────────────────────────────────────────────────
+test("하루 목표는 최소 20 아래로 내려가지 않는다", () => {
+  assert.equal(MIN_NEW_PER_DAY, 20, "사용자가 정한 최소값이다 — 바꾸려면 먼저 합의할 것");
+  assert.equal(normalizeNewPerDay(1), MIN_NEW_PER_DAY);
+  assert.equal(normalizeNewPerDay(19), MIN_NEW_PER_DAY);
+  assert.equal(normalizeNewPerDay(0), MIN_NEW_PER_DAY);
+  assert.equal(normalizeNewPerDay(-5), MIN_NEW_PER_DAY);
+});
+
+test("하루 목표는 상한과 형식도 지킨다", () => {
+  assert.equal(normalizeNewPerDay(9999), MAX_NEW_PER_DAY);
+  assert.equal(normalizeNewPerDay("30"), 30);
+  assert.equal(normalizeNewPerDay(37.4), 37);
+  assert.equal(normalizeNewPerDay("이상한값"), DEFAULT_NEW_PER_DAY);
+  assert.equal(normalizeNewPerDay(undefined), DEFAULT_NEW_PER_DAY);
+  assert.equal(normalizeNewPerDay(null), DEFAULT_NEW_PER_DAY);   // Number(null)은 0이라 하한으로 눌린다
+});
+
+test("화면에 내놓는 선택지가 전부 허용 범위 안이다", () => {
+  assert.ok(NEW_PER_DAY_OPTIONS.includes(DEFAULT_NEW_PER_DAY));
+  for (const n of NEW_PER_DAY_OPTIONS) {
+    assert.equal(normalizeNewPerDay(n), n, `${n}은 허용 범위 밖이라 눌린다`);
+  }
+  assert.deepEqual([...NEW_PER_DAY_OPTIONS].sort((a, b) => a - b), NEW_PER_DAY_OPTIONS);
+});
+

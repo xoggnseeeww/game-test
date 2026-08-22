@@ -81,7 +81,9 @@
   행만, D-100) — 9급 영단어의 **단어별** 다음 복습 시각·간격·정답/오답 횟수를 저장한다.
   ③과 달리 통짜 JSON이 아니라 **한 행이 단어 하나**다(8000단어를 매 응답마다 통째로 올리지
   않기 위해서 — `js/learning/civil-vocab/cloud.js`). 응답은 모아서(10개 또는 4초) 업서트하고
-  화면 이탈·탭 숨김에 flush한다. 입력한 답 자체는 저장하지 않는다.
+  화면 이탈·탭 숨김에 flush한다. 입력한 답 자체는 저장하지 않는다. 하루 목표 단어 수는 값이
+  하나뿐이라 별도 테이블(`vocab_settings`, D-102)에 바로 저장한다 — 단어별 행 테이블엔 사용자
+  단위 설정을 넣을 자리가 없다.
   반응속도 최고기록(`gt_reaction_best`)은 D-20에서 제거됐고 **되살리지 말 것** — D-20의 금지는
   "검사에서 빠름을 성취로 프레이밍"하는 것이지 게임 진행 저장이 아니다.
   시크릿·환경변수 **없음**은 그대로 유지(Supabase anon key는 공개 키라 시크릿이 아니다 — D-56).
@@ -305,6 +307,7 @@ docs/design-draft.html  최초 디자인 목업. 배포·동작과 무관 (.clau
   추가(D-56). 관리자 이메일은 `js/core/auth.js`의 `ADMIN_EMAIL` 하나뿐이라 공용 유틸리티로
   뽑지 않았다 — 두 번째로 필요해지면 그때 뽑는다
 - 새 학습 도구를 마이페이지 "학습 진행"에도 노출하려면 → 그 도구 디스크립터에 `summary()`를 넣는다(D-101). 마이페이지(`js/screens/home.js`)는 안 고친다 — `listLearning()`으로 훑어 도구가 돌려준 문장을 배치만 한다
+- 어휘 도구에 Supabase 테이블을 추가할 때 → RLS 정책만 만들지 말고 **`grant select, insert, update ... to authenticated`까지** 함께 넣는다. 빼면 정책에 닿기도 전에 permission denied가 나고 화면엔 아무 표시가 없다 → `docs/ERRORS.md` E-16
 - 어휘 일정에 저장하는 값(`state.vocab.cards`의 필드) 변경 → `js/learning/civil-vocab/cloud.js`의 `rowToEntry`/`entryToRow`와 Supabase `vocab_progress` 테이블 열을 **셋 다** 같이 고친다(D-100). 열을 추가하면 마이그레이션이 먼저다 — 클라이언트가 없는 열을 업서트하면 그 요청만 조용히 실패하고 화면엔 아무 표시가 없다
 - `js/core/cloud-auth.js`의 Supabase 프로젝트·anon key 변경 → 관리자 로그인(`js/core/auth.js`)이
   이 클라이언트를 쓰므로 함께 영향받는다. `scripts/verify.cjs`로 재확인할 것

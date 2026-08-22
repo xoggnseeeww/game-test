@@ -13,6 +13,7 @@
 import { loadCloudAuth } from "../../core/cloud-auth-loader.js";
 import { state } from "../../core/state.js";
 import { notifyLearningSync } from "../cloud.js";
+import { normalizeNewPerDay } from "./manifest.js";
 
 // 한 번에 올릴 최대 행 수와 지연. 카드를 넘길 때마다 요청을 보내면 세션 하나에 수백 번이
 // 되므로 모아서 보낸다 — 대신 화면을 떠날 때·탭이 숨을 때 반드시 flush한다(아래).
@@ -137,6 +138,14 @@ export function initVocabSync() {
       }
       if (syncedForUser === user.id) return;   // 같은 사용자로 중복 병합하지 않는다
       syncedForUser = user.id;
+      fetchSettings(cloud, user.id)
+        .then((row) => {
+          // 서버에 저장해 둔 목표가 있으면 그걸 쓴다. 없으면 이 기기에서 고른 값을 그대로 둔다
+          // (로그인 전에 고른 값이 로그인하면서 기본값으로 되돌아가면 안 된다).
+          if (row) state.vocab.newPerDay = normalizeNewPerDay(row.new_per_day);
+        })
+        .catch((err) => console.error("어휘 학습 설정 불러오기 실패", err));
+
       fetchAll(cloud, user.id)
         .then((rows) => {
           const remote = {};
@@ -163,4 +172,31 @@ export function initVocabSync() {
       });
     }
   });
+}
+
+// ── 학습자 설정(하루 목표) ─────────────────────────────────────────────────
+// 일정(vocab_progress)과 테이블을 나눈 이유: 저 테이블은 한 행이 단어 하나라 사용자 단위
+// 설정을 넣을 자리가 없다. 값이 하나뿐이라 배치도 필요 없다 — 바꿀 때마다 바로 올린다.
+export function saveVocabSettings() {
+  loadCloudAuth().then((cloud) => {
+    if (!cloud) return;
+    const user = cloud.getCachedUser();
+    if (!user) return;
+    cloud.supabase
+      .from("vocab_settings")
+      .upsert({ user_id: user.id, new_per_day: state.vocab.newPerDay, updated_at: new Date().toISOString() })
+      .then(({ error }) => {
+        if (error) console.error("어휘 학습 설정 저장 실패", error);
+      });
+  });
+}
+
+async function fetchSettings(cloud, userId) {
+  const { data, error } = await cloud.supabase
+    .from("vocab_settings")
+    .select("new_per_day")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
 }

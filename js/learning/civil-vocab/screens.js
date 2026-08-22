@@ -13,7 +13,7 @@ import { app, go, onLeave } from "../../core/router.js";
 import { el, bindNav } from "../../core/dom.js";
 import { state } from "../../core/state.js";
 import { speak, supportsSpeech } from "../speech.js";
-import { STAGES, DAYS, TOTAL_WORDS, DEFAULT_NEW_PER_DAY } from "./manifest.js";
+import { STAGES, DAYS, TOTAL_WORDS, DEFAULT_NEW_PER_DAY, NEW_PER_DAY_OPTIONS, normalizeNewPerDay } from "./manifest.js";
 import { ROOT_BY_ID } from "./roots.js";
 import { loadDay, dayIdOf } from "./loader.js";
 import {
@@ -21,14 +21,14 @@ import {
   makeCloze, checkCloze, buildDailyQueue, retrievalMode,
 } from "./session.js";
 import { schedule, dueIds, summarize, countNewToday } from "./srs.js";
-import { queueVocabSave, flushVocabSave } from "./cloud.js";
+import { queueVocabSave, flushVocabSave, saveVocabSettings } from "./cloud.js";
 import { onLearningSync } from "../cloud.js";
 
 // ── 상태 헬퍼 ───────────────────────────────────────────────────────────────
 // state.vocab의 기본값 중 **도구가 정하는 것**은 여기서 채운다 — core/state.js가
 // manifest.js를 import하면 "core는 학습 콘텐츠를 모른다"는 의존 방향이 뒤집힌다.
 function ensureVocabState() {
-  state.vocab.newPerDay ??= DEFAULT_NEW_PER_DAY;
+  state.vocab.newPerDay = normalizeNewPerDay(state.vocab.newPerDay ?? DEFAULT_NEW_PER_DAY);
   return state.vocab;
 }
 function dayState(dayId) {
@@ -201,10 +201,24 @@ export function renderVocabIntro() {
           `).join("")}
         </div>
       `).join("")}
-      <p class="learning-warn">로그인하면 이 일정이 계정에 저장돼 다른 기기에서도 이어져요.</p>
+      <div class="section-title">⚙️ 하루 목표</div>
+      <div class="vocab-goal-row">
+        ${NEW_PER_DAY_OPTIONS.map((n) => `
+          <button class="pref-toggle ${state.vocab.newPerDay === n ? "on" : ""}" data-goal="${n}">${n}</button>
+        `).join("")}
+      </div>
+      <p class="learning-warn">하루에 <b>새로</b> 시작할 단어 수예요(복습은 여기에 안 들어가요).
+         이 값이 코스 속도를 정해요 — 지금 목표라면 ${TOTAL_WORDS}단어를 ${Math.ceil(TOTAL_WORDS / state.vocab.newPerDay)}일에 한 바퀴 돌아요.</p>
+      <p class="learning-warn">로그인하면 이 일정과 목표가 계정에 저장돼 다른 기기에서도 이어져요.</p>
     </div>
   `));
   bindNav(app);
+  app.querySelectorAll("[data-goal]").forEach((btn) => btn.addEventListener("click", () => {
+    state.vocab.newPerDay = normalizeNewPerDay(btn.dataset.goal);
+    saveVocabSettings();
+    app.innerHTML = "";
+    renderVocabIntro();
+  }));
   // 로그인 동기화는 화면이 그려진 뒤에 끝난다 — 그때 다시 그리지 않으면 방금 로그인한
   // 사용자에게 "만난 단어 0개"가 계속 보인다(D-101).
   onLeave(onLearningSync(() => {
@@ -481,7 +495,13 @@ export function renderVocabToday() {
     .catch((err) => { if (!left) showLoadError(cardEl, err); });
 
   function run({ queue, poolByDay, dueCount, newCount }) {
-    const MAX_RETRIES = 2;
+    // 오늘 큐에 들어온 단어는 **맞힐 때까지** 다시 나온다(사용자 요청). 예전에는 같은 세션
+    // 재노출을 두 번으로 막았는데, 그러면 못 외운 단어를 남긴 채 화면이 끝나서 "오늘 학습"이
+    // 무엇을 끝낸 건지 알 수 없었다. 대신 두 가지를 함께 뒀다:
+    //  - 틀린 항목은 **바로 다음이 아니라 몇 장 뒤**에 끼워 넣는다(바로 다시 물으면 답을
+    //    외운 게 아니라 방금 본 걸 기억하는 것이다)
+    //  - 언제든 "오늘은 여기까지"로 끝낼 수 있다(모르는 단어에 갇히지 않게)
+    const REINSERT_AFTER = 3;
     if (queue.length === 0) {
       titleEl.textContent = "오늘 학습";
       const stats = summarize(state.vocab.cards);
@@ -526,12 +546,12 @@ export function renderVocabToday() {
     function advance(word, grade) {
       gradeWord(word.id, grade);
       const item = queue.shift();
-      const retries = (item.retries || 0) + 1;
-      // 틀린 것은 오늘 안에 다시 만난다 — 큐 끝에 넣는다(간격은 srs.js가 이미 0으로 되돌렸다).
-      // 다만 **한 세션에 두 번까지만** 되돌린다: 모르는 단어를 끝없이 되돌리면 큐가 줄지 않아
-      // "남은 개수"가 계속 늘어나는 화면이 된다(오늘 못 외운 단어는 내일 일정에 이미 올라 있다).
-      if (grade === "again" && retries <= MAX_RETRIES) queue.push({ ...item, kind: "again", retries });
-      else done += 1;
+      if (grade === "again") {
+        const retries = (item.retries || 0) + 1;
+        queue.splice(Math.min(REINSERT_AFTER, queue.length), 0, { ...item, kind: "again", retries });
+      } else {
+        done += 1;
+      }
       revealed = false;
       show();
     }
@@ -546,7 +566,7 @@ export function renderVocabToday() {
       // 오늘의 구성(복습 N · 새 단어 M)과 지금 카드가 어느 쪽인지도 같이 보여준다 — 이게
       // 없으면 "복습 화면인데 처음 보는 단어만 나온다"로 읽힌다(D-101에서 받은 지적).
       const head = progressMarkup(done, done + queue.length) + `
-        <p class="vocab-plan">오늘 구성 · 다시 볼 단어 ${dueCount}개 + 새 단어 ${newCount}개</p>
+        <p class="vocab-plan">오늘 구성 · 다시 볼 단어 ${dueCount}개 + 새 단어 ${newCount}개 · 외운 단어 ${done}개</p>
         <div class="vocab-item-badge ${item.kind === "new" ? "is-new" : "is-review"}">${itemBadge(item, word)}</div>`;
 
       // 새 단어는 카드로 만나고, 이미 만난 단어는 문제로 만난다(뜻 고르기 → 익숙해지면 빈칸).
@@ -570,6 +590,7 @@ export function renderVocabToday() {
         });
         cardEl.querySelector("#vocab-good")?.addEventListener("click", () => advance(word, "good"));
         cardEl.querySelector("#vocab-again")?.addEventListener("click", () => advance(word, "again"));
+        addStopButton();
         return;
       }
 
@@ -593,6 +614,7 @@ export function renderVocabToday() {
           if (e.key === "Enter") submit();
         });
         input.focus();
+        addStopButton();
         return;
       }
 
@@ -614,18 +636,30 @@ export function renderVocabToday() {
           <div class="cta"><button class="cta-btn" id="vocab-next-item">다음</button></div>`;
         cardEl.querySelector("#vocab-next-item").addEventListener("click", () => advance(word, correct ? "good" : "again"));
       }));
+      addStopButton();
     }
 
-    function showDone() {
+    // 맞힐 때까지 다시 나오는 구조라 **나갈 문**이 반드시 있어야 한다 — 오늘 도저히 안 외워지는
+    // 단어에 갇히면 학습이 아니라 벌이 된다. 남은 것은 어차피 내일 일정에 올라 있다.
+    function addStopButton() {
+      const btn = el(`<button class="retry-btn" id="vocab-stop">오늘은 여기까지</button>`);
+      cardEl.appendChild(btn);
+      btn.addEventListener("click", () => showDone({ stopped: true }));
+    }
+
+    function showDone({ stopped = false } = {}) {
       const stats = summarize(state.vocab.cards);
       // 내일 몇 개가 올라오는지 미리 보여준다 — "이 화면이 뭘 위한 건지" 가장 잘 설명하는 숫자다.
       const tomorrow = Date.now() + 24 * 60 * 60 * 1000;
       const dueTomorrow = dueIds(state.vocab.cards, tomorrow).length;
-      titleEl.textContent = "오늘 학습 · 완료";
+      const left = queue.length;
+      titleEl.textContent = stopped ? "오늘 학습 · 중단" : "오늘 학습 · 완료";
       cardEl.innerHTML = `
         <div class="empty-state">
-          <div class="emoji">🎉</div>
-          <div class="msg">오늘 몫을 다 했어요!<br/>${done}단어를 확인했어요</div>
+          <div class="emoji">${stopped ? "🌙" : "🎉"}</div>
+          <div class="msg">${stopped
+            ? `오늘은 여기까지!<br/>${done}단어를 외웠어요${left > 0 ? ` · ${left}개는 남겨뒀어요` : ""}`
+            : `오늘 몫을 다 외웠어요!<br/>${done}단어를 끝까지 맞혔어요`}</div>
         </div>
         <p class="learning-warn">지금까지 만난 단어 ${stats.seen}개 · 일정에 올라간 단어 ${stats.learned}개.
            <b>내일은 ${dueTomorrow}개</b>가 다시 올라와요 — 맞힐수록 다음 간격이 길어져요.</p>

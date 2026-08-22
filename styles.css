@@ -2568,3 +2568,12 @@ button.meta-chip {
   font-weight: 800;
   margin-bottom: 6px;
 }
+
+/* 하루 목표 고르기(D-102) — .pref-toggle을 그대로 쓰되 네 칸으로 나눈다. */
+.vocab-goal-row {
+  display: flex;
+  gap: 8px;
+  padding: 0 20px;
+  margin-top: 4px;
+}
+.vocab-goal-row .pref-toggle { font-size: 14px; padding: 11px 8px; }

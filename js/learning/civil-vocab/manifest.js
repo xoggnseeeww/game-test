@@ -15,10 +15,21 @@ export const TOOL_ID = "civil-vocab";
 // 콘텐츠를 새로 만들지 않고, 단어가 늘면 문제도 저절로 는다(D-95에서 쓴 방식).
 export const QUIZ_CHOICES = 4;
 
-// 하루에 새로 시작할 단어 수의 기본값(D-99). 상한이 없으면 신규만 몰아서 하다가 며칠 뒤
-// 복습이 눈덩이가 된다 — 8000단어에서 이 값이 사실상 코스의 속도다(30개면 하루 30분 안팎,
-// 전체 약 9개월). 학습자가 바꿀 수 있게 state.vocab.newPerDay로 복사해 둔다.
-export const DEFAULT_NEW_PER_DAY = 20;
+// 하루에 새로 시작할 단어 수(D-99, D-102에서 학습자 설정으로). 상한이 없으면 신규만 몰아서
+// 하다가 며칠 뒤 복습이 눈덩이가 된다 — 8000단어에서 이 값이 사실상 코스의 속도다.
+// **최소 20**은 사용자 지시다. 그 아래로는 8000단어가 현실적인 기간 안에 안 끝난다
+// (20개면 400일, 50개면 160일). 위쪽은 하루 분량이 감당 가능한 선에서 끊었다.
+export const MIN_NEW_PER_DAY = 20;
+export const MAX_NEW_PER_DAY = 200;
+export const NEW_PER_DAY_OPTIONS = [20, 30, 50, 100];
+export const DEFAULT_NEW_PER_DAY = MIN_NEW_PER_DAY;
+
+// 어디서 들어온 값이든(옛 저장분·서버·직접 입력) 허용 범위로 좁힌다. 순수 함수라 테스트가 직접 검증한다.
+export function normalizeNewPerDay(value) {
+  const n = Math.round(Number(value));
+  if (!Number.isFinite(n)) return DEFAULT_NEW_PER_DAY;
+  return Math.min(MAX_NEW_PER_DAY, Math.max(MIN_NEW_PER_DAY, n));
+}
 
 export const STAGES = [
   {
