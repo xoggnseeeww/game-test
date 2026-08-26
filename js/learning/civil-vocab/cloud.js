@@ -138,7 +138,8 @@ export function initVocabSync() {
       }
       if (syncedForUser === user.id) return;   // 같은 사용자로 중복 병합하지 않는다
       syncedForUser = user.id;
-      fetchSettings(cloud, user.id)
+
+      const settingsDone = fetchSettings(cloud, user.id)
         .then((row) => {
           // 서버에 저장해 둔 목표가 있으면 그걸 쓴다. 없으면 이 기기에서 고른 값을 그대로 둔다
           // (로그인 전에 고른 값이 로그인하면서 기본값으로 되돌아가면 안 된다).
@@ -146,7 +147,7 @@ export function initVocabSync() {
         })
         .catch((err) => console.error("어휘 학습 설정 불러오기 실패", err));
 
-      fetchAll(cloud, user.id)
+      const cardsDone = fetchAll(cloud, user.id)
         .then((rows) => {
           const remote = {};
           for (const row of rows) remote[row.word_id] = rowToEntry(row);
@@ -156,11 +157,14 @@ export function initVocabSync() {
             if (!remote[wordId]) pending.set(wordId, entry);
           }
           flushVocabSave();
-          // 화면이 이미 그려진 뒤에 도착하므로 알려야 한다 — 안 그러면 마이페이지·도구 인트로가
-          // 로그인 전 상태(만난 단어 0개)를 계속 보여준다(D-101).
-          notifyLearningSync();
         })
         .catch((err) => console.error("단어 일정 불러오기 실패", err));
+
+      // 화면이 이미 그려진 뒤에 도착하므로 알려야 한다 — 안 그러면 마이페이지·도구 인트로가
+      // 로그인 전 상태를 계속 보여준다(D-101). **둘 다 끝난 뒤 한 번만** 알린다 — 설정과
+      // 일정 중 하나만 기다렸다가 알리면(예전엔 일정 쪽에만 붙어 있었다), 그게 더 느리게
+      // 응답할 때 방금 도착한 값이 화면에 반영 안 된 채로 남는다(D-103).
+      Promise.allSettled([settingsDone, cardsDone]).then(notifyLearningSync);
     };
     sync();
     cloud.onAuthChange(sync);

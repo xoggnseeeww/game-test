@@ -52,7 +52,7 @@ export const civilVocabScreens = [
   {
     id: "learning-civil-vocab-today",
     path: "/learning/civil-vocab/today",
-    title: "오늘 복습 · 9급 영단어 | 과몰입구역",
+    title: "오늘 학습 · 9급 영단어 | 과몰입구역",   // D-101에서 화면 이름을 "오늘 학습"으로 바꿨는데 탭 제목은 그대로였다
     render: renderVocabToday,
     theme: "learning",
   },

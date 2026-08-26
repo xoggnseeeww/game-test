@@ -8,7 +8,13 @@
 // 학습 방식은 D-99에서 세 가지가 바뀌었다(효율성 검토 결과):
 //  1. **뜻·어원 지연 노출** — 카드 앞면은 단어만. 떠올려 본 뒤 뒤집는다(능동 인출).
 //  2. **빈칸 채우기** — 예문에서 표제어를 지운 산출 문제(콘텐츠 추가 0).
-//  3. **간격 반복** — 모든 응답이 srs.js 일정에 들어가고, "오늘 복습"이 그 일정을 돈다.
+//  3. **간격 반복** — "오늘 학습"의 모든 응답은 srs.js 일정에 들어간다.
+//
+// **DAY 화면에서는 카드 자가평가(👍/😅)만 그 일정에 들어간다**(D-103) — 확인 문제·빈칸
+// 채우기는 DAY 안의 추가 연습일 뿐이라 SRS를 다시 건드리지 않는다. 셋 다 같은 단어를
+// 같은 자리에서 gradeWord()로 계속 채점했더니, DAY 하나를 도는 사이(카드→퀴즈→빈칸)에
+// reps가 0→3으로 부풀어 간격이 "내일"이 아니라 "8일 뒤"로 튀어버렸다 — SM-2는 실제로
+// 날짜가 벌어진 recall에만 의미가 있는데, 같은 세션 안의 반복 정답은 그 조건을 안 만족한다.
 import { app, go, onLeave } from "../../core/router.js";
 import { el, bindNav } from "../../core/dom.js";
 import { state } from "../../core/state.js";
@@ -362,7 +368,10 @@ export function renderVocabDay(day) {
       const correct = choice === q.answerIndex;
       if (correct) right += 1;
       else st.wrong[q.id] = true;
-      gradeWord(q.id, correct ? "good" : "again");
+      // SRS는 안 건드린다 — 카드 자가평가(next())가 이미 이 단어를 오늘 일정에 올려놨다.
+      // 여기서 또 gradeWord를 부르면 카드 한 번 훑은 것만으로 같은 단어가 "good"을 두 번
+      // (카드+퀴즈) 받아 reps가 부풀고 간격이 실제보다 훨씬 앞서 나가 버린다(D-103) —
+      // "내일 다시 보여준다"던 약속이 DAY를 한 번 도는 사이에 8일 뒤로 밀려나 있었다.
       buttons.forEach((btn, i) => {
         btn.disabled = true;
         if (i === q.answerIndex) btn.classList.add("choice-ok");
@@ -438,7 +447,8 @@ export function renderVocabDay(day) {
       function grade(word, cloze, value) {
         const correct = checkCloze(cloze, value, word);
         if (correct) correctCount += 1;
-        gradeWord(word.id, correct ? "good" : "again");
+        // 퀴즈와 같은 이유로 SRS는 안 건드린다(D-103) — 카드 자가평가 한 번으로 충분하고,
+        // 여기서 또 grade하면 카드+퀴즈+빈칸 세 번이 같은 자리에서 겹쳐 reps가 부풀려진다.
         cardEl.querySelector("#vocab-cloze-input").disabled = true;
         cardEl.querySelector("#vocab-cloze-submit").disabled = true;
         cardEl.querySelector("#vocab-after").innerHTML = `
@@ -594,8 +604,11 @@ export function renderVocabToday() {
         return;
       }
 
-      if (retrievalMode(entryOf(word.id)) === "cloze") {
-        const cloze = makeCloze(word);
+      // makeCloze()가 null을 줄 수 있는 단어(예문에 표제어 형태가 없는 경우)는 테스트가
+      // 지금 데이터에서는 막아 주지만, 콘텐츠가 8000개로 늘어날 때의 방어선으로 폴백을
+      // 남겨둔다 — DAY 화면의 빈칸 모드도 같은 이유로 null을 걸러낸다(startCloze 참고).
+      const cloze = retrievalMode(entryOf(word.id)) === "cloze" ? makeCloze(word) : null;
+      if (cloze) {
         cardEl.innerHTML = head + clozeMarkup(cloze);
         const input = cardEl.querySelector("#vocab-cloze-input");
         const submit = () => {
