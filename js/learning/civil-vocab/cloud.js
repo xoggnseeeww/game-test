@@ -13,7 +13,7 @@
 import { loadCloudAuth } from "../../core/cloud-auth-loader.js";
 import { state } from "../../core/state.js";
 import { notifyLearningSync } from "../cloud.js";
-import { normalizeNewPerDay } from "./manifest.js";
+import { normalizeNewPerDay, DEFAULT_NEW_PER_DAY } from "./manifest.js";
 
 // 한 번에 올릴 최대 행 수와 지연. 카드를 넘길 때마다 요청을 보내면 세션 하나에 수백 번이
 // 되므로 모아서 보낸다 — 대신 화면을 떠날 때·탭이 숨을 때 반드시 flush한다(아래).
@@ -24,7 +24,6 @@ const PAGE_SIZE = 1000;
 
 let pending = new Map();
 let timer = null;
-let syncedForUser = null;
 
 // 같은 단어를 두 기기에서 공부하면 **마지막 응답이 이긴다**(entry.at = 서버의 updated_at).
 // 순수 함수라 node --test로 직접 검증한다 — 병합이 조용히 틀리면 화면엔 아무 표시가 없고
@@ -127,45 +126,70 @@ async function fetchAll(cloud, userId) {
   return rows;
 }
 
+// 로그인 이벤트가 올 때마다 부르는 실제 로직 — cloud 클라이언트를 인자로 받는다. 실제 부팅은
+// initVocabSync()가 CDN 클라이언트로 이 함수를 호출하지만, 이 함수 자체는 그 사실을 모른다 —
+// node --test에서 가짜 cloud로도 검증할 수 있다(js/learning/cloud.js의 makeSyncHandler와
+// 같은 이유·같은 이름). syncedForUser를 클로저에 두는 이유도 같다 — 핸들러 인스턴스마다
+// 독립적이어야 테스트끼리 상태가 새지 않는다.
+export function makeSyncHandler(cloud) {
+  let syncedForUser = null;
+  return () => {
+    const user = cloud.getCachedUser();
+    if (!user) {
+      // **로그아웃 감지(D-104)**: syncedForUser가 null이 아니었다는 건 방금 전까지 어떤
+      // 계정의 단어 일정이 로컬(state.vocab)에 실려 있었다는 뜻이다. 지우지 않으면, 같은
+      // 탭에서 다른 계정으로 로그인했을 때 mergeVocabCards()가 그 계정의 서버 값과 **방금
+      // 로그아웃한 계정의 로컬 일정**을 합쳐 버린다 — 최신 응답이 이기는 규칙이라 방금
+      // 나간 계정이 더 최근에 공부했으면 그 사람의 단어 진행이 새 계정에 그대로 올라간다.
+      // 처음부터 로그인한 적 없는 세션(syncedForUser가 원래부터 null)까지 지우면
+      // "로그인 전에 공부한 걸 로그인해서 이어 올린다"는 의도된 흐름이 깨지므로,
+      // **정말 로그아웃한 경우에만** 비운다. newPerDay도 같이 되돌린다 — 안 그러면 서버에
+      // 자기 설정이 없는 다음 계정이 방금 나간 계정의 하루 목표를 그대로 물려받는다.
+      if (syncedForUser !== null) {
+        state.vocab.days = {};
+        state.vocab.cards = {};
+        state.vocab.newPerDay = DEFAULT_NEW_PER_DAY;
+        notifyLearningSync();
+      }
+      syncedForUser = null;
+      return;
+    }
+    if (syncedForUser === user.id) return;   // 같은 사용자로 중복 병합하지 않는다
+    syncedForUser = user.id;
+
+    const settingsDone = fetchSettings(cloud, user.id)
+      .then((row) => {
+        // 서버에 저장해 둔 목표가 있으면 그걸 쓴다. 없으면 이 기기에서 고른 값을 그대로 둔다
+        // (로그인 전에 고른 값이 로그인하면서 기본값으로 되돌아가면 안 된다).
+        if (row) state.vocab.newPerDay = normalizeNewPerDay(row.new_per_day);
+      })
+      .catch((err) => console.error("어휘 학습 설정 불러오기 실패", err));
+
+    const cardsDone = fetchAll(cloud, user.id)
+      .then((rows) => {
+        const remote = {};
+        for (const row of rows) remote[row.word_id] = rowToEntry(row);
+        state.vocab.cards = mergeVocabCards(state.vocab.cards, remote);
+        // 로그인 전에 이 기기에서 공부한 것은 서버에 없다 — 병합 결과를 그대로 올려준다.
+        for (const [wordId, entry] of Object.entries(state.vocab.cards)) {
+          if (!remote[wordId]) pending.set(wordId, entry);
+        }
+        flushVocabSave();
+      })
+      .catch((err) => console.error("단어 일정 불러오기 실패", err));
+
+    // 화면이 이미 그려진 뒤에 도착하므로 알려야 한다 — 안 그러면 마이페이지·도구 인트로가
+    // 로그인 전 상태를 계속 보여준다(D-101). **둘 다 끝난 뒤 한 번만** 알린다 — 설정과
+    // 일정 중 하나만 기다렸다가 알리면(예전엔 일정 쪽에만 붙어 있었다), 그게 더 느리게
+    // 응답할 때 방금 도착한 값이 화면에 반영 안 된 채로 남는다(D-103).
+    Promise.allSettled([settingsDone, cardsDone]).then(notifyLearningSync);
+  };
+}
+
 export function initVocabSync() {
   loadCloudAuth().then((cloud) => {
     if (!cloud) return;
-    const sync = () => {
-      const user = cloud.getCachedUser();
-      if (!user) {
-        syncedForUser = null;
-        return;
-      }
-      if (syncedForUser === user.id) return;   // 같은 사용자로 중복 병합하지 않는다
-      syncedForUser = user.id;
-
-      const settingsDone = fetchSettings(cloud, user.id)
-        .then((row) => {
-          // 서버에 저장해 둔 목표가 있으면 그걸 쓴다. 없으면 이 기기에서 고른 값을 그대로 둔다
-          // (로그인 전에 고른 값이 로그인하면서 기본값으로 되돌아가면 안 된다).
-          if (row) state.vocab.newPerDay = normalizeNewPerDay(row.new_per_day);
-        })
-        .catch((err) => console.error("어휘 학습 설정 불러오기 실패", err));
-
-      const cardsDone = fetchAll(cloud, user.id)
-        .then((rows) => {
-          const remote = {};
-          for (const row of rows) remote[row.word_id] = rowToEntry(row);
-          state.vocab.cards = mergeVocabCards(state.vocab.cards, remote);
-          // 로그인 전에 이 기기에서 공부한 것은 서버에 없다 — 병합 결과를 그대로 올려준다.
-          for (const [wordId, entry] of Object.entries(state.vocab.cards)) {
-            if (!remote[wordId]) pending.set(wordId, entry);
-          }
-          flushVocabSave();
-        })
-        .catch((err) => console.error("단어 일정 불러오기 실패", err));
-
-      // 화면이 이미 그려진 뒤에 도착하므로 알려야 한다 — 안 그러면 마이페이지·도구 인트로가
-      // 로그인 전 상태를 계속 보여준다(D-101). **둘 다 끝난 뒤 한 번만** 알린다 — 설정과
-      // 일정 중 하나만 기다렸다가 알리면(예전엔 일정 쪽에만 붙어 있었다), 그게 더 느리게
-      // 응답할 때 방금 도착한 값이 화면에 반영 안 된 채로 남는다(D-103).
-      Promise.allSettled([settingsDone, cardsDone]).then(notifyLearningSync);
-    };
+    const sync = makeSyncHandler(cloud);
     sync();
     cloud.onAuthChange(sync);
 

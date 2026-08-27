@@ -18,7 +18,8 @@ import {
   makeCloze, checkCloze, buildDailyQueue, retrievalMode, CLOZE_BLANK,
 } from "../js/learning/civil-vocab/session.js";
 import { newEntry, schedule, isDue, dueIds, summarize, countNewToday, EASE_MIN, MAX_INTERVAL_DAYS } from "../js/learning/civil-vocab/srs.js";
-import { mergeVocabCards, rowToEntry, entryToRow } from "../js/learning/civil-vocab/cloud.js";
+import { mergeVocabCards, rowToEntry, entryToRow, makeSyncHandler as makeVocabSyncHandler } from "../js/learning/civil-vocab/cloud.js";
+import { state } from "../js/core/state.js";
 
 const ROOT_DIR = path.join(import.meta.dirname, "..");
 
@@ -427,3 +428,99 @@ test("화면에 내놓는 선택지가 전부 허용 범위 안이다", () => {
   assert.deepEqual([...NEW_PER_DAY_OPTIONS].sort((a, b) => a - b), NEW_PER_DAY_OPTIONS);
 });
 
+
+// ── 로그아웃 시 로컬 일정 초기화(D-104) ──────────────────────────────────────
+// js/learning/cloud.js와 같은 문제, 같은 수정 — 로그아웃 후 로컬(state.vocab)에 남은 게
+// 방금 나간 계정의 단어 일정이라, 지우지 않으면 다음 계정으로 로그인할 때 섞여 버린다.
+function fakeVocabCloud({ progressByUser = {}, settingsByUser = {} } = {}) {
+  let currentUser = null;
+  const listeners = new Set();
+  return {
+    getCachedUser: () => currentUser,
+    onAuthChange(cb) {
+      listeners.add(cb);
+      return () => listeners.delete(cb);
+    },
+    _login(id) {
+      currentUser = { id };
+      for (const cb of listeners) cb();
+    },
+    _logout() {
+      currentUser = null;
+      for (const cb of listeners) cb();
+    },
+    supabase: {
+      from(table) {
+        if (table === "vocab_progress") {
+          const query = {
+            select: () => query,
+            eq: () => query,
+            order: () => query,
+            range: () => Promise.resolve({ data: progressByUser[currentUser.id] || [], error: null }),
+            upsert: () => Promise.resolve({ error: null }),
+          };
+          return query;
+        }
+        if (table === "vocab_settings") {
+          const query = {
+            select: () => query,
+            eq: () => query,
+            maybeSingle: () => Promise.resolve({ data: settingsByUser[currentUser.id] || null, error: null }),
+            upsert: () => Promise.resolve({ error: null }),
+          };
+          return query;
+        }
+        throw new Error(`가짜 cloud가 모르는 테이블: ${table}`);
+      },
+    },
+  };
+}
+
+const flushTicks = () => new Promise((r) => setTimeout(r, 0));
+
+test("어휘 로그아웃 시 로컬 일정·목표가 지워져 다음 계정에 안 섞인다", async () => {
+  const remoteB = [
+    { word_id: "v001-01", due: new Date(2026, 0, 1).toISOString(), ivl: 1, ease: 2.5,
+      reps: 1, lapses: 0, updated_at: new Date(2026, 0, 1).toISOString(), first_seen: new Date(2026, 0, 1).toISOString() },
+  ];
+  const cloud = fakeVocabCloud({ progressByUser: { userB: remoteB } });
+  const sync = makeVocabSyncHandler(cloud);
+  sync();
+  cloud.onAuthChange(sync);
+  assert.deepEqual(state.vocab.cards, {}, "로그인 전인데 뭔가 채워졌다");
+
+  cloud._login("userA");
+  await flushTicks();
+  // A 계정으로 이 기기에서 많이 공부했다고 하자(서버보다 훨씬 앞선 진행)
+  state.vocab.cards["v001-01"] = { due: Date.now(), ivl: 50, ease: 2.5, reps: 6, lapses: 0, at: Date.now(), first: Date.now() };
+  state.vocab.days["day-001"] = { index: 40, best: 90, wrong: {} };
+  state.vocab.newPerDay = 100;
+
+  cloud._logout();
+  await flushTicks();
+  assert.deepEqual(state.vocab.cards, {}, "로그아웃했는데 A의 단어 일정이 그대로 남아 있다(D-104)");
+  assert.deepEqual(state.vocab.days, {}, "로그아웃했는데 A의 DAY 진행이 그대로 남아 있다(D-104)");
+  assert.equal(state.vocab.newPerDay, DEFAULT_NEW_PER_DAY, "로그아웃했는데 A가 고른 하루 목표가 남아 있다(D-104)");
+
+  cloud._login("userB");
+  await flushTicks();
+  assert.equal(
+    state.vocab.cards["v001-01"].reps, 1,
+    "B의 서버 값(reps=1)이 아니라 A의 로컬 값이 섞여 들어왔다 — 계정 간 데이터 누출(D-104)"
+  );
+
+  state.vocab.cards = {};
+  state.vocab.days = {};
+  state.vocab.newPerDay = DEFAULT_NEW_PER_DAY;
+});
+
+test("어휘 도구: 로그인한 적 없는 세션은 로그아웃 처리에서 아무것도 안 지운다", async () => {
+  const cloud = fakeVocabCloud({});
+  const sync = makeVocabSyncHandler(cloud);
+  cloud.onAuthChange(sync);
+  state.vocab.cards["v001-02"] = { due: Date.now(), ivl: 1, ease: 2.5, reps: 1, lapses: 0, at: Date.now(), first: Date.now() };
+  sync();
+  await flushTicks();
+  assert.ok(state.vocab.cards["v001-02"], "로그인 전에 공부한 게 지워지면 '나중에 로그인해서 이어 올리기'가 깨진다");
+  state.vocab.cards = {};
+});

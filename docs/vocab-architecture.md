@@ -118,6 +118,14 @@ grant select, insert, update on public.vocab_progress to authenticated;
   사용자 단위 값을 넣을 자리가 없고, 값이 하나뿐이라 배치도 필요 없다(바꿀 때 바로 올린다).
   RLS 정책과 함께 `grant ... to authenticated`를 반드시 넣는다(E-16).
 - **저장하지 않는 것**: 입력한 답, 오답 내용, 어느 화면에서 풀었는지. 일정 계산에 쓰는 숫자만 남는다.
+- **로그아웃하면 로컬을 지운다**(D-104): 같은 브라우저 탭에서 계정 A로 공부하다 로그아웃하고
+  계정 B로 로그인하면, 로그인 동기화가 "로컬(=방금 나간 A의 값)"과 "B의 서버 값"을 그대로
+  병합해 A의 진행이 B 계정에 섞여 들어갔다. 로그아웃을 감지하면 `state.vocab.cards`·`days`·
+  `newPerDay`를 전부 지운다 — 단, **한 번도 로그인한 적 없는 세션은 지우지 않는다**(그러면
+  "로그인 전에 공부해두고 나중에 로그인해서 올린다"는 흐름이 깨진다). 이 판단(로그아웃 vs
+  최초부터 비로그인)이 이 수정의 핵심이라 `js/learning/civil-vocab/cloud.js`의
+  `makeSyncHandler`에 클로저로 캡슐화돼 있고, 가짜 cloud로 이 시나리오 자체를 테스트한다
+  (`test/learning.vocab.test.js`). 문장 도구(`js/learning/cloud.js`)도 같은 버그·같은 수정.
 - 영속 데이터가 늘었으므로 `CLAUDE.md`의 "영속 데이터" 항목 ④와 `/privacy`를 같은 커밋에서
   갱신했다(부부 체크 코드·학습 진행률 때와 같은 절차).
 

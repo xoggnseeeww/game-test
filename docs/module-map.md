@@ -99,7 +99,12 @@ js/learning/civil-vocab/  9급 공무원 영단어(D-98) — 어원 중심 어�
   cloud.js              단어별 일정을 Supabase `vocab_progress`에 동기화(D-100). learning/cloud.js와
                         달리 **행 단위**다(한 행 = 단어 하나) — 8000단어를 통짜로 올리지 않기
                         위해서. 응답은 모아서(10개/4초) 업서트하고 화면 이탈·탭 숨김에 flush,
-                        로그인 시엔 서버 행을 전부 받아 병합(최신 응답이 이긴다)
+                        로그인 시엔 서버 행을 전부 받아 병합(최신 응답이 이긴다). 로그인 이벤트
+                        처리는 `makeSyncHandler(cloud)`로 뽑혀 있어(D-104) cloud 클라이언트를
+                        인자로 받는다 — 실제 CDN 클라이언트 대신 가짜 cloud를 넣어
+                        `node --test`로 로그인/로그아웃 시나리오까지 검증한다(**로그아웃하면
+                        `state.vocab.cards`/`days`/`newPerDay`를 지운다** — 안 그러면 같은 탭에서
+                        다른 계정으로 로그인할 때 방금 나간 계정의 진행이 섞여 들어간다)
   screens.js            목차 + DAY 학습 세션(카드 → 확인 문제 → 빈칸) + 오늘 복습 큐. 데이터가
                         화면보다 늦게 오므로 골격을 먼저 그리고 채운다 — 로딩 중 이탈은
                         onLeave 플래그로 버린다. 카드의 뜻·어원은 기본이 **가림**이고
@@ -136,7 +141,11 @@ js/learning/cloud.js     학습 진행률(state.learning)을 Supabase에 동기�
                         밖, 도구가 여럿이어도 공용으로 재사용한다. NumPath 마을(D-55)과 같은
                         패턴(cloud-auth-loader.js로 CDN 동적 import), 코인/마을 같은 보상
                         체계는 없다. initLearningSync()는 main.js 부팅 시 1회, saveLearningProgress()는
-                        각 도구의 screens.js가 진행이 바뀔 때마다 호출
+                        각 도구의 screens.js가 진행이 바뀔 때마다 호출. 로그인 이벤트 처리는
+                        `makeSyncHandler(cloud)`로 뽑혀 있어(D-104, civil-vocab/cloud.js와 같은
+                        이름·같은 이유) 가짜 cloud로 로그인/로그아웃 시나리오를 테스트한다.
+                        **로그아웃하면 `state.learning`을 지운다** — 한 번도 로그인한 적 없는
+                        세션은 지우지 않아서 "로그인 전 진행을 로그인해서 이어 올리기"는 그대로 산다
 ```
 
 **의존 방향**: `tests/*`·`games/*`·`learning/*` → `core/*`. `core`는 테스트도 게임도 학습 콘텐츠도 모른다.
