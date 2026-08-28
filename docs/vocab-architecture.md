@@ -222,7 +222,7 @@ grant select, insert, update on public.vocab_progress to authenticated;
 
 | 차수 | 누적 단어 | 비고 |
 |------|-----------|------|
-| M1(지금) | 200 (DAY 1~4) | 메커니즘 확인용. 어원 사전 156항목이 여기서 만들어졌다 |
+| M1(지금) | DAY 1~4 | 메커니즘 확인용. 어원 사전도 여기서 만들어졌다 |
 | P1 | 800 | 최빈출 |
 | P2 | 2000 | 여기까지가 시험의 대부분 |
 | P3 | 4000 | |
@@ -231,3 +231,9 @@ grant select, insert, update on public.vocab_progress to authenticated;
 확장은 **`words/day-NNN.js` 추가 + `manifest.js`에 줄 하나**가 전부다 — 화면·라우팅·테스트는
 안 고친다. 한 번에 몰아서 만들지 않는 이유는 D-73/74에서 겪은 "검증 없이 양만 늘리면 품질이
 떨어진다"이다.
+
+> **지금 몇 단어인지는 여기 적지 않는다**(D-105). 단일 소스는 `manifest.js`의 `STAGES`
+> (합계는 `TOTAL_WORDS`)이고 어원 수는 `roots.js`의 `ROOTS` 길이다 — 문서에 숫자를 박으면
+> DAY를 추가할 때마다 같이 고쳐야 하고, 안 고치면 조용히 거짓말이 된다(실제로 어원 수가
+> 156으로 적혀 있다가 158이 된 채 방치됐다). `npm test`가 매니페스트와 실제 파일을 대조하니
+> 숫자가 궁금하면 코드를 보면 된다.

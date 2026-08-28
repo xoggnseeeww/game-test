@@ -24,9 +24,14 @@
 
 ## READ ORDER
 1. `CLAUDE.md` — 항상
-2. `CURRENT_TASK.md` — 항상
-3. `PROGRESS.md` — 조건부 (회귀 추적 / 과거 설계 배경 확인 / 명시 요청 / 맥락 부족 시에만). `.claudeignore` 대상이라 필요할 때 명시적으로 Read 한다
-4. `docs/*` — 필요 시 선택 로드
+2. `CURRENT_TASK.md` — 항상 (**1~2k 토큰 유지**. 지난 항목은 `archive/`로 옮긴다 — D-105)
+3. `docs/*` — 필요 시 선택 로드 (아래 "상세 문서" 표에서 고른다)
+4. `PROGRESS.md` — 조건부. **인덱스만** 있으므로 여기서 달을 고른 뒤
+   `archive/PROGRESS_YYYY-MM.md` 하나만 Read 한다(`.claudeignore` 대상)
+
+> **문서를 늘릴 때의 원칙(D-105)**: 1·2번은 매 세션 자동 로드라 여기 적는 모든 글자가
+> 세션마다 비용이다. **콘텐츠가 늘 때 같이 커지는 것(개수·목록·이력)은 절대 1·2번에 두지
+> 않는다** — 3·4번으로 보내고 1·2번에는 "어디를 보라"만 남긴다.
 
 ## 커맨드
 | 동작 | 명령어 |
@@ -105,138 +110,46 @@ History API 직접 구현 + **레지스트리 방식 라우터**. 상태는 메�
 날아감) — 로그인 이메일만 예외로 `localStorage`에 남는다(위 항목 참고).
 
 ## 구조 개요
+> **이 트리에는 "어디에 무엇이 있는지"와 구조 불변식만 적는다.** 콘텐츠 개수·챕터 목록·
+> 필드 상세는 `docs/module-map.md`와 각 도구의 `docs/*-architecture.md`에 있다 —
+> 여기 적으면 콘텐츠가 늘 때마다 **매 세션 자동 로드되는 파일**이 같이 커진다(D-88, D-105).
 ```
-index.html            진입점 (메타·OG·referrer 정책은 기본값 — 아래 3곳 외 전 주소 공통)
-og-shells/             테스트·게임 진입 화면 3곳의 정적 OG 셸(og-shells/test-adhd.html 등).
-                      _redirects가 해당 경로만 이 파일로 rewrite한다 — index.html과 내용은
-                      거의 같고 <title>·og:*만 페이지별이다(D-47)
-assets/                favicon(svg) · apple-touch-icon(png) · og-image*.png(1200×630, 홈+테스트/게임별)
-js/main.js            부팅: 화면·테스트·게임·학습 콘텐츠를 라우터에 등록 + initHeader()
-js/core/              router(레지스트리·guard·teardown·게임 레지스트리) · state · dom · share · util · ads ·
-                      cloud-auth(공유 Supabase Auth 클라이언트, D-56 — cloud-auth-loader로만
-                      동적 import) · auth(일반 로그인 + isAdmin() 별도 판별, D-68, cloud-auth 재사용,
-                      onAuthChange는 구독자 여럿을 받는 Set 기반) · header(우상단 햄버거 메뉴 —
-                      로그인 시 점 배지, 마이페이지 이동, D-70)
-js/screens/home.js    홈(카테고리 카드 3개: 심리테스트/미니게임/학습) · 심리테스트 목록(등록된
-                      테스트에서 자동 생성) · 미니게임 목록(등록된 게임에서 자동 생성) ·
-                      학습 목록(등록된 학습 도구에서 자동 생성) · 개인정보처리방침 ·
-                      마이페이지(로그인 상태·학습 진행 집계, D-70 — 개별 학습 도구는 import 안 함)
+index.html            진입점 (메타·OG·referrer는 기본값 — og-shells/ 3곳만 예외)
+og-shells/            테스트·게임 진입 화면 3곳의 정적 OG 셸. _redirects가 그 경로만 rewrite (D-47)
+assets/               favicon(svg) · apple-touch-icon(png) · og-image*.png(1200×630)
+js/main.js            부팅: 화면·테스트·게임·학습을 라우터에 등록 + initHeader() + 동기화 init
+js/core/              router(레지스트리·guard·teardown) · state · dom · share · util · ads ·
+                      cloud-auth(공유 Supabase Auth — cloud-auth-loader로만 동적 import) ·
+                      auth(일반 로그인 + isAdmin() 별도 판별) · header(우상단 햄버거 메뉴)
+js/screens/home.js    홈 · 심리테스트/미니게임/학습 목록(전부 레지스트리에서 자동 생성) ·
+                      개인정보처리방침 · 마이페이지 — **개별 테스트·도구를 import하지 않는다**(D-70)
 js/tests/<id>/        테스트 1개 = 폴더 1개: data · score · screens · index(디스크립터)
-                      현재 adhd(+반응속도 게임), disc(+딜레마 게임),
-                      couple(+assemble · match — 문항지 조립과 부부 매칭이 따로 검증돼야 해서 분리).
-                      couple은 screens.js(문항 진행·개인 결과)가 다른 테스트 대비 훨씬 커져서
-                      screens-match.js(초대·코드 입력·결합 결과)로 한 번 더 쪼갰다 —
-                      의존 방향은 screens-match.js → screens.js 한쪽뿐(반대는 없음).
-                      두 화면 파일이 같이 쓰는 카드 캔버스는 card.js로 뺐다
+                      현재 adhd(+반응속도) · disc(+딜레마) · couple(+assemble · match · card,
+                      screens-match.js는 screens.js에 단방향 의존)
 js/games/<id>/        테스트에 속하지 않는 독립 미니게임 1개 = 폴더 1개. 현재 numpath
-js/learning/<toolId>/ 학습 카테고리 안의 독립 도구 1개 = 폴더 1개(게임과 같은 레지스트리
-                      방식, D-60·D-63 — 도구가 여럿이면 학습 목록에 카드로 나열). 도구
-                      안은 챕터(목차) 여러 개로 이뤄질 수 있다 — data.js의 CHAPTERS 배열이
-                      단일 소스, index.js가 챕터별 화면을 자동 생성한다. 챕터는 잘게 쪼개지
-                      않고 묶는다(D-66) — 새 상황이 생기면 새 챕터부터 만들지 말고 기존
-                      챕터 중 붙일 자리가 있는지 먼저 본다. 문장 단위 도구 셋(위 civil-vocab은
-                      단어 단위라 별개): **basic-conversation**
-                      (기초 영어회화, 7세 이하 대상) — 챕터 인사/기분 표현·하루 일과(아침+밥+
-                      목욕/잠자리 통합)·가족/자기소개·놀이터에서(놀이+날씨 통합) 4개, 총
-                      362문장(기본 122 + 중급 120 + 심화 120, D-74). 각 챕터는 기본(입문
-                      생존 표현) → 중급(짧은 질문·요청) → 심화(의견·이유·비교·협상이 들어간
-                      원어민 7세 수준 문장, `level: "intermediate"`/`"advanced"`)로 이어지는
-                      3단계 구성(D-72, D-73) — 단계별로 대략 30문장씩(D-74), 단계용으로 새
-                      챕터를 만들지 않는다. 챕터를 누르면 단계를 고르는 화면이 먼저 뜬다.
-                      같은 문장 틀에 단어만 바꿔 반복하는 패턴 드릴("I like ~", "This is
-                      my ~")도 섞여 있다(D-67). **elementary-conversation**(초등 영어회화)
-                      — basic-conversation의 "듣고 따라 말하기"만으로는 초등학생부터 실력
-                      향상에 부족하다고 판단해(D-78) 학년(GRADES) 한 겹을 더 얹고, 문장마다
-                      `grammar` 태그로 문법 진행·반복(recycling)을 추적하며, `type: "produce"`
-                      문장(정답을 안 읽어주고 질문만 던져 스스로 답하게 함, 예시 답안으로
-                      자가평가)과 낮은 점수 문장 재노출("헷갈렸던 문장만 복습하기")을 더했다
-                      (D-79: produce엔 시도 전 hint, 연습 카드엔 문법 라벨, 마이페이지엔
-                      weak 총합도 노출). 아직 안 만든 학년·챕터는 화면에 미리 노출하지
-                      않는다 — 지금은 저학년 챕터 6개(학교 가는 날·교실에서·쉬는 시간·
-                      좋아하는 것·체육 시간·급식 시간, 챕터당 20문장, D-80·D-83·D-87),
-                      중학년 챕터 6개(수업과 과제·친구 관계·방과 후 생활·우리 동네·
-                      학교 행사·건강과 습관, 챕터당 20문장, D-81·D-83·D-87), 고학년 챕터
-                      6개(의견 나누기·꿈과 진로·요즘 이슈·여행과 경험·협동과 리더십·
-                      미디어와 기술, 챕터당 20문장, D-82·D-83·D-87)까지 있다 —
-                      3개 학년·18챕터·360문장. 학년마다 문법 목록
-                      (`*_GRAMMAR_POINTS`)이 따로 있어 서로 독립적이고, 개념이 겹쳐도
-                      (예: 저학년 G2와 중학년 G7이 둘 다 일반동사 현재형) 각자 새 id로
-                      다시 정의한다 — 새 문법 id 번호는 그 학년 안에서가 아니라 지금까지
-                      나온 것 중 가장 큰 다음 번호를 전체에서 이어 붙인다(D-83). 문법 항목은
-                      `label`(문법 용어 — 저작·문서·테스트용) 외에 **`kidLabel`**(학습자 화면에
-                      보이는 아이 말)과 선택적 **`check`**(그 형태를 실제로 썼는지 보는 정규식)를
-                      갖는다(D-94). 여기에 **`explain`**(그 문법을 아이 말로 푼 한 줄)이 더 있고, 카드의
-                      문법 줄을 펴면 설명과 함께 **이 문장의 어느 부분이 그 문법인지**를
-                      check로 찾아 표시한다(D-96 — 이름만 띄우던 게 "어떻게 적용된 건지
-                      알 수 없다"는 지적을 받았다). produce 문장은 정답이 여럿이라
-                      유사도 채점을 못 하는 대신 check로 "목표 형태를 넣었는지"만 알려준다.
-                      형태가 뚜렷하지 않은 항목은 check를 **일부러 비운다**(억지 정규식은
-                      맞게 말했는데 틀렸다고 하는 오탐을 만든다). 문법은
-                      챕터마다 무조건 새로 늘리지 않는다 — 새 문법 없이 기존 걸 다른
-                      소재로 재사용만 하는 챕터도
-                      있다(좋아하는 것, 우리 동네, 여행과 경험, 체육 시간, 급식 시간은
-                      새 문법 G18을 도입). **dialogue**(대화 연습, D-87) — 오래 미뤄둔
-                      진짜 다중 턴 대화를 별도 도구로 신설했다(위 두 도구를 확장하지 않은
-                      이유는 `docs/learning-architecture.md` §3-7). 장면(SCENES) 하나 =
-                      대화 하나이고, `role: "partner"`(상대 대사, 자동 재생)와
-                      `role: "you"`(내 차례, 힌트만 주고 예시 답안으로 자가평가)가 번갈아
-                      온다 — 유사도 채점은 안 한다(정답이 여러 개). 자유 발화를 의미로
-                      해석해 갈래를 고르는 **분기는 일부러 없다**(브라우저 STT 인식률로는
-                      대화가 산으로 가는 실패가 더 잦다) — 한 줄기로 흐르는 역할극에 가깝다.
-                      학년·단계 층이 없어 elementary보다 한 단 얕다. 한글을 아직 못
-                      읽는 어린이를 위해 한국어 해석도 TTS로 들을 수 있다(뜻 옆 🔊, D-69) —
-                      영어/한국어 듣기가 서로 다른 `lang`으로 독립적으로 재생된다. 브라우저
-                      내장 TTS/STT만 쓰고 서버 API 없음(STT가 없는 iOS는 녹음-되듣기로 폴백, D-95)(로그인·학습 진행률 동기화는 D-68
-                      참고 — 위 "영속 데이터" 항목). 듣기/말하기를 강제하지 않고 건너뛰기
-                      버튼도 둔다(D-61). 문장 카드 위 마스코트 일러스트(D-61)는 실물로
-                      보니 별로라 D-64에서 뺐다 — 이미지가 필요하면 나중에 실제 이미지
-                      에셋으로 따로 넣는다
-js/learning/civil-vocab/ 9급 공무원 영단어(D-98) — 어원 중심 어휘 학습. 학습 도구지만 위
-                      세 도구와 모델이 다르다: 카드가 문장이 아니라 **단어**이고, 목표가
-                      8000단어라 **데이터를 정적으로 안 들고 온다**. manifest.js(스테이지·
-                      DAY 메타데이터)만 정적 import이고 words/day-NNN.js(50단어씩)는
-                      loader.js의 동적 import로만 불린다 — 정적 import는 테스트가 금지한다.
-                      연상은 **어원 우선**(roots.js 어원 사전 + 단어별 한 줄 힌트), 어원이
-                      약한 단어만 소리연상을 쓰고 둘 다 없는 단어는 금지(테스트가 잡는다).
-                      진행 상태는 state.learning이 아니라 **state.vocab** — 계정별 저장은
-                      단어별 행을 갖는 별도 테이블(`vocab_progress`, D-100)이라 통짜 업서트
-                      구조에 섞지 않았다(비로그인은 세션 한정). **resolveReview를 일부러 안 둔다** —
-                      어휘 복습은 "오늘 복습"(D-92)에 섞지 않고 이 도구 안의
-                      `/learning/civil-vocab/today`가 돈다(D-99). 학습 방식은 D-99에서 셋이
-                      됐다: 카드의 **뜻·어원 지연 노출**(앞면은 단어만 — 토글로 끌 수 있다),
-                      뜻 고르기, **빈칸 채우기**(예문에서 표제어를 지운 산출 문제 — 콘텐츠
-                      추가 0). 모든 응답이 도구 안 `srs.js`(SM-2 변형, 졸업/삭제 없음)
-                      일정에 누적된다 — 문장용 `js/learning/srs.js`와 규칙이 반대라 재사용
-                      안 함. 하루 신규 상한은 manifest의 DEFAULT_NEW_PER_DAY.
-                      지금 200단어(DAY 4개) · 어원 158항목 → 목표 8000
-js/learning/grammar.js 문법 설명 블록(D-96) — 연습·복습 화면 공용. 도구를 모르는 순수 view
-                      함수라 D-70 경계를 안 깬다(문법 항목은 resolveReview가 넘겨준다)
-js/learning/record.js STT 없는 브라우저(iOS Safari)의 말하기 폴백(D-95) — MediaRecorder로
-                      녹음해 되듣고 자가평가. 6개 호출부 공용, 결과는 STT 경로와 똑같이
-                      weak/SRS에 반영된다. iOS에서 말하기가 통째로 죽어 있던 걸 메운 것
-js/learning/prefs.js  연습 카드의 "받침대 치우기" 토글(D-93) — 영어 문장 가리기·뜻 접기.
-                      강제로 가리지 않고 학습자가 켜고 끈다(D-61과 같은 판단). repeat 카드
-                      셋(basic·elementary·복습)만 — produce/대화는 그 텍스트가 질문이라 가리면
-                      문제가 성립 안 한다. 세션 한정 메모리(진행률 객체·localStorage 안 씀)
-js/learning/srs.js    간격 반복(SRS) 스케줄(D-92) — 순수 함수. `weak`의 값이 이제 불리언이
-                      아니라 `{ due, step }`이다(키는 그대로라 기존 읽기 코드는 무변경).
-                      틀리면 처음으로, 맞히면 다음 칸, 마지막 칸 넘기면 졸업(목록에서 삭제)
-js/learning/review.js "오늘 복습" 화면(`/learning/review`) — 도구별이 아니라 **전 도구를
-                      가로질러** 오늘 볼 문장만 모은다. 도구를 import하지 않고
-                      `listLearning()`의 `resolveReview(key,id)`로 문장을 되돌려받는다(D-70
-                      경계 유지). `registerLearning`은 안 한다 — 도구가 아니라 도구들의 결과를
-                      모으는 화면이라 학습 목록에 카드로 뜨면 안 된다
-functions/api/couple-code/  부부 체크 짧은 코드 발급(index.js)·조회([code].js). 유일한 백엔드 —
-                      Cloudflare Pages Function + KV(COUPLE_CODES). js/tests/couple/shortcode.js를
-                      그대로 가져다 쓴다(발급·조회·브라우저 검증이 같은 알파벳을 봐야 한다)
-wrangler.jsonc         위 Function의 KV 바인딩 설정. 빌드 명령은 여전히 없다 — 이 파일은 배포
-                      산출물이 아니라 Cloudflare Pages가 Functions를 띄울 때만 읽는다
-test/                 node --test 스위트 (채점 로직 · 게임 로직 · 모듈 import/export 정합성 · OG 셸 정합성).
-                      `og-shells/`와 이름이 비슷하지만 무관 — 여긴 순수 JS 유닛 테스트 폴더다
+js/learning/<toolId>/ 학습 도구 1개 = 폴더 1개(게임과 같은 레지스트리, D-60·D-63).
+                      도구 안은 data.js의 CHAPTERS가 단일 소스이고 index.js가 화면을 자동
+                      생성한다 — 챕터를 늘려도 index.js·라우터는 안 고친다.
+                      문장 단위 도구 셋: basic-conversation · elementary-conversation · dialogue
+                      (챕터/학년/단계 구성과 문장 수는 `docs/learning-architecture.md`)
+js/learning/civil-vocab/  9급 공무원 영단어 — **유일하게 모델이 다른 도구**(D-98). 카드가 문장이
+                      아니라 단어이고, 목표 8000단어라 **데이터를 정적으로 안 들고 온다**
+                      (manifest.js만 정적, words/day-NNN.js는 loader.js의 동적 import 전용 —
+                      정적 import는 테스트가 막는다). 진행은 state.learning이 아니라
+                      **state.vocab**, 복습도 "오늘 복습"에 안 섞고 자체 큐가 돈다.
+                      상세는 `docs/vocab-architecture.md`
+js/learning/*.js      도구 폴더 밖 공용: score(발음 유사도) · speech(TTS/STT) · record(iOS 녹음
+                      폴백) · prefs(가리기 토글) · grammar(문법 설명 블록) · srs(문장용 간격 반복) ·
+                      review("오늘 복습" 화면 — 도구를 가로지르지만 registerLearning은 안 한다) ·
+                      cloud(진행률 동기화 + onLearningSync 알림)
+functions/api/couple-code/  **유일한 백엔드** — 부부 체크 짧은 코드 발급·조회
+                      (Cloudflare Pages Function + KV). js/tests/couple/shortcode.js를 공유한다
+wrangler.jsonc        위 Function의 KV 바인딩. 빌드 산출물이 아니라 Pages가 Functions를 띄울 때만 읽는다
+test/                 node --test 스위트 (채점·게임 로직 · 모듈 정합성 · OG 셸 정합성)
 styles.css            전체 스타일. 브랜드 색은 CSS custom properties + theme-* 클래스
-_redirects            Cloudflare Pages SPA 폴백 + 페이지별 OG 셸 rewrite (순서 중요, 위 항목 참고)
-serve.py              로컬 개발 서버 — `_redirects`를 실제로 읽어 규칙대로 적용한다(개발 전용, functions/는 못 띄운다)
-scripts/verify.cjs     헤드리스 브라우저 회귀 스위트 (레포 의존성 아님 — 파일 헤더 참고)
+_redirects            SPA 폴백 + 페이지별 OG 셸 rewrite (**순서 중요** — 구체적 규칙이 와일드카드 위)
+serve.py              로컬 개발 서버 — _redirects를 실제로 읽어 적용(개발 전용, functions/는 못 띄움)
+scripts/verify.cjs    헤드리스 브라우저 회귀 스위트 (레포 의존성 아님)
 docs/design-draft.html  최초 디자인 목업. 배포·동작과 무관 (.claudeignore)
 ```
 
@@ -253,8 +166,11 @@ docs/design-draft.html  최초 디자인 목업. 배포·동작과 무관 (.clau
 | `docs/numpath-architecture.md` | NumPath 흐름 · 게임 로직(타일 모델 · 생성기 · 솔버 · 별 판정) 개요 |
 | `docs/vocab-architecture.md` | 9급 공무원 영단어 구조(DAY 파일 동적 로드 · 어원 사전 · 확장 계획 · 아직 안 붙인 SRS/계정 저장) |
 | `docs/learning-architecture.md` | 학습 카테고리 구조(도구 → 목차 → 챕터, D-63) · 지금 자른 것(로그인·SRS·결제·어댑터 패턴·어르신 모드)을 나중에 어떻게 붙일지 |
-| `docs/ERRORS.md` | 오류 패턴 (같은 증상이 재발할 때) |
-| `docs/DECISIONS.md` | 설계 결정 · 기각안 · 되돌림 |
+| `docs/ERRORS.md` | 오류 패턴 **인덱스** — 증상으로 E-/A-번호를 찾는다 |
+| `docs/errors-runtime.md` | E-번호 본문 (라우팅·브라우저·배포·인프라, D-105에 분리) |
+| `docs/errors-ai.md` | A-번호 본문 (AI 반복 실수, D-105에 분리) |
+| `docs/DECISIONS.md` | 설계 결정 · 기각안 · 되돌림 — **인덱스**에서 D-번호를 찾아 `docs/decisions/*.md`로 |
+| `docs/VERIFY_PENDING.md` | 배포 후 확인 필요 목록 (샌드박스에서 확인 못 한 것, D-105에 `CURRENT_TASK.md`에서 분리) |
 
 ## ⚠️ ABSOLUTE RULES
 - **도구 호출 사이에 텍스트를 쓰지 않는다** — 맨 위 "🔇 출력 규칙" 절이 본문. 세 번 반복 위반해서 두 곳에 나눠 적었다(D-89)
@@ -269,7 +185,7 @@ docs/design-draft.html  최초 디자인 목업. 배포·동작과 무관 (.clau
   예외: `localStorage` 접근(프라이버시 모드 throw)과 `runTeardowns()`의 catch는 **의도된 방어**다. 제거하지 말 것.
 - **검증은 `npm test` + 실제 브라우저 둘 다** — 빌드가 없어 "빌드 통과"라는 신호가 없다.
   `npm test`는 채점·모듈 정합성만 본다. 라우팅·이벤트·레이아웃은 `scripts/verify.cjs`로만 잡힌다.
-  **확인하지 못한 항목은 `CURRENT_TASK.md`의 "배포 후 확인 필요"로 옮긴다** — 침묵은 "확인됨"으로 오독된다.
+  **확인하지 못한 항목은 `docs/VERIFY_PENDING.md`로 옮긴다** — 침묵은 "확인됨"으로 오독된다.
 - **의학적 진단 표현 금지** — "성향 체크"까지만. `disclaimer` 문구를 제거하거나 약화하지 말 것 → `docs/DECISIONS.md` D-3
 - **부부 체크의 결과 전달 안전 장치를 빼지 말 것** — 유형 라벨 단독 노출 금지(연속 점수·확신도 동반),
   **단일 궁합 점수 산출 금지**(블록별 구간 서술만), 백분위·석차 표현 금지(규준 표본이 없다),
