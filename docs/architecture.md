@@ -160,7 +160,7 @@ state = {
 ## 6. 채점 파이프라인
 
 ADHD·DISC 채점 파이프라인 상세는 각각 `docs/adhd-architecture.md` · `docs/disc-architecture.md`로
-분리돼 있다(15KB 자동 분리 규칙 — 본문 상단 참고). NumPath는 성향 채점이 아니라 퍼즐 생성·솔버
+분리돼 있다(자동 분리 규칙 300줄 — 본문 상단 참고). NumPath는 성향 채점이 아니라 퍼즐 생성·솔버
 로직이라 `docs/numpath-architecture.md`의 "게임 로직 개요"에 있다.
 
 ---
