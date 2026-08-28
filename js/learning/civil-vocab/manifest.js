@@ -44,6 +44,18 @@ export const STAGES = [
       { id: "day-004", label: "DAY 4", count: 50, theme: "per·pre·pro·re 계열", preview: "perceive · prohibit · restrain" },
     ],
   },
+  {
+    id: "stage-2",
+    label: "2단계 · 빈출 확장",
+    emoji: "🥈",
+    desc: "동사에 몰려 있던 1단계 위에 형용사·명사를 얹는다",
+    days: [
+      { id: "day-005", label: "DAY 5", count: 50, theme: "형용사 ① 판단·성질", preview: "abundant · coherent · plausible" },
+      { id: "day-006", label: "DAY 6", count: 50, theme: "명사 ① 제도·사회", preview: "consensus · disparity · mandate" },
+      { id: "day-007", label: "DAY 7", count: 50, theme: "동사 ② ad·circ·sub 계열", preview: "avert · mitigate · undermine" },
+      { id: "day-008", label: "DAY 8", count: 50, theme: "형용사 ② 정도·태도", preview: "acute · impartial · stringent" },
+    ],
+  },
 ];
 
 export const DAYS = STAGES.flatMap((stage) => stage.days.map((day) => ({ ...day, stage: stage.id, stageLabel: stage.label })));
