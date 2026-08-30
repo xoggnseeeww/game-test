@@ -83,8 +83,8 @@ export function stepOf(itemCount) {
 // 국소적 위양성에도 강하다(§5.0 응답 일관성 ②).
 //
 // 갈등 두 축(SC·OC)은 정방향이 2문항뿐이라 평균이 거칠어 위양성이 늘 수 있으므로
-// 기획서가 지정한 6개 요인만 본다. 애정 표현 5유형(LW/LT/LG/LS/LP, D-102)도 정방향이
-// 2문항이라(D-103으로 1→2) SC·OC와 같은 이유로 여기 넣지 않는다.
+// 기획서가 지정한 6개 요인만 본다. 애정 표현 5유형(LW/LT/LG/LS/LP, D-111)도 정방향이
+// 2문항이라(D-112으로 1→2) SC·OC와 같은 이유로 여기 넣지 않는다.
 const REVERSE_CHECK_FACTORS = ["D", "I", "S", "C", "ANX", "AVO"];
 
 export function reverseMismatchCount(answers) {
@@ -155,7 +155,7 @@ export function anchorScores(answers) {
 //
 // 시드는 요인 원점수에서 뽑는다. 같은 응답이면 새로고침해도 같은 결과가 나오고(재현성),
 // 사용자 간에는 고르게 흩어진다. (원점수에서 뽑는 이유는 원래 "배우자 기기에서 다시
-// 채점해도 같은 순서가 나오게" 하기 위해서였다 — 그 흐름은 D-99에서 없어졌지만, 응답
+// 채점해도 같은 순서가 나오게" 하기 위해서였다 — 그 흐름은 D-108에서 없어졌지만, 응답
 // 원본이 아니라 원점수를 쓰는 편이 여전히 단순하다.)
 export function seedFromRaw(raw) {
   let h = 2166136261;
@@ -168,7 +168,7 @@ export function seedFromRaw(raw) {
 
 // 축 배열을 시드로 섞는다. `tieBreakOrder(seed)`는 이 로직을 BEHAVIOR_AXES에 고정해
 // 쓰던 기존 시그니처를 그대로 유지한다(외부에서 `tieBreakOrder(seed)`로 호출하는
-// 기존 코드·테스트를 안 건드리기 위해서) — 애정 표현 5유형(D-102)처럼 다른 축 배열에도
+// 기존 코드·테스트를 안 건드리기 위해서) — 애정 표현 5유형(D-111)처럼 다른 축 배열에도
 // 같은 셔플이 필요해지면서 내부 로직만 `shuffleAxes()`로 뽑아냈다.
 function shuffleAxes(axes, seed) {
   const order = axes.slice();
@@ -186,7 +186,7 @@ export function tieBreakOrder(seed) {
 }
 
 // 요인 배열 하나에서 최댓값 하나를 primary로 뽑는다. resolveBehavior(4요인)와
-// resolveLoveLanguage(5요인, D-102)가 축 개수만 다르고 로직은 완전히 같아서 공유한다.
+// resolveLoveLanguage(5요인, D-111)가 축 개수만 다르고 로직은 완전히 같아서 공유한다.
 //
 // 유형 라벨은 언제나 primary 하나로만 정한다. 경계 사례를 감추는 대신 확신도로 드러낸다 —
 // 유형을 더 잘게 쪼개면 오분류만 늘어난다.
@@ -266,7 +266,7 @@ export function resolveConflict(scRaw, ocRaw) {
 
   // 절충형(CS5)은 "양축이 모두 중간"이 아니라 **한 축만 중간인 조합까지 포함**하는
   // 나머지 전부다. 그래서 실제 분포에서 비중이 커진다 — 5000명 시뮬레이션에서 54%였다.
-  // 라벨은 그대로 두고 `shape`로 그 안을 다시 나눈다(D-105, data.js `CS5_SHADES`).
+  // 라벨은 그대로 두고 `shape`로 그 안을 다시 나눈다(D-114, data.js `CS5_SHADES`).
   let style = "CS5";
   if (sc === "high" && oc === "low") style = "CS1"; // 관철형
   else if (sc === "low" && oc === "high") style = "CS2"; // 맞춰주기형
@@ -276,7 +276,7 @@ export function resolveConflict(scRaw, ocRaw) {
   return {
     style,
     // 두 축의 수준 조합 그대로. CS1~CS4는 조합과 스타일이 1:1이라 쓰이지 않고,
-    // 여러 조합이 한 스타일로 모이는 CS5에서만 서술을 가르는 데 쓴다(D-105).
+    // 여러 조합이 한 스타일로 모이는 CS5에서만 서술을 가르는 데 쓴다(D-114).
     shape: `${sc}-${oc}`,
     confidence:
       CONFLICT_EDGE_RAWS.includes(scRaw) || CONFLICT_EDGE_RAWS.includes(ocRaw) ? "edge" : "clear",
@@ -285,7 +285,7 @@ export function resolveConflict(scRaw, ocRaw) {
   };
 }
 
-// ---------------------------------------------------------------- 애정 표현 5유형 (D-102)
+// ---------------------------------------------------------------- 애정 표현 5유형 (D-111)
 
 // 성향(§5.3)과 로직이 완전히 같다 — 축이 4개에서 5개로 바뀌었을 뿐이라 `resolveTopFactor()`를
 // 그대로 재사용한다. 다른 세 유형 체계(성향·애착·갈등)와 곱해서 COUPLE_TYPES 같은 조합
@@ -298,7 +298,7 @@ export function resolveLoveLanguage(norm, seed = 0) {
 // ---------------------------------------------------------------- 개인 읽을거리 (§7.3·§7.4를 1인용으로)
 
 // 앵커(AN)·역할(R)·자녀(K) 문항은 예전엔 **부부 결합 리포트에서만** 쓰였다. 그 흐름을
-// 없애면서(D-99) 이 문항들이 전부 죽은 문항이 될 뻔했다 — 답은 하는데 결과에는 안 나오는
+// 없애면서(D-108) 이 문항들이 전부 죽은 문항이 될 뻔했다 — 답은 하는데 결과에는 안 나오는
 // 문항이 절반 가까이 되는 셈이라, 그 자체로 결과가 부실해 보이는 원인이다. 두 사람의 답을
 // 빼는 대신 **내 답을 그대로 읽어주는** 쪽으로 옮겼다.
 //
@@ -393,7 +393,7 @@ export function computeCouple(answers, { elapsedMs = null, setup = null } = {}) 
     love,
     typeKey: `${behavior.primary}-${attachment.key}`,
     anchors: anchorScores(answers),
-    // 앵커·역할·자녀 문항을 개인 결과에서 읽어주는 구간 값(D-99). 예전의 `comparable`
+    // 앵커·역할·자녀 문항을 개인 결과에서 읽어주는 구간 값(D-108). 예전의 `comparable`
     // (부부 비교용 문항값 묶음)은 결합 리포트와 함께 사라졌다 — 내보낼 곳이 없는 값을
     // 결과 객체에 남겨두면, 다음 사람이 "이건 어디에 쓰이지"를 매번 다시 추적하게 된다.
     readings: selfReadings(answers),

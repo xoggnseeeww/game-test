@@ -96,7 +96,7 @@ test("문항 수가 모듈 합계와 일치한다", () => {
   assert.equal(BEHAVIOR_ITEMS.length, 16);
   assert.equal(ATTACH_ITEMS.length, 8);
   assert.equal(CONFLICT_ITEMS.length, 6);
-  // 애정 표현 5유형(D-102, D-103) — 유형당 3문항(정방향 2 + 역채점 1).
+  // 애정 표현 5유형(D-111, D-112) — 유형당 3문항(정방향 2 + 역채점 1).
   assert.equal(LOVE_ITEMS.length, LOVE_AXES.length * 3);
   // 앵커는 개념 3개 × 2문항. 서비스 차별점인 인지 격차를 단일 문항에 걸어두지 않는다.
   assert.equal(ANCHOR_ITEMS.length, ANCHOR_CONCEPTS.length * 2);
@@ -459,7 +459,7 @@ test("절단점 바로 옆 원점수는 경계로 표시된다", () => {
   }
 });
 
-// 절충형(CS5) 안을 다시 나누는 서술(D-105). 5000명 시뮬레이션에서 CS5 하나가 54%를
+// 절충형(CS5) 안을 다시 나누는 서술(D-114). 5000명 시뮬레이션에서 CS5 하나가 54%를
 // 가져가 절반 넘는 사람이 같은 문단을 보고 있었다 — 그 안이 다섯 조합으로 고르게
 // 갈려 있다는 걸 확인하고 서술만 나눴다.
 // 3문항 척도라 원점수는 3~15만 나온다. 수준 이름(low/mid/high)을 가정하지 않고 이
@@ -508,7 +508,7 @@ test("절충형 서술 다섯이 서로 다르고, 새 유형처럼 읽히지 �
   assert.equal(texts.size, Object.keys(CS5_SHADES).length, "절충형 서술이 서로 겹친다");
 });
 
-// ---------------------------------------------------------------- 애정 표현 5유형 (D-102)
+// ---------------------------------------------------------------- 애정 표현 5유형 (D-111)
 
 test("애정 표현 5유형도 성향과 같은 확신도 규칙을 따른다", () => {
   // resolveTopFactor()를 공유하므로 로직은 동일하고, 유형당 2문항이라 칸 크기(step)만 다르다.
@@ -532,7 +532,7 @@ test("애정 표현 유형의 동점도 시드에 따라 갈리되 같은 시드
 
 test("애정 표현 유형은 성향·애착·갈등과 곱해지지 않는다 (조합 폭발 방지)", () => {
   // typeKey(COUPLE_TYPES 조회 키)에 love가 섞이면 16×5=80개를 손으로 써야 한다 — 그럴
-  // 여력이 없다는 게 D-102의 설계 전제였으므로, 결과 객체가 그 전제를 지키는지 확인한다.
+  // 여력이 없다는 게 D-111의 설계 전제였으므로, 결과 객체가 그 전제를 지키는지 확인한다.
   const r = computeCouple(variedAnswers(), { elapsedMs: 400000, setup: SETUP });
   assert.equal(r.typeKey, `${r.behavior.primary}-${r.attachment.key}`, "typeKey에 love가 섞이면 안 된다");
   assert.ok(LOVE_AXES.includes(r.love.primary), "love.primary는 LOVE_AXES 중 하나여야 한다");
@@ -627,7 +627,7 @@ test("피해야 할 대화법은 구체적인 말을 인용부호로 짚는다",
   }
 });
 
-// 애정 표현 5유형(D-102) 문구 뱅크. LOVE_AXES가 단일 소스라 유형이 늘거나 줄어도
+// 애정 표현 5유형(D-111) 문구 뱅크. LOVE_AXES가 단일 소스라 유형이 늘거나 줄어도
 // 이 검사는 그대로 따라간다.
 test("애정 표현 5유형에 결과 문구가 빠짐없이 있다", () => {
   for (const ax of LOVE_AXES) {
@@ -687,7 +687,7 @@ test("결과가 유형 라벨·연속 프로필·확신도를 항상 함께 낸�
   assert.ok(LOVE_TYPES[r.love.primary], `${r.love.primary}가 애정 표현 5유형 표에 없다`);
   assert.equal(r.validity.verdict, "ok");
   assert.deepEqual(Object.keys(r.anchors).sort(), ["AN1", "AN2", "AN3"]);
-  // 부부 비교용 문항값 묶음(comparable)은 결합 리포트와 함께 사라졌다(D-99).
+  // 부부 비교용 문항값 묶음(comparable)은 결합 리포트와 함께 사라졌다(D-108).
   // 내보낼 곳이 없는 값이 결과 객체에 남으면 다음 사람이 매번 용도를 다시 추적한다.
   assert.equal(r.comparable, undefined, "결합 리포트용 값이 결과에 남아 있다");
   // 대신 같은 문항들이 개인용 구간 값으로 나온다.
@@ -719,10 +719,10 @@ test("결과 화면 guard는 답 개수가 아니라 완료 플래그를 본다"
   assert.equal(coupleReady(), false);
 });
 
-// ---------------------------------------------------------------- 개인 읽을거리 (D-99)
+// ---------------------------------------------------------------- 개인 읽을거리 (D-108)
 
 test("답한 문항은 전부 결과 어딘가에서 쓰인다", () => {
-  // D-99로 결합 리포트를 없애면서 앵커·역할·자녀 문항이 통째로 죽은 문항이 될 뻔했다.
+  // D-108로 결합 리포트를 없애면서 앵커·역할·자녀 문항이 통째로 죽은 문항이 될 뻔했다.
   // "답은 했는데 결과엔 안 나오는 문항"이 늘어나는 것이 결과가 부실해지는 가장 큰 원인이라,
   // 그 상태로 되돌아가는 변경을 여기서 막는다.
   const used = new Set(SELF_READINGS.flatMap((r) => r.codes));

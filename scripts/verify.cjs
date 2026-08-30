@@ -804,7 +804,7 @@ async function playNumpathRun(page) {
     "cp-privacy"
   );
   // === 이용 안내 화면 ===
-  // D-99 이후 이 화면의 역할은 "결과를 어떻게 읽는가"다. 링크가 살아 있는지와
+  // D-108 이후 이 화면의 역할은 "결과를 어떻게 읽는가"다. 링크가 살아 있는지와
   // 핵심 문장이 실제로 렌더되는지를 본다.
   await page.click('[data-nav="couple-guide"]');
   check("인트로 → 이용 안내", page.url().endsWith("/test/couple/guide"), page.url());
@@ -817,9 +817,9 @@ async function playNumpathRun(page) {
   check("안내에 무엇이 나오는지 목록이 있다", guideBody.includes("심화 서술"));
   check("안내에 자주 묻는 것이 있다", guideBody.includes("내 답이 어디에 저장되나요"));
   check("안내에도 상시 안내 링크가 있다", await page.isVisible(".cp-support"));
-  // D-99: 결합 기능은 없앴다. 안내가 다시 "합쳐 보세요"로 돌아가는 변경을 여기서 막는다.
+  // D-108: 결합 기능은 없앴다. 안내가 다시 "합쳐 보세요"로 돌아가는 변경을 여기서 막는다.
   check(
-    "결합 기능을 되살리는 안내 문구 없음 (D-99)",
+    "결합 기능을 되살리는 안내 문구 없음 (D-108)",
     !/결과를 합쳐 보세요|초대 링크를 (보내|만들)|배우자 코드를 입력/.test(guideBody),
     guideBody.slice(0, 120)
   );
@@ -960,7 +960,7 @@ async function playNumpathRun(page) {
     ),
     cpBody.slice(0, 200)
   );
-  // === D-99: 개인 결과가 앵커·역할·자녀 문항까지 읽어주는가 ===
+  // === D-108: 개인 결과가 앵커·역할·자녀 문항까지 읽어주는가 ===
   // 결합 리포트를 없애면서 이 문항들이 죽은 문항이 될 뻔했다. 화면에 실제로 나오는지를
   // 구조로 본다 — 문구 검사만 하면 카드 하나가 통째로 빠져도 통과할 수 있다.
   const feelReadings = await page.$$eval(".cp-feelings .cp-reading", (n) => n.length);
@@ -977,14 +977,14 @@ async function playNumpathRun(page) {
     feelScripts > 0 && feelScripts < feelReadings,
     `${feelScripts}/${feelReadings}`
   );
-  // 결합 흐름을 되살리는 문구가 결과 화면에 남아 있으면 안 된다(D-99).
+  // 결합 흐름을 되살리는 문구가 결과 화면에 남아 있으면 안 된다(D-108).
   check(
-    "결과 화면에 결합·코드 관련 문구가 없다 (D-99)",
+    "결과 화면에 결합·코드 관련 문구가 없다 (D-108)",
     !/결과를 합쳐|배우자 코드|짧은 코드|초대 링크/.test(cpBody),
     cpBody.slice(0, 140)
   );
 
-  // === D-102: 애정 표현 5유형이 다른 세 체계(성향·애착·갈등)와 엮여서 나오는가 ===
+  // === D-111: 애정 표현 5유형이 다른 세 체계(성향·애착·갈등)와 엮여서 나오는가 ===
   // "결과들이 따로 놀면 안 된다"는 요청에 답해 만든 두 연결 지점을 구조로 확인한다.
   const loveFold = await page.$$eval(".cp-fold", (folds) =>
     folds.find((f) => f.querySelector("summary")?.textContent.trim() === "무엇으로 사랑받는다고 느끼나요")
@@ -998,7 +998,7 @@ async function playNumpathRun(page) {
   check("애정 표현 유형 블록에 다섯 축 막대가 전부 나온다", loveBars === 5, `${loveBars}개`);
   // 연결 지점 ①: "배우자에게 보여주세요" DOS/DONTS 목록에 애정 표현 유형 몫이 합류한다.
   // actionMarkup은 DOS_BEHAVIOR(2개)·DOS_ATTACH(1개)·DOS_LOVE(1개)를 합치므로 4개씩이다 —
-  // D-102 이전에는 3개였다.
+  // D-111 이전에는 3개였다.
   const doCount = await page.$$eval(".cp-do", (n) => n.length);
   const dontCount = await page.$$eval(".cp-dont", (n) => n.length);
   check(
@@ -1014,7 +1014,7 @@ async function playNumpathRun(page) {
   });
   check("갈등 블록에 애정 표현 유형 기반 화해법이 엮여 있다", conflictHasLoveRepair);
 
-  // === D-105: 절충형(CS5) 안을 다시 나누는 기울기 문단 ===
+  // === D-114: 절충형(CS5) 안을 다시 나누는 기울기 문단 ===
   // 어떤 응답이 어떤 스타일로 떨어질지는 문항 조립 순서에 달려 있어 여기서 고정할 수
   // 없다. 그래서 "절충형이면 문단이 있고, 아니면 없다"는 대응 관계를 검사한다 —
   // 어느 쪽으로 떨어져도 의미가 있고, 문단을 아무 스타일에나 붙이는 실수도 걸린다.
@@ -1030,7 +1030,7 @@ async function playNumpathRun(page) {
     };
   });
   check(
-    "절충형일 때만 기울기 문단이 붙는다 (D-105)",
+    "절충형일 때만 기울기 문단이 붙는다 (D-114)",
     Boolean(shadeState) &&
       shadeState.isBlend === shadeState.hasShade &&
       (!shadeState.hasShade || shadeState.shadeLen > 40),
@@ -1099,11 +1099,11 @@ async function playNumpathRun(page) {
     check(`${label} 주소 직접 접속 → 인트로 폴백`, await page.isVisible(sel), page.url());
   }
 
-  // D-99로 사라진 주소들. 라우터에 등록돼 있지 않으므로 SPA 폴백이 홈을 그려야 한다 —
+  // D-108로 사라진 주소들. 라우터에 등록돼 있지 않으므로 SPA 폴백이 홈을 그려야 한다 —
   // 없앤 화면이 어딘가에 되살아나면(디스크립터를 다시 추가하면) 여기서 걸린다.
   for (const p of ["/test/couple/invite", "/test/couple/pair", "/test/couple/together"]) {
     await goto(p);
-    check(`없앤 결합 화면(${p})은 홈으로 폴백된다 (D-99)`, await page.isVisible(".hero-title"), page.url());
+    check(`없앤 결합 화면(${p})은 홈으로 폴백된다 (D-108)`, await page.isVisible(".hero-title"), page.url());
   }
 
   // === OG 셸: 특정 경로만 og-shells/*.html로 rewrite되고, 그 안에서도 SPA가 그대로 뜨는가 ===
@@ -1169,7 +1169,7 @@ async function playNumpathRun(page) {
   check("홈 하단 링크 → 개인정보처리방침", page.url().endsWith("/privacy"), page.url());
   const privacyBody = (await page.textContent("#app")).replace(/\s+/g, " ");
   check(
-    "개인정보처리방침이 검사 응답을 저장하지 않는다고 밝힌다 (D-99로 KV 저장 절 삭제)",
+    "개인정보처리방침이 검사 응답을 저장하지 않는다고 밝힌다 (D-108로 KV 저장 절 삭제)",
     privacyBody.includes("기기의 메모리에만") && !privacyBody.includes("7일이 지나면 자동으로 삭제"),
     privacyBody.slice(0, 120)
   );
@@ -1178,7 +1178,7 @@ async function playNumpathRun(page) {
   check("개인정보처리방침 뒤로가기 → 홈", page.url().endsWith("/") || new URL(page.url()).pathname === "/", page.url());
 
   // 예전에는 백엔드(/api/couple-code)가 없는 로컬 실행에서 나는 콘솔 에러를 걸러냈다.
-  // D-99로 그 백엔드 자체가 사라져서 예외 없이 전부 본다 — 이 앱에는 이제 서버 호출이 없다.
+  // D-108로 그 백엔드 자체가 사라져서 예외 없이 전부 본다 — 이 앱에는 이제 서버 호출이 없다.
   check("콘솔/페이지 에러 없음", errors.length === 0, errors.join(" ; "));
 
   await browser.close();

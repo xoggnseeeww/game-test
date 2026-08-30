@@ -5,7 +5,21 @@
 import { loadCloudAuth } from "../core/cloud-auth-loader.js";
 import { state } from "../core/state.js";
 
-let syncedForUser = null;
+// 서버에서 받아온 값이 state에 병합된 순간을 알리는 pub-sub. 로그인 동기화는 **화면이 이미
+// 그려진 뒤에** 끝나기 때문에(CDN 동적 import + 네트워크), 알림이 없으면 마이페이지·학습
+// 목록이 "아직 아무것도 안 한 상태"를 계속 보여준다 — 실제로 사용자가 겪은 증상이다(D-101).
+// 어휘 도구(js/learning/civil-vocab/cloud.js)도 자기 병합이 끝나면 이 알림을 쓴다 — 도구별로
+// 알림 채널을 따로 두면 구독하는 쪽이 도구를 알아야 해서 D-70 경계가 깨진다.
+const syncListeners = new Set();
+
+export function onLearningSync(cb) {
+  syncListeners.add(cb);
+  return () => syncListeners.delete(cb);
+}
+
+export function notifyLearningSync() {
+  for (const cb of syncListeners) cb();
+}
 
 // 챕터별로 더 진행된 쪽(index가 큰 쪽)을 남긴다 — 로그인이 여러 번 일어나도(재로그인, 다른
 // 탭) 멱등해야 한다는 게 NumPath 마을 병합(mergeVillages, D-55)과 같은 이유다.
@@ -42,32 +56,59 @@ export function saveLearningProgress() {
   });
 }
 
+// 로그인 이벤트가 올 때마다 부르는 실제 로직 — cloud 클라이언트를 인자로 받는다. 실제
+// 부팅에서는 initLearningSync()가 CDN에서 받아온 진짜 클라이언트를 넘기지만, 이 함수
+// 자체는 그 사실을 모른다 — 그래서 node --test에서 가짜 cloud로도 검증할 수 있다
+// (아래 D-104 로그아웃 초기화가 여기 있다).
+//
+// syncedForUser를 클로저 안에 둔 이유: 예전엔 모듈 전역이라 실제 부팅(단 한 번의
+// initLearningSync 호출)에서는 문제가 없었지만, 그러면 테스트에서 handler를 여러 번 만들
+// 때마다 이전 테스트의 상태가 새 handler로 새어 들어간다 — 핸들러 인스턴스마다 독립적인
+// "누구와 동기화됐는지"를 갖게 했다.
+export function makeSyncHandler(cloud) {
+  let syncedForUser = null;
+  return () => {
+    const user = cloud.getCachedUser();
+    if (!user) {
+      // **로그아웃 감지(D-104)**: syncedForUser가 null이 아니었다는 건 방금 전까지 어떤
+      // 계정의 진행률이 로컬(state.learning)에 실려 있었다는 뜻이다. 지우지 않으면, 같은
+      // 브라우저 탭에서 다른 계정으로 로그인했을 때 mergeProgress()가 그 계정의 서버 값과
+      // **방금 로그아웃한 계정의 로컬 진행률**을 합쳐 버린다 — index가 더 큰 쪽이 이기는
+      // 규칙이라 방금 나간 계정의 진도가 더 앞서 있으면 새 계정 서버에 그대로 업서트돼
+      // 남의 진행률이 내 계정에 섞여 들어가는 것과 같다. 처음부터 로그인한 적 없는 세션
+      // (syncedForUser가 원래부터 null)까지 지우면 "로그인 전에 해둔 공부를 로그인해서
+      // 이어 올린다"는 의도된 흐름이 깨지므로, **정말 로그아웃한 경우에만** 비운다.
+      if (syncedForUser !== null) {
+        state.learning = {};
+        notifyLearningSync();
+      }
+      syncedForUser = null;
+      return;
+    }
+    if (syncedForUser === user.id) return;
+    syncedForUser = user.id;
+    cloud.supabase
+      .from("learning_progress")
+      .select("progress")
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("학습 진행률 불러오기 실패", error);
+          return;
+        }
+        Object.assign(state.learning, mergeProgress(state.learning, data?.progress));
+        notifyLearningSync();
+      });
+  };
+}
+
 // 부팅 시 한 번 불러 로그인 이벤트를 구독한다 — 로그인할 때마다(최초 1회만) 서버 값을 받아와
-// 병합한다. 같은 사용자로 중복 병합하지 않도록 syncedForUser로 막는다.
+// 병합한다. 같은 사용자로 중복 병합하지 않도록 makeSyncHandler의 syncedForUser로 막는다.
 export function initLearningSync() {
   loadCloudAuth().then((cloud) => {
     if (!cloud) return;
-    const sync = () => {
-      const user = cloud.getCachedUser();
-      if (!user) {
-        syncedForUser = null;
-        return;
-      }
-      if (syncedForUser === user.id) return;
-      syncedForUser = user.id;
-      cloud.supabase
-        .from("learning_progress")
-        .select("progress")
-        .eq("user_id", user.id)
-        .maybeSingle()
-        .then(({ data, error }) => {
-          if (error) {
-            console.error("학습 진행률 불러오기 실패", error);
-            return;
-          }
-          Object.assign(state.learning, mergeProgress(state.learning, data?.progress));
-        });
-    };
+    const sync = makeSyncHandler(cloud);
     sync();
     cloud.onAuthChange(sync);
   });

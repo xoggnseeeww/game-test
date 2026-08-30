@@ -1,5 +1,11 @@
 # Graph Report - .  (2026-07-30)
 
+> ⚠️ **생성 시점 스냅샷 — 현재 구조의 근거로 쓰지 말 것.**
+> 이 리포트는 `/graphify` 스킬이 돌 때만 갱신된다(CLI `graphify`에는 생성 명령이 없다).
+> 위 날짜 이후 `js/learning/` 아래로 도구 4개가 늘었고 여기엔 한 줄도 반영돼 있지 않다.
+> **구조의 단일 소스는 `CLAUDE.md` 구조 개요와 `docs/module-map.md`다.**
+> `graphify-out/`의 나머지(cache·manifest)는 기계별 캐시라 git·컨텍스트에서 제외했다(2026-08-28).
+
 ## Corpus Check
 - 75 files · ~119,803 words
 - Verdict: corpus is large enough that graph structure adds value.

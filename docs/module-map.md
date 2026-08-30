@@ -46,7 +46,7 @@ js/games/<id>/          테스트에 속하지 않는 독립 미니게임(예: n
   screens.js            인트로 · 광고 게이트 · 결과 화면
   index.js               디스크립터: <id>Game(메타) + <id>Screens(화면 배열)
 js/learning/<toolId>/   학습 카테고리 안의 독립 도구 1개 = 폴더 1개(basic-conversation,
-                        elementary-conversation, dialogue). tests/games와 같은 레지스트리
+                        elementary-conversation, dialogue, civil-vocab). tests/games와 같은 레지스트리
                         방식(D-63) — 도구가 여럿이면 학습 목록(`/learning`)에 카드로 나열된다.
                         도구 내부는 챕터(목차) 여러 개로 이뤄질 수 있고, index.js가 챕터별
                         화면을 자동 생성한다. basic-conversation은 챕터 → 단계(D-73),
@@ -77,6 +77,43 @@ js/learning/dialogue/   다중 턴 대화 연습(D-87) — §3-7이 오래 미�
                         해석해 갈래를 고르면 STT 오인식 때 대화가 산으로 간다 — 한 줄기
                         역할극으로 고정). 지나온 턴은 화면 위에 로그(.dialogue-log)로 쌓아
                         앞 맥락을 보여준다 — 문장 단위 도구엔 없는 요구
+js/learning/civil-vocab/  9급 공무원 영단어(D-98) — 어원 중심 어휘 학습. 다른 학습 도구와
+                        모델이 다르다: 문장이 아니라 **단어**가 카드이고, 목표가 8000단어라
+                        데이터를 정적으로 안 들고 온다
+  manifest.js           스테이지 · DAY 메타데이터(개수·제목·미리보기)만 — **유일하게 정적
+                        import되는 데이터 파일**. 화면·카드가 파일을 열지 않고 개수를 쓴다
+  words/day-NNN.js      단어 50개씩. loader.js의 **동적 import로만** 불린다(정적 import는
+                        test/learning.vocab.test.js가 금지). 확장은 이 파일 추가 + manifest 한 줄
+  roots.js              어원 사전(접두사 + 어근). 단어의 roots가 이 id를 가리킨다 — 없는 어근·
+                        죽은 어근 둘 다 테스트가 잡는다(grammarPoints 규칙과 같다)
+  loader.js             DAY 캐시 로더. 단어 id(v003-17)에서 DAY를 계산해 색인 파일을 안 만든다.
+                        매니페스트에 없는 id는 거부(경로가 되는 값이라)
+  session.js            문제지·빈칸 문제·오늘 큐 생성 — 시드 난수·4지선다(오답 보기는 같은
+                        DAY의 다른 뜻에서 자동 생성)·makeCloze(예문에서 표제어를 지운 산출
+                        문제, D-99)·buildDailyQueue(복습 사이에 신규를 끼움)·retrievalMode
+                        (익숙해지면 고르기 → 빈칸). DOM·state를 모르는 순수 함수
+  srs.js                어휘 전용 간격 반복(D-99) — SM-2 변형, 1 → 3 → 8 → 20 → 50 → 125일,
+                        틀리면 간격 0 + ease 감소, **졸업(삭제) 없음**. js/learning/srs.js를
+                        재사용하지 않는 이유가 이것(그쪽은 마지막 칸을 넘기면 지운다).
+                        도구 안에 둔 건 쓰는 곳이 어휘뿐이라서다 — 문장 도구가 같이 쓰면 올린다
+  cloud.js              단어별 일정을 Supabase `vocab_progress`에 동기화(D-100). learning/cloud.js와
+                        달리 **행 단위**다(한 행 = 단어 하나) — 8000단어를 통짜로 올리지 않기
+                        위해서. 응답은 모아서(10개/4초) 업서트하고 화면 이탈·탭 숨김에 flush,
+                        로그인 시엔 서버 행을 전부 받아 병합(최신 응답이 이긴다). 로그인 이벤트
+                        처리는 `makeSyncHandler(cloud)`로 뽑혀 있어(D-104) cloud 클라이언트를
+                        인자로 받는다 — 실제 CDN 클라이언트 대신 가짜 cloud를 넣어
+                        `node --test`로 로그인/로그아웃 시나리오까지 검증한다(**로그아웃하면
+                        `state.vocab.cards`/`days`/`newPerDay`를 지운다** — 안 그러면 같은 탭에서
+                        다른 계정으로 로그인할 때 방금 나간 계정의 진행이 섞여 들어간다)
+  screens.js            목차 + DAY 학습 세션(카드 → 확인 문제 → 빈칸) + 오늘 복습 큐. 데이터가
+                        화면보다 늦게 오므로 골격을 먼저 그리고 채운다 — 로딩 중 이탈은
+                        onLeave 플래그로 버린다. 카드의 뜻·어원은 기본이 **가림**이고
+                        토글(state.vocab.prefs.recall)로 끌 수 있다
+  index.js              디스크립터. 마이페이지 집계용 `summary()` 훅을 갖는다(D-101 — 이 도구의
+                        진행은 state.learning이 아니라 state.vocab에 있어서, 화면이 상태 모양을
+                        직접 아는 대신 도구가 자기 말로 요약해 준다).
+                        **resolveReview는 일부러 두지 않는다**(D-98) — 어휘 복습은
+                        도구를 가로지르는 "오늘 복습"에 섞지 않기로 결정
 js/learning/score.js     발음 유사도 판정 — Levenshtein 기반, DOM을 모른다. 도구 폴더
                         밖에 있어 여러 학습 도구가 공용으로 쓴다(D-78, 원래
                         basic-conversation 안에 있던 걸 두 번째 도구가 생기며 옮김 —
@@ -104,7 +141,11 @@ js/learning/cloud.js     학습 진행률(state.learning)을 Supabase에 동기�
                         밖, 도구가 여럿이어도 공용으로 재사용한다. NumPath 마을(D-55)과 같은
                         패턴(cloud-auth-loader.js로 CDN 동적 import), 코인/마을 같은 보상
                         체계는 없다. initLearningSync()는 main.js 부팅 시 1회, saveLearningProgress()는
-                        각 도구의 screens.js가 진행이 바뀔 때마다 호출
+                        각 도구의 screens.js가 진행이 바뀔 때마다 호출. 로그인 이벤트 처리는
+                        `makeSyncHandler(cloud)`로 뽑혀 있어(D-104, civil-vocab/cloud.js와 같은
+                        이름·같은 이유) 가짜 cloud로 로그인/로그아웃 시나리오를 테스트한다.
+                        **로그아웃하면 `state.learning`을 지운다** — 한 번도 로그인한 적 없는
+                        세션은 지우지 않아서 "로그인 전 진행을 로그인해서 이어 올리기"는 그대로 산다
 ```
 
 **의존 방향**: `tests/*`·`games/*`·`learning/*` → `core/*`. `core`는 테스트도 게임도 학습 콘텐츠도 모른다.

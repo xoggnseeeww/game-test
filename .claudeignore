@@ -1,9 +1,10 @@
-# 조건부 로드 문서 — READ ORDER 조건(회귀 추적 / 과거 설계 배경 / 명시 요청)에
-# 해당할 때만 명시적으로 Read 한다. ignore에 있어도 명시적 Read는 가능하다.
+# 월별 작업 이력 전문(D-105). PROGRESS.md는 **인덱스만** 갖고 있어 가볍지만, 자동 로드
+# 대상은 아니다 — 회귀 추적·과거 배경 확인 때 인덱스에서 달을 고른 뒤 archive/의 그 달
+# 파일 하나만 명시적으로 Read 한다. ignore에 있어도 명시적 Read는 가능하다.
 PROGRESS.md
 archive/
 
-# docs/DECISIONS.md가 300줄/15KB를 넘어 분리된 전체 항목 아카이브(반기 단위).
+# docs/DECISIONS.md가 300줄을 넘어 분리된 전체 항목 아카이브(반기 단위).
 # docs/DECISIONS.md의 인덱스에서 필요한 D-번호를 찾은 뒤에만 명시적으로 Read 한다.
 docs/decisions/
 
@@ -18,3 +19,9 @@ node_modules/
 .DS_Store
 *.png
 *.jpg
+
+# graphify(코드 그래프 CLI)의 출력 디렉터리. GRAPH_REPORT.md는 생성 시점 스냅샷이라
+# 코드가 바뀌면 곧바로 낡는다 — 여기 있는 내용을 현재 구조의 근거로 쓰지 말 것
+# (구조는 CLAUDE.md 구조 개요 · docs/module-map.md가 단일 소스다). cache/는 기계별
+# 해시라 읽을 값이 없다.
+graphify-out/

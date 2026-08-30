@@ -1,6 +1,6 @@
 # numpath-architecture — NumPath: Stack & Clear
 
-> `docs/architecture.md`에서 분리된 NumPath 전용 상세. 15KB 자동 분리 규칙(같은 파일 헤더 참고)에
+> `docs/architecture.md`에서 분리된 NumPath 전용 상세. 자동 분리 규칙(300줄, 같은 파일 헤더 참고)에
 > 따라 2026-07-28(추가 당시 본문이 15KB를 넘겼을 때) 처음부터 여기로 옮겨 실렸다. 모듈맵·라우터
 > 계약·화면 표는 `docs/architecture.md`에 남아 있고, 여긴 게임 흐름·로직 개요만 있다.
 

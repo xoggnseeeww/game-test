@@ -1,6 +1,7 @@
 // 홈 · 심리테스트 목록 · 미니게임 목록.
 import { app, go, onLeave, listTests, listGames, listLearning } from "../core/router.js";
 import { collectDue, countPending } from "../learning/srs.js";
+import { onLearningSync } from "../learning/cloud.js";
 import { el, bindNav } from "../core/dom.js";
 import { adSlotMarkup } from "../core/ads.js";
 import { currentEmail, currentName, isAdmin, logout, onAuthChange, renderSignInButton } from "../core/auth.js";
@@ -216,6 +217,22 @@ export function renderMyPage() {
     }
   }
 
+  // 도구가 스스로 요약한 것(디스크립터의 summary())을 모은다 — 학습 진행이 state.learning에
+  // 있는 도구(문장)와 state.vocab에 있는 도구(어휘)가 섞여 있어서, 화면이 상태 모양을 직접
+  // 알려고 하면 도구가 늘 때마다 여기를 고쳐야 한다(D-101).
+  function toolSummaryMarkup() {
+    return listLearning()
+      .map((tool) => (tool.summary ? tool.summary() : null))
+      .filter(Boolean)
+      .map((sum) => `
+        <div class="mypage-tool">
+          <div class="mypage-tool-name">${sum.emoji || "📘"} ${sum.name}</div>
+          ${sum.lines.map((line) => `<p>${line}</p>`).join("")}
+          <div class="cta"><button class="cta-btn" data-nav="${sum.screen}">${sum.actionLabel}</button></div>
+        </div>`)
+      .join("");
+  }
+
   function renderLearning() {
     const entries = Object.entries(state.learning);
     const total = entries.reduce((sum, [, ch]) => sum + ch.index, 0);
@@ -226,18 +243,21 @@ export function renderMyPage() {
     // "챕터 제목은 안 본다" 원칙과 같다.
     const weakTotal = countPending(state.learning);
     const dueNow = collectDue(state.learning).length;
-    learningEl.innerHTML = entries.length === 0
+    const toolBlocks = toolSummaryMarkup();
+    learningEl.innerHTML = entries.length === 0 && !toolBlocks
       ? `<div class="empty-state">
            <div class="emoji">📚</div>
            <div class="msg">아직 진행한 학습이 없어요</div>
          </div>
          <div class="cta"><button class="cta-btn" id="mypage-go-learning">학습하러 가기</button></div>`
-      : `<p>진행 중인 챕터 ${entries.length}개 · 완료한 문장 총 ${total}개</p>
+      : `${entries.length > 0 ? `<p>진행 중인 챕터 ${entries.length}개 · 완료한 문장 총 ${total}개</p>` : ""}
          ${weakTotal > 0 ? `<p>🔁 복습 목록에 문장 ${weakTotal}개가 있어요${dueNow > 0 ? ` — 그중 ${dueNow}개는 오늘 볼 차례예요.` : " — 오늘 볼 차례는 없어요. 며칠 뒤에 다시 나와요."}</p>` : ""}
          ${dueNow > 0 ? `<div class="cta"><button class="cta-btn" id="mypage-go-review">🔁 오늘 복습 시작하기</button></div>` : ""}
+         ${toolBlocks}
          <p>${currentEmail ? "로그인 상태라 진행 상황이 계정에 저장돼요." : "로그인하면 진행 상황이 기기를 바꿔도 이어져요."}</p>
          <div class="cta"><button class="cta-btn" id="mypage-go-learning">이어하기</button></div>`;
-    learningEl.querySelector("#mypage-go-learning").addEventListener("click", () => go("learning-list"));
+    bindNav(learningEl);   // 도구 요약 블록의 data-nav 버튼
+    learningEl.querySelector("#mypage-go-learning")?.addEventListener("click", () => go("learning-list"));
     // D-79에서 "복습 진입로가 그 챕터 완료 화면에만 있어 놓치면 사라진다"고 짚었던 문제의
     // 실제 해결(D-92) — 이제 도구·챕터와 무관하게 여기서 바로 들어간다.
     learningEl.querySelector("#mypage-go-review")?.addEventListener("click", () => go("learning-review"));
@@ -251,6 +271,9 @@ export function renderMyPage() {
     renderAccount();
     renderLearning();
   }));
+  // 로그인 동기화는 화면이 그려진 **뒤에** 끝난다 — 그때 다시 그리지 않으면 방금 로그인한
+  // 사용자에게 계속 "아직 진행한 학습이 없어요"가 보인다(D-101).
+  onLeave(onLearningSync(renderLearning));
 }
 
 // 실제로 저장·처리하는 것만 적는다 — 아직 안 하는 걸(계정, 회원 데이터 등) 미리 적어두면
@@ -265,7 +288,7 @@ export function renderPrivacy() {
         <div class="back-title">개인정보처리방침</div>
       </div>
       <div class="legal-block">
-        <p class="legal-updated">시행일자: 2026년 8월 11일</p>
+        <p class="legal-updated">시행일자: 2026년 8월 30일</p>
 
         <h3>일반 이용자는 회원가입이 없습니다</h3>
         <p>과몰입구역의 테스트·게임 이용에는 로그인·회원가입이 필요 없습니다. 이름, 전화번호 등
@@ -286,6 +309,15 @@ export function renderPrivacy() {
         가능하도록 접근이 제한돼 있습니다. 로그인하지 않으면 이 저장은 일어나지 않고, 진행
         상황은 새로고침하면 사라집니다.</p>
 
+        <h3>영단어 학습 일정 저장 (로그인 시에만)</h3>
+        <p>로그인한 상태로 9급 공무원 영단어를 공부하면, 단어별로 <b>다음에 언제 다시 볼지</b>가
+        계정에 연결돼 서버(Supabase)에 저장됩니다 — 간격을 두고 다시 보여주기 위해 필요한
+        정보입니다. 저장되는 값은 단어 번호와 일정 계산에 쓰는 숫자(다음 복습 시각, 간격,
+        맞힌 횟수, 틀린 횟수)뿐이고, 입력한 답이나 오답 내용 자체는 저장하지 않습니다.
+        여기에 학습자가 고른 <b>하루 목표 단어 수</b>가 함께 저장됩니다.
+        위 학습 진행률과 마찬가지로 본인 계정으로만 조회·수정 가능하도록 접근이 제한돼
+        있습니다. 로그인하지 않으면 이 저장은 일어나지 않고, 새로고침하면 사라집니다.</p>
+
         <h3>테스트·게임의 답과 결과</h3>
         <p>심리테스트(부부 관계 성향 체크 포함)와 미니게임에서 고른 답, 그리고 계산된
         결과는 <b>이용 중인 기기의 메모리에만</b> 있습니다. 서버로 전송하거나 저장하지
@@ -293,7 +325,8 @@ export function renderPrivacy() {
         기기에서 직접 만들어지는 것이고, 그 과정에서도 답한 내용이 전송되지 않습니다.</p>
 
         <h3>그 외 저장하는 것</h3>
-        <p>위에 적은 것(로그인 이메일, 로그인 시의 학습 진행률) 외에는 없습니다.</p>
+        <p>위에 적은 것(로그인 이메일, 로그인 시의 학습 진행률과 영단어 학습 일정) 외에는
+        없습니다.</p>
 
         <h3>광고</h3>
         <p>이 사이트는 카카오(다음) AdFit을 통해 광고를 게재합니다. 광고가 표시되는

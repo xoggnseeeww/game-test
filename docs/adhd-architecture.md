@@ -1,6 +1,6 @@
 # adhd-architecture — 성인 ADHD 성향 체크
 
-> `docs/architecture.md`에서 분리된 ADHD 전용 상세. 15KB 자동 분리 규칙(같은 파일 헤더 참고)에
+> `docs/architecture.md`에서 분리된 ADHD 전용 상세. 자동 분리 규칙(300줄, 같은 파일 헤더 참고)에
 > 따라 2026-07-28(NumPath 추가로 본문이 15KB를 넘겼을 때) 옮겨졌다. 여긴 ADHD 흐름·채점
 > 파이프라인만 있다 — 라우터 계약은 `docs/architecture.md`, 모듈맵은 `docs/module-map.md`,
 > 화면 표는 `docs/screen-map.md`(뒤 둘은 D-88에서 architecture.md에서 또 한 번 분리됐다).

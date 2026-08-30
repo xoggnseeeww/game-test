@@ -2280,3 +2280,194 @@ button.meta-chip {
   font-size: 12px;
   font-weight: 700;
 }
+
+/* ── 9급 공무원 영단어(js/learning/civil-vocab) ───────────────────────────────
+   문장 도구와 달리 카드 하나에 "단어 + 어원 분해 + 예문"이 함께 올라간다. 그래서 색이 있는
+   .cover 아래에 흰 바탕의 상세 블록(.vocab-detail)을 붙여 읽을 것과 외울 것을 분리한다. */
+.vocab-word {
+  font-size: 34px;
+  font-weight: 900;
+  letter-spacing: -.5px;
+  margin: 6px 0 2px;
+}
+.vocab-detail {
+  margin: 14px 20px 0;
+  padding: 16px 16px 14px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 10px rgba(23,23,26,.05);
+}
+
+/* 어근 칩 — 이 도구의 핵심 장치라 카드에서 가장 먼저 눈에 들어와야 한다. */
+.vocab-roots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.root-chip {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  border-radius: 999px;
+  padding: 5px 11px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.root-chip b { font-weight: 900; margin-right: 4px; }
+
+.vocab-hint {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.6;
+  color: #3A3844;
+  margin: 0 0 8px;
+}
+.vocab-sound {
+  font-size: 13px;
+  color: #6B6875;
+  line-height: 1.6;
+  margin: 0 0 8px;
+}
+.vocab-ex {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #17171A;
+  margin: 0 0 8px;
+  padding-top: 8px;
+  border-top: 1px solid #EFEDE8;
+}
+.vocab-ex span {
+  display: block;
+  font-size: 13px;
+  color: #75727B;
+  margin-top: 2px;
+}
+.vocab-syn {
+  font-size: 12px;
+  font-weight: 700;
+  color: #8A8794;
+  margin: 0;
+}
+
+/* 4지선다 보기 — 고른 뒤 정답/오답을 테두리 색으로만 알린다(듣기 퀴즈 .listen-choice와 같은 톤). */
+.vocab-choice { text-align: left; }
+.vocab-choice:disabled { opacity: 1; }
+.vocab-choice.choice-ok { box-shadow: inset 0 0 0 2px #1FAE6A; }
+.vocab-choice.choice-no { box-shadow: inset 0 0 0 2px #C8384F; }
+
+.vocab-wrong-list {
+  margin: 0 20px 12px;
+  padding: 12px 14px;
+  background: var(--accent-soft);
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.7;
+  color: var(--accent-ink);
+}
+
+/* 뜻 지연 노출(D-99) — 앞면에서는 뜻 자리에 안내만 둔다. 자리를 비우면 카드가 훅 줄었다
+   늘어나 시선이 튀어서, 같은 높이를 유지하고 흐리게만 둔다. */
+.cover-ko.vocab-veil {
+  opacity: .6;
+  font-weight: 700;
+}
+
+/* 자가평가 두 버튼(😅 헷갈려요 / 👍 알겠어요). .cta-btn은 width:100%라 flex 안에서 flex:1로
+   눌러줘야 나란히 앉는다(.learning-listen과 같은 처리). */
+.vocab-grade-row {
+  display: flex;
+  gap: 10px;
+  padding: 0 20px;
+  margin-top: 16px;
+}
+.vocab-grade-row .cta-btn { flex: 1; width: auto; }
+.cta-btn.vocab-grade-again {
+  background: #F1EFEA;
+  color: #75727B;
+  box-shadow: none;
+}
+
+/* 빈칸 채우기(D-99) */
+.vocab-cloze-ko { font-size: 22px; }
+.vocab-cloze-sentence {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.7;
+  color: #17171A;
+  margin: 0 0 8px;
+}
+.vocab-shape {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 3px;
+  color: var(--accent-ink);
+  margin: 8px 0 0;
+}
+.vocab-input-row {
+  display: flex;
+  gap: 8px;
+  padding: 0 20px;
+  margin-top: 14px;
+}
+.vocab-input {
+  flex: 1;
+  min-width: 0;
+  border: 2px solid #E5E2DC;
+  border-radius: 14px;
+  padding: 14px 16px;
+  font-size: 17px;
+  font-weight: 700;
+  font-family: inherit;
+  background: #fff;
+  color: #17171A;
+}
+.vocab-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.vocab-input:disabled { background: #F7F5F1; color: #8A8794; }
+.vocab-input-row .cta-btn { width: auto; flex: 0 0 auto; padding-left: 22px; padding-right: 22px; }
+
+/* 오늘 학습 화면의 안내 줄(D-101) — "지금 뭘 하고 있는지"와 "다음엔 언제 나오는지"를
+   카드마다 한 줄로 알린다. 사용자가 "이 페이지가 뭘 위한 건지 애매하다"고 지적한 자리. */
+.vocab-plan {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #8A8794;
+  margin: 8px 20px 0;
+  line-height: 1.6;
+}
+.vocab-item-badge {
+  display: block;
+  width: fit-content;
+  margin: 10px auto 0;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+}
+.vocab-item-badge.is-new { background: #E4F1E8; color: #1B8F5C; }
+.vocab-item-badge.is-review { background: var(--accent-soft); color: var(--accent-ink); }
+
+/* 마이페이지의 도구별 요약 블록(D-101) */
+.mypage-tool {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #EFEDE8;
+}
+.mypage-tool-name {
+  font-size: 14px;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+/* 하루 목표 고르기(D-102) — .pref-toggle을 그대로 쓰되 네 칸으로 나눈다. */
+.vocab-goal-row {
+  display: flex;
+  gap: 8px;
+  padding: 0 20px;
+  margin-top: 4px;
+}
+.vocab-goal-row .pref-toggle { font-size: 14px; padding: 11px 8px; }
