@@ -8,6 +8,13 @@ import {
   BEHAVIOR_ITEMS,
   ATTACH_ITEMS,
   CONFLICT_ITEMS,
+  LOVE_ITEMS,
+  LOVE_AXES,
+  LOVE_LABELS,
+  LOVE_AXIS_MEANING,
+  LOVE_TYPES,
+  DOS_LOVE,
+  DONTS_LOVE,
   ANCHOR_ITEMS,
   ANCHOR_CONCEPTS,
   QC_ITEMS,
@@ -19,7 +26,11 @@ import {
   COUPLE_TYPES,
   COUPLE_SLUG_TO_KEY,
   ATTACH_TYPES,
+  ATTACH_DEEP,
+  BEHAVIOR_AXIS_MEANING,
+  BEHAVIOR_DEEP,
   CONFLICT_STYLES,
+  CS5_SHADES,
   ROLE_NARRATIVE,
   CHILD_NARRATIVE,
   DOS_BEHAVIOR,
@@ -27,8 +38,13 @@ import {
   DONTS_BEHAVIOR,
   DONTS_ATTACH,
   CONFLICT_SCRIPTS,
+  READING_TEXT,
+  ROLE_IDENTITY_NOTE,
 } from "../js/tests/couple/data.js";
 import {
+  SELF_READINGS,
+  selfReadings,
+  readingLevel,
   REVERSE_CODES,
   FACTOR_ITEMS,
   BEHAVIOR_AXES,
@@ -43,6 +59,7 @@ import {
   resolveBehavior,
   resolveAttachment,
   resolveConflict,
+  resolveLoveLanguage,
   computeCouple,
 } from "../js/tests/couple/score.js";
 import { assembleQuestionnaire, NOTICE_POSITION } from "../js/tests/couple/assemble.js";
@@ -79,12 +96,23 @@ test("문항 수가 모듈 합계와 일치한다", () => {
   assert.equal(BEHAVIOR_ITEMS.length, 16);
   assert.equal(ATTACH_ITEMS.length, 8);
   assert.equal(CONFLICT_ITEMS.length, 6);
+  // 애정 표현 5유형(D-111, D-112) — 유형당 3문항(정방향 2 + 역채점 1).
+  assert.equal(LOVE_ITEMS.length, LOVE_AXES.length * 3);
   // 앵커는 개념 3개 × 2문항. 서비스 차별점인 인지 격차를 단일 문항에 걸어두지 않는다.
   assert.equal(ANCHOR_ITEMS.length, ANCHOR_CONCEPTS.length * 2);
   assert.equal(QC_ITEMS.length, 2);
   assert.equal(ROLE_ITEMS.length, 6);
   assert.equal(CHILD_ITEMS.length, 5);
-  assert.equal(ITEM_TOTAL, 49);
+  assert.equal(ITEM_TOTAL, 64);
+});
+
+test("애정 표현 유형은 유형당 정방향 2 + 역채점 1로 균등하다", () => {
+  for (const ax of LOVE_AXES) {
+    assert.equal(FACTOR_ITEMS[ax].length, 3, `${ax} 문항 수`);
+    const codes = FACTOR_ITEMS[ax];
+    const reverseCount = codes.filter((c) => REVERSE_CODES.has(c)).length;
+    assert.equal(reverseCount, 1, `${ax}는 정방향 2 + 역채점 1이어야 한다`);
+  }
 });
 
 test("앵커는 개념마다 정확히 2문항이고 역채점이 섞이지 않는다", () => {
@@ -107,7 +135,7 @@ test("요인마다 문항 수가 균등하다", () => {
 });
 
 test("역채점 코드가 전부 실제 문항에 있고, 요인마다 최소 하나씩 있다", () => {
-  const all = [...BEHAVIOR_ITEMS, ...ATTACH_ITEMS, ...CONFLICT_ITEMS, ...ROLE_ITEMS].map((i) => i.code);
+  const all = [...BEHAVIOR_ITEMS, ...ATTACH_ITEMS, ...CONFLICT_ITEMS, ...LOVE_ITEMS, ...ROLE_ITEMS].map((i) => i.code);
   for (const code of REVERSE_CODES) assert.ok(all.includes(code), `${code}는 문항 뱅크에 없다`);
   for (const [factor, codes] of Object.entries(FACTOR_ITEMS)) {
     assert.ok(codes.some((c) => REVERSE_CODES.has(c)), `${factor}에 역채점 문항이 없다`);
@@ -190,8 +218,11 @@ test("앵커는 후반부에 흩어져 배치된다", () => {
     const items = assembleQuestionnaire(SETUP);
     const at = items.map((it, i) => (it.factor === "AN" ? i + 1 : null)).filter(Boolean);
     assert.equal(at.length, ANCHOR_ITEMS.length);
-    // 후반부(35번 이후) 구간 안에 전부 들어간다
-    assert.ok(at[0] >= 35, `앵커가 너무 앞(${at[0]}번째)에서 시작한다`);
+    // 후반부(마지막 15칸) 안에 전부 들어간다. NOTICE_POSITION이 아니라 ITEM_TOTAL로
+    // 직접 계산한다 — NOTICE_POSITION은 assemble.js 안에서 파생되는 값이라, 그
+    // 파생 로직 자체가 깨지면(예: ITEM_TOTAL 대신 절대 숫자로 되돌아가면) NOTICE_POSITION과
+    // 비교하는 검사는 같은 버그를 공유해 못 잡는다(2026-08-11 실제로 겪음 — 되돌려서 확인).
+    assert.ok(at[0] >= ITEM_TOTAL - 15 + 1, `앵커가 너무 앞(${at[0]}번째)에서 시작한다`);
     assert.ok(at[at.length - 1] <= items.length, `앵커가 문항지를 벗어났다(${at[at.length - 1]})`);
     // 앵커끼리 붙지 않는다(사이에 일반 문항 최소 1개)
     for (let i = 1; i < at.length; i++) {
@@ -428,7 +459,106 @@ test("절단점 바로 옆 원점수는 경계로 표시된다", () => {
   }
 });
 
+// 절충형(CS5) 안을 다시 나누는 서술(D-114). 5000명 시뮬레이션에서 CS5 하나가 54%를
+// 가져가 절반 넘는 사람이 같은 문단을 보고 있었다 — 그 안이 다섯 조합으로 고르게
+// 갈려 있다는 걸 확인하고 서술만 나눴다.
+// 3문항 척도라 원점수는 3~15만 나온다. 수준 이름(low/mid/high)을 가정하지 않고 이
+// 범위를 통째로 돌려서 CS5로 오는 shape을 모은다 — 절단점을 옮기든 스타일 배정
+// 규칙을 바꾸든, 서술 없는 조합이 생기면 여기서 걸린다(화면에서는 그 문단만 조용히
+// 사라져서 눈으로는 알아채기 어렵다).
+function cs5ShapesFromScoring() {
+  const shapes = new Set();
+  for (let sc = 3; sc <= 15; sc++) {
+    for (let oc = 3; oc <= 15; oc++) {
+      const r = resolveConflict(sc, oc);
+      if (r.style === "CS5") shapes.add(r.shape);
+    }
+  }
+  return [...shapes];
+}
+
+test("절충형으로 오는 조합에 빠짐없이 서술이 있고, 남는 서술도 없다", () => {
+  const cs5Shapes = cs5ShapesFromScoring();
+  // 아홉 조합 중 네 모서리는 CS1~CS4로 빠지고 나머지가 절충형이다.
+  assert.equal(cs5Shapes.length, 5, "절충형으로 오는 조합 수가 달라졌다");
+  assert.deepEqual(
+    Object.keys(CS5_SHADES).slice().sort(),
+    cs5Shapes.slice().sort(),
+    "절충형 조합과 서술 목록이 어긋난다"
+  );
+});
+
+test("shape은 두 축의 수준 조합 그대로다", () => {
+  assert.equal(resolveConflict(3, 15).shape, "low-high");
+  assert.equal(resolveConflict(9, 9).shape, "mid-mid");
+  assert.equal(resolveConflict(15, 9).shape, "high-mid");
+});
+
+test("절충형 서술 다섯이 서로 다르고, 새 유형처럼 읽히지 않는다", () => {
+  const texts = new Set();
+  for (const [shape, shade] of Object.entries(CS5_SHADES)) {
+    assert.ok(shade.lean?.length > 1, `${shape}의 기울기 라벨`);
+    assert.ok(shade.text?.length >= 60, `${shape}의 서술이 너무 짧다: ${shade.text}`);
+    // `lean`은 기울기를 가리키는 말이지 유형 이름이 아니다 — "~형"으로 끝나면
+    // 화면에서 절충형 옆에 새 유형이 하나 더 생긴 것처럼 읽힌다(§8.2).
+    assert.ok(!/형$/.test(shade.lean), `${shape}의 기울기 라벨이 유형명처럼 끝난다: ${shade.lean}`);
+    texts.add(shade.text);
+  }
+  // 다섯을 나눠놓고 문구가 겹치면 나눈 의미가 없다.
+  assert.equal(texts.size, Object.keys(CS5_SHADES).length, "절충형 서술이 서로 겹친다");
+});
+
+// ---------------------------------------------------------------- 애정 표현 5유형 (D-111)
+
+test("애정 표현 5유형도 성향과 같은 확신도 규칙을 따른다", () => {
+  // resolveTopFactor()를 공유하므로 로직은 동일하고, 유형당 2문항이라 칸 크기(step)만 다르다.
+  const step = stepOf(3); // 100 / (4*3) ≈ 8.33
+  const base = { LW: 50, LT: 50, LG: 50, LS: 50, LP: 50 };
+  assert.equal(resolveLoveLanguage({ ...base, LW: 50 + step }).confidence, "edge");
+  assert.equal(resolveLoveLanguage({ ...base, LW: 50 + step * 2 }).confidence, "moderate");
+  assert.equal(resolveLoveLanguage({ ...base, LW: 50 + step * 3 }).confidence, "clear");
+  assert.equal(resolveLoveLanguage(base).confidence, "edge");
+});
+
+test("애정 표현 유형의 동점도 시드에 따라 갈리되 같은 시드면 항상 같다", () => {
+  const tied = { LW: 60, LT: 60, LG: 60, LS: 60, LP: 60 };
+  for (const seed of [0, 1, 12345, 987654321]) {
+    assert.equal(resolveLoveLanguage(tied, seed).primary, resolveLoveLanguage(tied, seed).primary);
+  }
+  const winners = new Set();
+  for (let seed = 0; seed < 400; seed++) winners.add(resolveLoveLanguage(tied, seed).primary);
+  assert.deepEqual([...winners].sort(), [...LOVE_AXES].sort(), "동점이 특정 유형으로만 쏠린다");
+});
+
+test("애정 표현 유형은 성향·애착·갈등과 곱해지지 않는다 (조합 폭발 방지)", () => {
+  // typeKey(COUPLE_TYPES 조회 키)에 love가 섞이면 16×5=80개를 손으로 써야 한다 — 그럴
+  // 여력이 없다는 게 D-111의 설계 전제였으므로, 결과 객체가 그 전제를 지키는지 확인한다.
+  const r = computeCouple(variedAnswers(), { elapsedMs: 400000, setup: SETUP });
+  assert.equal(r.typeKey, `${r.behavior.primary}-${r.attachment.key}`, "typeKey에 love가 섞이면 안 된다");
+  assert.ok(LOVE_AXES.includes(r.love.primary), "love.primary는 LOVE_AXES 중 하나여야 한다");
+});
+
 // ---------------------------------------------------------------- 결과 콘텐츠
+
+// 사용자에게 그대로 렌더되는 문구 전부. 금지어 검사 두 개가 같은 목록을 봐야 한다 —
+// 목록을 검사마다 따로 두면 새 문구 뱅크를 한쪽에만 추가하는 실수가 난다.
+function userFacingCopy() {
+  return [
+    ...Object.values(COUPLE_TYPES).flatMap((t) => [t.name, t.desc]),
+    ...Object.values(ATTACH_TYPES).flatMap((t) => [t.name, t.desc]),
+    ...Object.values(CONFLICT_STYLES).flatMap((t) => [t.name, t.desc, t.crisis, t.repair, t.avoid]),
+    ...Object.values(CS5_SHADES).flatMap((s) => [s.lean, s.text]),
+    ...Object.values(BEHAVIOR_AXIS_MEANING),
+    ...Object.values(BEHAVIOR_DEEP).flatMap((d) => [d.short, ...DEEP_PARTS.map((p) => d[p])]),
+    ...Object.values(ATTACH_DEEP).flatMap((d) => DEEP_PARTS.map((p) => d[p])),
+    ...Object.values(READING_TEXT).flatMap((t) => [t.label, t.desc, t.low, t.mid, t.high, t.script]),
+    ...Object.values(ROLE_IDENTITY_NOTE),
+    ...Object.values(LOVE_AXIS_MEANING),
+    ...Object.values(LOVE_TYPES).flatMap((t) => [t.name, t.desc, t.avoid, t.repair]),
+    ...Object.values(DOS_LOVE),
+    ...Object.values(DONTS_LOVE),
+  ];
+}
 
 test("16유형 표와 슬러그가 서로 빠짐없이 대응한다", () => {
   const keys = Object.keys(COUPLE_TYPES);
@@ -446,12 +576,85 @@ test("사용자에게 보이는 문구에 원 척도 유형명이 없다", () =>
   // §2.1 B등급 방침("유형 코드 전면 재작성")과 §8.5(자기비난 유발 표현 금지)를 함께 지킨다.
   // 원 척도의 표준 번역어를 그대로 쓰면 명칭만 바꾼 껍데기가 된다.
   const banned = ["집착형", "두려움형", "회피형", "안정형 애착", "경쟁형", "순응형", "협력형", "타협형"];
-  const surfaces = [
-    ...Object.values(COUPLE_TYPES).flatMap((t) => [t.name, t.desc]),
-    ...Object.values(ATTACH_TYPES).flatMap((t) => [t.name, t.desc]),
-    ...Object.values(CONFLICT_STYLES).flatMap((t) => [t.name, t.desc]),
-  ];
-  for (const text of surfaces) {
+  for (const text of userFacingCopy()) {
+    for (const w of banned) assert.ok(!text.includes(w), `"${w}"가 노출 문구에 있다: ${text}`);
+  }
+});
+
+// 심화 서술(2026-08-11) — 점수 막대 밑 설명이 부실하다는 지적으로 추가한 문구 뱅크.
+// `avoid`(피해야 할 대화법)는 같은 날 후속 질문에 답해 추가했다. 조각이 하나라도 비면
+// 화면에 undefined가 그대로 찍히거나 섹션이 빈 채로 남는다.
+const DEEP_PARTS = ["nature", "thought", "crisis", "talk", "avoid"];
+
+test("네 성향·애착 유형에 심화 서술 다섯 조각이 빠짐없이 있다", () => {
+  for (const ax of BEHAVIOR_AXES) {
+    assert.ok(BEHAVIOR_AXIS_MEANING[ax]?.length > 5, `${ax} 축 설명`);
+    const deep = BEHAVIOR_DEEP[ax];
+    assert.ok(deep, `${ax} 심화 서술`);
+    // 두 성향이 가깝게 나온 경우 2위 몫으로 한 줄 붙는다 — 없으면 그 문장이 반쯤 빈다.
+    assert.ok(deep.short?.length > 10, `${ax} 요약 한 줄`);
+    for (const part of DEEP_PARTS) {
+      // 길이 하한이 있는 이유: 자리만 채운 한 문장짜리 값은 있으나 마나라, 있음 검사만
+      // 하면 이번에 지적받은 상태(설명이 부실함)로 조용히 되돌아갈 수 있다.
+      assert.ok(deep[part]?.length >= 60, `${ax}의 ${part}가 너무 짧다: ${deep[part]}`);
+    }
+  }
+  for (const key of Object.keys(ATTACH_TYPES)) {
+    const deep = ATTACH_DEEP[key];
+    assert.ok(deep, `${key} 심화 서술`);
+    for (const part of DEEP_PARTS) {
+      assert.ok(deep[part]?.length >= 60, `${key}의 ${part}가 너무 짧다: ${deep[part]}`);
+    }
+  }
+  for (const [key, style] of Object.entries(CONFLICT_STYLES)) {
+    assert.ok(style.crisis?.length >= 60, `${key}의 다툼이 커질 때 서술`);
+    assert.ok(style.repair?.length >= 60, `${key}의 다투고 난 뒤 서술`);
+    assert.ok(style.avoid?.length >= 60, `${key}의 피해야 할 대화법 서술`);
+  }
+});
+
+test("피해야 할 대화법은 구체적인 말을 인용부호로 짚는다", () => {
+  // "짜증 내지 마세요" 식의 막연한 금지는 자기비난만 유발하고 뭘 조심해야 할지 모른다 —
+  // 실제로 조심할 문장을 인용부호로 짚어야 쓸모가 있다는 서술 규칙을 코드로도 확인한다.
+  for (const [ax, deep] of Object.entries(BEHAVIOR_DEEP)) {
+    assert.ok(deep.avoid.includes("\""), `${ax}의 avoid에 인용된 말이 없다`);
+  }
+  for (const [key, deep] of Object.entries(ATTACH_DEEP)) {
+    assert.ok(deep.avoid.includes("\""), `${key}의 avoid에 인용된 말이 없다`);
+  }
+  for (const [key, style] of Object.entries(CONFLICT_STYLES)) {
+    assert.ok(style.avoid.includes("\""), `${key}의 avoid에 인용된 말이 없다`);
+  }
+});
+
+// 애정 표현 5유형(D-111) 문구 뱅크. LOVE_AXES가 단일 소스라 유형이 늘거나 줄어도
+// 이 검사는 그대로 따라간다.
+test("애정 표현 5유형에 결과 문구가 빠짐없이 있다", () => {
+  for (const ax of LOVE_AXES) {
+    assert.ok(LOVE_LABELS[ax]?.length > 1, `${ax} 막대 라벨`);
+    assert.ok(LOVE_AXIS_MEANING[ax]?.length > 5, `${ax} 축 설명`);
+    const t = LOVE_TYPES[ax];
+    assert.ok(t, `${ax} 유형 정의`);
+    assert.ok(t.emoji, `${ax} 이모지`);
+    assert.ok(t.name?.length > 1, `${ax} 유형명`);
+    assert.ok(t.desc?.length >= 40, `${ax}의 desc가 너무 짧다: ${t.desc}`);
+    assert.ok(t.avoid?.length >= 40, `${ax}의 avoid가 너무 짧다: ${t.avoid}`);
+    assert.ok(t.repair?.length >= 40, `${ax}의 repair가 너무 짧다: ${t.repair}`);
+    assert.ok(DOS_LOVE[ax]?.length > 5, `${ax} Do 문구`);
+    assert.ok(DONTS_LOVE[ax]?.length > 5, `${ax} Don't 문구`);
+  }
+});
+
+test("애정 표현 유형의 avoid·repair도 구체적인 말을 인용부호로 짚는다", () => {
+  for (const [ax, t] of Object.entries(LOVE_TYPES)) {
+    assert.ok(t.avoid.includes("\"") || t.avoid.includes("'"), `${ax}의 avoid에 인용된 말이 없다`);
+  }
+});
+
+test("심화 서술에 진단처럼 읽히는 표현이 없다 (§2.2 · D-3)", () => {
+  // "성향 체크"까지만 간다. 임상 용어가 한 번 섞이면 결과 전체가 진단서처럼 읽힌다.
+  const banned = ["진단", "장애", "증상", "치료", "환자", "정상", "비정상"];
+  for (const text of userFacingCopy()) {
     for (const w of banned) assert.ok(!text.includes(w), `"${w}"가 노출 문구에 있다: ${text}`);
   }
 });
@@ -480,11 +683,15 @@ test("결과가 유형 라벨·연속 프로필·확신도를 항상 함께 낸�
   for (const factor of Object.keys(FACTOR_ITEMS)) assert.equal(typeof r.norm[factor], "number");
   assert.ok(["clear", "moderate", "edge"].includes(r.behavior.confidence));
   assert.ok(["clear", "edge"].includes(r.attachment.confidence));
+  assert.ok(["clear", "moderate", "edge"].includes(r.love.confidence));
+  assert.ok(LOVE_TYPES[r.love.primary], `${r.love.primary}가 애정 표현 5유형 표에 없다`);
   assert.equal(r.validity.verdict, "ok");
-  // 부부 비교에 쓰는 값은 양쪽 문장이 같은 것만 담는다 — R1~R4가 새면 안 된다.
-  // 앵커는 개별 응답값이 아니라 개념 점수로만 넘어간다.
-  assert.deepEqual(Object.keys(r.comparable).sort(), ["K1", "K2", "K3", "K4", "K5", "R5", "R6"]);
   assert.deepEqual(Object.keys(r.anchors).sort(), ["AN1", "AN2", "AN3"]);
+  // 부부 비교용 문항값 묶음(comparable)은 결합 리포트와 함께 사라졌다(D-108).
+  // 내보낼 곳이 없는 값이 결과 객체에 남으면 다음 사람이 매번 용도를 다시 추적한다.
+  assert.equal(r.comparable, undefined, "결합 리포트용 값이 결과에 남아 있다");
+  // 대신 같은 문항들이 개인용 구간 값으로 나온다.
+  assert.equal(r.readings.length, SELF_READINGS.length);
 });
 
 // 진행 상태를 "답이 다 찼는가"로 세면, 마지막 문항에서 뒤로 간 순간에도 답은 전부 차 있어서
@@ -510,4 +717,68 @@ test("결과 화면 guard는 답 개수가 아니라 완료 플래그를 본다"
   // 완료했더라도 문항지가 없으면(=새로고침으로 state가 날아간 뒤) 결과를 그릴 수 없다.
   state.couple.items = null;
   assert.equal(coupleReady(), false);
+});
+
+// ---------------------------------------------------------------- 개인 읽을거리 (D-108)
+
+test("답한 문항은 전부 결과 어딘가에서 쓰인다", () => {
+  // D-108로 결합 리포트를 없애면서 앵커·역할·자녀 문항이 통째로 죽은 문항이 될 뻔했다.
+  // "답은 했는데 결과엔 안 나오는 문항"이 늘어나는 것이 결과가 부실해지는 가장 큰 원인이라,
+  // 그 상태로 되돌아가는 변경을 여기서 막는다.
+  const used = new Set(SELF_READINGS.flatMap((r) => r.codes));
+  used.add("R3"); // 막대가 아니라 덧말(ROLE_IDENTITY_NOTE)로 쓰인다
+  for (const code of Object.keys(FACTOR_ITEMS).flatMap((f) => FACTOR_ITEMS[f])) used.add(code);
+  const scored = [...ANCHOR_ITEMS, ...ROLE_ITEMS, ...CHILD_ITEMS].map((i) => i.code);
+  for (const code of scored) assert.ok(used.has(code), `${code}가 결과 어디에도 안 쓰인다`);
+  // QC 문항만 예외 — 응답 품질 검사에만 쓰이고 결과에 나오지 않는 게 설계다.
+});
+
+test("자기보고 항목마다 구간 서술 세 개와 대화 문장이 있다", () => {
+  for (const r of SELF_READINGS) {
+    const t = READING_TEXT[r.key];
+    assert.ok(t, `${r.key} 문구`);
+    assert.ok(t.label?.length > 2 && t.desc?.length > 10, `${r.key} 라벨·설명`);
+    for (const level of ["low", "mid", "high"]) {
+      assert.ok(t[level]?.length >= 60, `${r.key}의 ${level} 서술이 너무 짧다: ${t[level]}`);
+    }
+    // watch 방향으로 나왔을 때만 붙지만, 없으면 그 순간 화면이 비어버린다.
+    assert.ok(t.script?.includes("\""), `${r.key}의 대화 문장`);
+    assert.ok(["low", "high"].includes(r.watch), `${r.key}의 watch 방향`);
+  }
+});
+
+test("구간 경계는 3.0을 어느 쪽으로도 읽지 않는다", () => {
+  assert.equal(readingLevel(1), "low");
+  assert.equal(readingLevel(2.5), "low");
+  assert.equal(readingLevel(2.6), "mid");
+  assert.equal(readingLevel(3), "mid");
+  assert.equal(readingLevel(3.4), "mid");
+  assert.equal(readingLevel(3.5), "high");
+  assert.equal(readingLevel(5), "high");
+});
+
+test("역채점 문항(R6)은 방향을 뒤집어 읽는다", () => {
+  // R6 문장은 "바꾸는 것은 어렵다"이다. 뒤집지 않으면 "바꿀 여지가 크다"는 라벨에
+  // 정반대 값이 실려, 화면 문구와 점수가 서로 반대말을 하게 된다.
+  const rigid = selfReadings(variedAnswers({ R6: 5 })).find((x) => x.key === "ROLE_FLEX");
+  const flexible = selfReadings(variedAnswers({ R6: 1 })).find((x) => x.key === "ROLE_FLEX");
+  assert.equal(rigid.level, "low");
+  assert.equal(flexible.level, "high");
+});
+
+test("눈여겨볼 방향으로 나온 항목만 watched로 표시된다", () => {
+  // 부담(AN2)은 높을 때, 알아줌(AN1)은 낮을 때가 눈여겨볼 방향이다. 전부 붙이면
+  // 대화 문장이 배경음이 되어 정작 지금 필요한 한 줄이 묻힌다.
+  const heavy = selfReadings(variedAnswers({ AN2a: 5, AN2b: 5, AN1a: 5, AN1b: 5 }));
+  assert.equal(heavy.find((x) => x.key === "AN2").watched, true);
+  assert.equal(heavy.find((x) => x.key === "AN1").watched, false);
+  const unseen = selfReadings(variedAnswers({ AN1a: 1, AN1b: 1 }));
+  assert.equal(unseen.find((x) => x.key === "AN1").watched, true);
+});
+
+test("같은 개념 두 문항이 크게 엇갈리면 단정하지 않는다", () => {
+  const shaky = selfReadings(variedAnswers({ AN3a: 1, AN3b: 5 })).find((x) => x.key === "AN3");
+  assert.equal(shaky.consistent, false);
+  const steady = selfReadings(variedAnswers({ AN3a: 4, AN3b: 4 })).find((x) => x.key === "AN3");
+  assert.equal(steady.consistent, true);
 });

@@ -1,11 +1,14 @@
 // 부부 관계 성향 체크의 개인 채점 (기획서 §5). DOM을 모르는 순수 함수만 둔다 —
 // 그래야 node --test로 브라우저 없이 채점 불변식을 검증할 수 있다.
-import { BEHAVIOR_ITEMS, ATTACH_ITEMS, CONFLICT_ITEMS, ANCHOR_CONCEPTS } from "./data.js";
+import { BEHAVIOR_ITEMS, ATTACH_ITEMS, CONFLICT_ITEMS, LOVE_ITEMS, LOVE_AXES, ANCHOR_CONCEPTS } from "./data.js";
 
 // 역채점 대상(§4). 모든 문항이 같은 방향이면 읽지 않고 한쪽으로만 찍는 응답을
 // 걸러낼 수 없고 점수가 실제보다 부풀려진다. 요인마다 최소 1개씩 들어 있다.
 // 앵커에는 넣지 않는다 — 두 사람의 응답을 직접 빼는 용도라 방향 일관성이 더 중요하다(§4.4).
-export const REVERSE_CODES = new Set(["D4", "I4", "S4", "C4", "A4", "V4", "SC3", "OC3", "R6"]);
+export const REVERSE_CODES = new Set([
+  "D4", "I4", "S4", "C4", "A4", "V4", "SC3", "OC3", "R6",
+  "LW2", "LT2", "LG2", "LS2", "LP2",
+]);
 
 export const BEHAVIOR_AXES = ["D", "I", "S", "C"];
 
@@ -24,6 +27,11 @@ export const FACTOR_ITEMS = {
   AVO: codesOf(ATTACH_ITEMS, "AVO"),
   SC: codesOf(CONFLICT_ITEMS, "SC"),
   OC: codesOf(CONFLICT_ITEMS, "OC"),
+  LW: codesOf(LOVE_ITEMS, "LW"),
+  LT: codesOf(LOVE_ITEMS, "LT"),
+  LG: codesOf(LOVE_ITEMS, "LG"),
+  LS: codesOf(LOVE_ITEMS, "LS"),
+  LP: codesOf(LOVE_ITEMS, "LP"),
 };
 
 const QC1_EXPECTED = 2;
@@ -75,7 +83,8 @@ export function stepOf(itemCount) {
 // 국소적 위양성에도 강하다(§5.0 응답 일관성 ②).
 //
 // 갈등 두 축(SC·OC)은 정방향이 2문항뿐이라 평균이 거칠어 위양성이 늘 수 있으므로
-// 기획서가 지정한 6개 요인만 본다.
+// 기획서가 지정한 6개 요인만 본다. 애정 표현 5유형(LW/LT/LG/LS/LP, D-111)도 정방향이
+// 2문항이라(D-112으로 1→2) SC·OC와 같은 이유로 여기 넣지 않는다.
 const REVERSE_CHECK_FACTORS = ["D", "I", "S", "C", "ANX", "AVO"];
 
 export function reverseMismatchCount(answers) {
@@ -93,7 +102,7 @@ export function reverseMismatchCount(answers) {
 }
 
 // 플래그 2개 이상이면 결과를 내지 않고 재응답을 유도한다. 부정확한 데이터로 산출된
-// 인지 격차는 부부에게 도움이 되기는커녕 다툼거리만 만든다.
+// 성향 서술은 도움이 되기는커녕 자기 이해를 엉뚱한 쪽으로 굳힌다.
 export function validityCheck(answers, elapsedMs) {
   const flags = [];
   if (answers.QC1 !== QC1_EXPECTED) flags.push("지시 이행 문항의 답이 안내와 다릅니다");
@@ -145,8 +154,9 @@ export function anchorScores(answers) {
 // 사회적 바람직성 편향을 이미 안고 있는데 타이브레이크가 그 위에 한 방향으로 더 얹는 구조였다.
 //
 // 시드는 요인 원점수에서 뽑는다. 같은 응답이면 새로고침해도 같은 결과가 나오고(재현성),
-// 사용자 간에는 고르게 흩어진다. 배우자 코드에는 원점수가 실리므로 **상대 기기에서 다시
-// 채점해도 같은 순서가 나온다** — 응답 원본이 아니라 원점수에서 뽑는 이유가 이것이다.
+// 사용자 간에는 고르게 흩어진다. (원점수에서 뽑는 이유는 원래 "배우자 기기에서 다시
+// 채점해도 같은 순서가 나오게" 하기 위해서였다 — 그 흐름은 D-108에서 없어졌지만, 응답
+// 원본이 아니라 원점수를 쓰는 편이 여전히 단순하다.)
 export function seedFromRaw(raw) {
   let h = 2166136261;
   for (const factor of Object.keys(FACTOR_ITEMS)) {
@@ -156,8 +166,12 @@ export function seedFromRaw(raw) {
   return h >>> 0;
 }
 
-export function tieBreakOrder(seed) {
-  const order = BEHAVIOR_AXES.slice();
+// 축 배열을 시드로 섞는다. `tieBreakOrder(seed)`는 이 로직을 BEHAVIOR_AXES에 고정해
+// 쓰던 기존 시그니처를 그대로 유지한다(외부에서 `tieBreakOrder(seed)`로 호출하는
+// 기존 코드·테스트를 안 건드리기 위해서) — 애정 표현 5유형(D-111)처럼 다른 축 배열에도
+// 같은 셔플이 필요해지면서 내부 로직만 `shuffleAxes()`로 뽑아냈다.
+function shuffleAxes(axes, seed) {
+  const order = axes.slice();
   let s = seed >>> 0;
   for (let i = order.length - 1; i > 0; i--) {
     s = (Math.imul(s, 1103515245) + 12345) >>> 0;
@@ -167,9 +181,23 @@ export function tieBreakOrder(seed) {
   return order;
 }
 
-export function resolveBehavior(norm, seed = 0) {
-  const tieBreak = tieBreakOrder(seed);
-  const ranked = BEHAVIOR_AXES.slice().sort(
+export function tieBreakOrder(seed) {
+  return shuffleAxes(BEHAVIOR_AXES, seed);
+}
+
+// 요인 배열 하나에서 최댓값 하나를 primary로 뽑는다. resolveBehavior(4요인)와
+// resolveLoveLanguage(5요인, D-111)가 축 개수만 다르고 로직은 완전히 같아서 공유한다.
+//
+// 유형 라벨은 언제나 primary 하나로만 정한다. 경계 사례를 감추는 대신 확신도로 드러낸다 —
+// 유형을 더 잘게 쪼개면 오분류만 늘어난다.
+//
+// 임계값이 3칸/2칸인 이유(§5.3 v3.1 재조정): 정규화 점수가 한 칸 단위의 이산값이라
+// "1칸 이상이면 보통"으로 두면 원점수 1점 차이 — 문항 하나에 4점 대신 5점을 누른 것 —
+// 까지 단정적으로 서술하게 된다. 가장 불안정한 사례를 오히려 확신 있게 전달하는 구조라,
+// 1칸 차이는 "경계"로 흡수한다.
+function resolveTopFactor(axes, norm, seed) {
+  const tieBreak = shuffleAxes(axes, seed);
+  const ranked = axes.slice().sort(
     (a, b) => norm[b] - norm[a] || tieBreak.indexOf(a) - tieBreak.indexOf(b)
   );
   const primary = ranked[0];
@@ -177,18 +205,15 @@ export function resolveBehavior(norm, seed = 0) {
   const margin = norm[primary] - norm[secondary];
   const step = stepOf(FACTOR_ITEMS[primary].length);
 
-  // 유형 라벨은 언제나 primary 하나로만 정한다. 경계 사례를 감추는 대신 확신도로 드러낸다 —
-  // 유형을 더 잘게 쪼개면 오분류만 늘어난다.
-  //
-  // 임계값이 3칸/2칸인 이유(§5.3 v3.1 재조정): 정규화 점수가 한 칸(6.25점) 단위의 이산값이라
-  // "1칸 이상이면 보통"으로 두면 원점수 1점 차이 — 문항 하나에 4점 대신 5점을 누른 것 —
-  // 까지 단정적으로 서술하게 된다. 가장 불안정한 사례를 오히려 확신 있게 전달하는 구조라,
-  // 1칸 차이는 "경계"로 흡수한다.
   let confidence = "edge";
   if (margin >= step * 3) confidence = "clear";
   else if (margin >= step * 2) confidence = "moderate";
 
   return { primary, secondary, ranked, margin, confidence };
+}
+
+export function resolveBehavior(norm, seed = 0) {
+  return resolveTopFactor(BEHAVIOR_AXES, norm, seed);
 }
 
 // ---------------------------------------------------------------- §5.4 애착 4분류
@@ -240,7 +265,8 @@ export function resolveConflict(scRaw, ocRaw) {
   const oc = conflictLevel(ocRaw);
 
   // 절충형(CS5)은 "양축이 모두 중간"이 아니라 **한 축만 중간인 조합까지 포함**하는
-  // 나머지 전부다. 그래서 실제 분포에서 비중이 커질 수 있다.
+  // 나머지 전부다. 그래서 실제 분포에서 비중이 커진다 — 5000명 시뮬레이션에서 54%였다.
+  // 라벨은 그대로 두고 `shape`로 그 안을 다시 나눈다(D-114, data.js `CS5_SHADES`).
   let style = "CS5";
   if (sc === "high" && oc === "low") style = "CS1"; // 관철형
   else if (sc === "low" && oc === "high") style = "CS2"; // 맞춰주기형
@@ -249,11 +275,86 @@ export function resolveConflict(scRaw, ocRaw) {
 
   return {
     style,
+    // 두 축의 수준 조합 그대로. CS1~CS4는 조합과 스타일이 1:1이라 쓰이지 않고,
+    // 여러 조합이 한 스타일로 모이는 CS5에서만 서술을 가르는 데 쓴다(D-114).
+    shape: `${sc}-${oc}`,
     confidence:
       CONFLICT_EDGE_RAWS.includes(scRaw) || CONFLICT_EDGE_RAWS.includes(ocRaw) ? "edge" : "clear",
     scRaw,
     ocRaw,
   };
+}
+
+// ---------------------------------------------------------------- 애정 표현 5유형 (D-111)
+
+// 성향(§5.3)과 로직이 완전히 같다 — 축이 4개에서 5개로 바뀌었을 뿐이라 `resolveTopFactor()`를
+// 그대로 재사용한다. 다른 세 유형 체계(성향·애착·갈등)와 곱해서 COUPLE_TYPES 같은 조합
+// 유형을 만들지 않는다 — 16 × 5 = 80개는 이 방식(문구 손수 작성)으로 감당할 수 없는
+// 규모라, 완전히 독립된 결과로만 낸다(§6 참고, `docs/couple-architecture.md`).
+export function resolveLoveLanguage(norm, seed = 0) {
+  return resolveTopFactor(LOVE_AXES, norm, seed);
+}
+
+// ---------------------------------------------------------------- 개인 읽을거리 (§7.3·§7.4를 1인용으로)
+
+// 앵커(AN)·역할(R)·자녀(K) 문항은 예전엔 **부부 결합 리포트에서만** 쓰였다. 그 흐름을
+// 없애면서(D-108) 이 문항들이 전부 죽은 문항이 될 뻔했다 — 답은 하는데 결과에는 안 나오는
+// 문항이 절반 가까이 되는 셈이라, 그 자체로 결과가 부실해 보이는 원인이다. 두 사람의 답을
+// 빼는 대신 **내 답을 그대로 읽어주는** 쪽으로 옮겼다.
+//
+// 부부 비교가 아니라 자기보고라서 §6.5.3(격차의 방향·지목 금지)과 충돌하지 않는다 —
+// 비교 대상이 없으니 지목할 상대도 없다.
+//
+// `watch`는 "이 방향으로 나오면 눈여겨볼 값"이다. 그 방향일 때만 대화 문장을 붙인다 —
+// 전부 붙이면 조언이 배경음이 되고, 정작 지금 필요한 한 줄이 묻힌다(§8.4의 취지).
+export const SELF_READINGS = [
+  { key: "AN1", group: "feel", codes: ["AN1a", "AN1b"], watch: "low" },
+  { key: "AN2", group: "feel", codes: ["AN2a", "AN2b"], watch: "high" },
+  { key: "AN3", group: "feel", codes: ["AN3a", "AN3b"], watch: "high" },
+  { key: "ROLE_LOAD", group: "role", codes: ["R1", "R2"], watch: "high" },
+  { key: "ROLE_FIT", group: "role", codes: ["R4", "R5"], watch: "low" },
+  // R6은 역채점 대상(REVERSE_CODES)이라 scoreItem을 거치면 "바꾸기 어렵다"가 뒤집혀
+  // **바꿀 여지가 있다**가 높은 쪽이 된다. 다른 항목과 방향을 맞추기 위한 것이다.
+  { key: "ROLE_FLEX", group: "role", codes: ["R6"], watch: "low" },
+  { key: "CHILD_TALK", group: "child", codes: ["K1", "K3"], watch: "low" },
+  { key: "CHILD_TIME", group: "child", codes: ["K2"], watch: "low" },
+  { key: "CHILD_STRAIN", group: "child", codes: ["K4"], watch: "high" },
+  { key: "CHILD_VALUES", group: "child", codes: ["K5"], watch: "low" },
+];
+
+// 구간 경계. 1~5 척도의 중앙값 3을 가운데 두고 위아래로 반 칸씩 둔다 — 3.0은 "보통이다"를
+// 고른 상태라 어느 쪽으로도 읽지 않는 게 맞다. 이 폭을 ±1로 넓히면 2점대 후반이 "낮음"에서
+// 빠져서, 실제로 힘들다고 답한 사람에게 아무 말도 안 하게 된다.
+export const READING_LOW_MAX = 2.5;
+export const READING_HIGH_MIN = 3.5;
+
+export function readingLevel(score) {
+  if (score <= READING_LOW_MAX) return "low";
+  if (score >= READING_HIGH_MIN) return "high";
+  return "mid";
+}
+
+/**
+ * 자기보고 항목을 구간으로 읽는다.
+ * @returns {Array<{key,group,score,level,watched,consistent}>}
+ *   score는 1.0~5.0(문항 평균), watched는 "지금 눈여겨볼 방향으로 나왔는가",
+ *   consistent는 같은 개념을 두 문항으로 묻는 앵커에서만 의미가 있다(§7.3).
+ */
+export function selfReadings(answers) {
+  const anchors = anchorScores(answers);
+  return SELF_READINGS.map((r) => {
+    const score = r.codes.reduce((sum, c) => sum + scoreItem(c, answers[c]), 0) / r.codes.length;
+    const level = readingLevel(score);
+    return {
+      key: r.key,
+      group: r.group,
+      score,
+      level,
+      watched: level === r.watch,
+      // 두 문항이 3점 이상 벌어진 앵커는 본인 응답 자체가 흔들린 것이라 단정하지 않는다.
+      consistent: anchors[r.key] ? anchors[r.key].consistent : true,
+    };
+  });
 }
 
 // ---------------------------------------------------------------- 전체 채점
@@ -263,7 +364,7 @@ export function resolveConflict(scRaw, ocRaw) {
  * @param {Object} answers 문항 코드 → 1~5
  * @param {{elapsedMs?:number|null, setup?:Object}} opts
  *        elapsedMs가 null이면 속도 검사를 건너뛴다. setup은 결과에 그대로 실려
- *        배우자 코드(match.js)와 리포트 서사에 쓰인다.
+ *        역할·자녀 서사를 고르는 데 쓰인다.
  */
 export function computeCouple(answers, { elapsedMs = null, setup = null } = {}) {
   const validity = validityCheck(answers, elapsedMs);
@@ -275,9 +376,11 @@ export function computeCouple(answers, { elapsedMs = null, setup = null } = {}) 
     norm[factor] = normalize(raw[factor], codes.length);
   }
 
-  const behavior = resolveBehavior(norm, seedFromRaw(raw));
+  const seed = seedFromRaw(raw);
+  const behavior = resolveBehavior(norm, seed);
   const attachment = resolveAttachment(raw.ANX, raw.AVO);
   const conflict = resolveConflict(raw.SC, raw.OC);
+  const love = resolveLoveLanguage(norm, seed);
 
   return {
     setup,
@@ -287,19 +390,15 @@ export function computeCouple(answers, { elapsedMs = null, setup = null } = {}) 
     behavior,
     attachment,
     conflict,
+    love,
     typeKey: `${behavior.primary}-${attachment.key}`,
     anchors: anchorScores(answers),
-    // 부부 비교에 쓰이는 문항값. 문장이 양쪽에 동일한 것만 담는다(§5.6) —
-    // R1~R4는 역할마다 문장이 달라 측정 동등성이 없으므로 여기 들어오면 안 된다.
-    // 앵커는 개별 응답값이 아니라 개념 점수(anchors)로만 넘어간다.
-    comparable: {
-      R5: answers.R5,
-      R6: answers.R6,
-      K1: answers.K1,
-      K2: answers.K2,
-      K3: answers.K3,
-      K4: answers.K4,
-      K5: answers.K5,
-    },
+    // 앵커·역할·자녀 문항을 개인 결과에서 읽어주는 구간 값(D-108). 예전의 `comparable`
+    // (부부 비교용 문항값 묶음)은 결합 리포트와 함께 사라졌다 — 내보낼 곳이 없는 값을
+    // 결과 객체에 남겨두면, 다음 사람이 "이건 어디에 쓰이지"를 매번 다시 추적하게 된다.
+    readings: selfReadings(answers),
+    // 역할이 정체성에서 차지하는 비중(R3)만 막대가 아니라 한 줄 덧말로 쓴다 —
+    // 높고 낮음이 좋고 나쁨이 아니라 서술의 결을 바꾸는 값이라서다.
+    roleIdentity: answers.R3,
   };
 }

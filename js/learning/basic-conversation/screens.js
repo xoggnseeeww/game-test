@@ -7,7 +7,7 @@ import { state } from "../../core/state.js";
 import { saveLearningProgress } from "../cloud.js";
 import { CHAPTERS, LEVEL_LABELS } from "./data.js";
 import { scoreSpeech, TIER_TEXT } from "../score.js";
-import { supportsSpeech, supportsRecognition, speak, listen } from "../speech.js";
+import { supportsSpeech, supportsRecognition, speak, listen, cancelSpeech } from "../speech.js";
 import { recordFallbackMarkup, bindRecordFallback } from "../record.js";
 import { practicePrefsMarkup, bindPracticePrefs, sentenceMarkup, koMarkup, bindReveal } from "../prefs.js";
 
@@ -83,7 +83,7 @@ export function renderChapter(chapter, level) {
 
   let activeRecognition = null;
   onLeave(() => {
-    window.speechSynthesis?.cancel();
+    cancelSpeech();
     activeRecognition?.abort();
   });
 

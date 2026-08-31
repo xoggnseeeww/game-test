@@ -53,9 +53,7 @@
 | `/test/couple` · `/setup` | `couple-intro` · `couple-setup` | couple | **관리자만**(D-51) — 아니면 "곧 출시됩니다" 모달 + `psych-list` |
 | `/test/couple/guide` | `couple-guide` | couple | **관리자만**(D-51) |
 | `/test/couple/play` | `couple-question` | couple | **관리자만**(D-51) · 통과해도 축 미선택 → `couple-intro` · 다 답했으면 마지막 문항으로 되돌림 |
-| `/test/couple/ad` · `/result` · `/invite` | `couple-ad` · `couple-result` · `couple-invite` | couple | **관리자만**(D-51) · 통과해도 문항 미완료 → `couple-intro` |
-| `/test/couple/pair[?p=<코드>]` | `couple-pair` | couple | **관리자만**(D-51) · 통과하면 코드 없음/안 풀림 → 직접 입력 폼 렌더(D-45) · 코드 있고 본인 응답 완료 → `couple-report` |
-| `/test/couple/together` | `couple-report` | couple | **관리자만**(D-51) · 통과해도 코드 없음·문항 미완료 → `couple-intro` |
+| `/test/couple/ad` · `/result` | `couple-ad` · `couple-result` | couple | **관리자만**(D-51) · 통과해도 문항 미완료 → `couple-intro` |
 | `/test/couple/result/<slug>` | `couple-shared` | couple | **관리자만**(D-51) · 통과해도 슬러그 안 풀리면 → `home` |
 | `/game/numpath` | `numpath-intro` | game | — |
 | `/game/numpath/play` | `numpath-play` | game | 런 없음 → `numpath-intro` |
@@ -94,12 +92,10 @@ D-73) — 단계별로 새 챕터를 만들지 않고 같은 챕터 데이터 �
 아직 없다(파일럿 단계라 뺐다). 서버 API 없이 브라우저 내장 TTS(`speechSynthesis`)·
 STT(`SpeechRecognition`)만 쓴다. 상세·범위·향후 확장은 `docs/learning-architecture.md`.
 
-**부부 관계 성향 체크만 화면이 10개다** — 축 선택·이용 안내·배우자 초대·결합 결과가 더 있기 때문이다.
-배우자 결과는 기본적으로 주소(`?p=<25자 코드>`)로 실어 나르므로 `couple-pair`만 쿼리 스트링에
-의존한다. **이 테스트만 예외적으로 백엔드(Cloudflare Pages Functions + KV)를 하나 쓴다** —
-25자 코드를 8자로 줄여주는 `functions/api/couple-code/`. 스키마 자체는 그대로 백엔드 없이도
-동작해서(`couple-pair`가 25자 코드·링크 직접 입력도 받는다), 백엔드는 최적화지 의존성이
-아니다. 상세는 `docs/couple-architecture.md` §6-1.
+**부부 관계 성향 체크는 화면이 7개다** — 축 선택과 이용 안내가 더 있기 때문이다.
+예전에는 10개였다(배우자 초대·코드 입력·결합 결과). 그 흐름과 유일한 백엔드
+(Cloudflare Pages Functions + KV)는 **D-99에서 통째로 없앴다** — 지금 이 앱에는 서버 호출이
+하나도 없다. 상세는 `docs/couple-architecture.md` §5.
 
 - **광고 게이트(`reaction-ad`/`dilemma-ad`/`numpath-ad`)**: `core/ads.js`의 `adGateMarkup()` +
   `core/dom.js`의 `bindAdGate()`로 구성. 300×250 AdFit 광고 단위(`interstitial`)를 3초

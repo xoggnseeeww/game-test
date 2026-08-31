@@ -25,8 +25,11 @@ export const state = {
     difficulty: "normal",
   },
   // 부부 관계 성향 체크. items는 세 축(호칭·역할·자녀단계)을 고른 뒤 조립되는 문항지라,
-  // 축을 고르기 전에는 null이다. partner는 배우자 초대 링크(?p=)에서 푼 결과로, 문항을
-  // 다시 시작해도 날아가면 안 되기 때문에 resetCouple()이 따로 살려둔다.
+  // 축을 고르기 전에는 null이다.
+  //
+  // 배우자와 결과를 합치는 흐름(partner·shortCode)은 D-99에서 통째로 걷어냈다 — 응답이
+  // 실린 링크·코드가 부부 사이에서 오간다는 것 자체가 감당할 수 없는 위험이었다.
+  // 이 검사는 이제 전적으로 개인 결과만 낸다.
   couple: {
     setup: null,
     items: null,
@@ -37,11 +40,6 @@ export const state = {
     completed: false,
     startedAt: null,
     elapsedMs: null,
-    partner: null,
-    // 초대 화면에서 발급받은 짧은 코드 캐시. { code, for }에서 for는 그 코드를 발급받을 때
-    // 실었던 25자 배우자 코드 — 재진입 시 이게 같으면 재발급 없이 그대로 쓴다(KV 쓰기
-    // 한도가 하루 1,000회라 화면을 왔다갔다할 때마다 새로 발급하면 낭비다).
-    shortCode: null,
   },
   // 학습 카테고리. 도구(js/learning/<toolId>) 안 챕터 id 하나당 키 하나씩, 화면에서
   // `state.learning[chapter.id] ??= { index: 0 }`로 처음 진입할 때 늘어난다 — 도구가
