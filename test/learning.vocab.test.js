@@ -112,6 +112,35 @@ test("연상 힌트가 자기 어근 표기를 실제로 담고 있다", async (
   }
 });
 
+// 위 검사는 "어근 표기가 힌트에 있는가"까지만 본다. 실제로 400단어를 훑어 보니 그 다음
+// 단계에서 어긋나 있었다 — 표기는 있는데 **괄호 안 풀이가 칩과 다른 말을 하는** 경우다
+// (obsolete가 ob를 "완전히"로 풀었는데 칩엔 그 뜻이 없었고, insist·coincide는 in을 "위에"로
+// 풀었는데 칩은 "안으로"만 있었다). 학습자는 칩과 힌트 중 뭘 믿을지 알 수 없고, 8000단어로
+// 가면 손으로는 못 잡는다. 뜻이 맞는지까지는 기계가 못 보지만 **한 글자도 안 겹치는 것**은
+// 확실히 어긋난 것이라 그것만 잡는다.
+test("힌트의 어근 풀이가 어근 사전과 같은 말을 한다", async () => {
+  const esc = (t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  for (const w of await allWords()) {
+    for (const id of w.roots) {
+      const root = ROOT_BY_ID.get(id);
+      const form = esc(root.form.replace(/-/g, ""));
+      // "form(풀이)" 또는 철자가 바뀐 경우의 "변형(=form, 풀이)" 둘 다 받아준다.
+      // 앞에 [^a-z]를 두는 이유: form이 "pos"일 때 "post(뒤에)"를 잘못 집지 않게 한다.
+      const m =
+        new RegExp("(?:^|[^a-z])" + form + "\\(([^)=][^)]*)\\)").exec(w.hint) ||
+        new RegExp("\\(=\\s*" + form + ",\\s*([^)]*)\\)").exec(w.hint);
+      assert.ok(m, `${w.id}(${w.word}): 힌트가 어근 ${id}의 뜻을 괄호로 풀어 주지 않는다 — ${w.hint}`);
+      const inHint = new Set(m[1].replace(/[^가-힣]/g, ""));
+      const inDict = new Set(root.ko.replace(/[^가-힣]/g, ""));
+      assert.ok(
+        [...inHint].some((ch) => inDict.has(ch)),
+        `${w.id}(${w.word}): 힌트는 ${id}를 「${m[1]}」로 푸는데 칩엔 「${root.ko}」뿐이다 — ` +
+          "둘 중 하나를 고쳐야 한다(칩에 그 뜻이 실제로 있으면 사전에 추가, 아니면 힌트를 사전 쪽으로)"
+      );
+    }
+  }
+});
+
 test("어근 사전 항목이 표시에 필요한 값을 갖는다", () => {
   for (const root of ROOTS) {
     assert.ok(root.id && root.form && root.ko, `${root.id}: form·ko가 비었다`);

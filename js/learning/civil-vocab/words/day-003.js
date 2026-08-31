@@ -25,7 +25,7 @@ export const WORDS = [
     ex: { en: "The price excludes tax and service charges.", ko: "그 가격은 세금과 봉사료를 제외한 것이다." },
     syn: ["leave out", "bar"] },
   { id: "v003-07", word: "execute", pos: "v.", ko: ["실행하다", "처형하다"], freq: 1,
-    roots: ["ex", "secut"], hint: "ex(끝까지) + secut(따르다) → 계획을 끝까지 따라 해내다",
+    roots: ["ex", "secut"], hint: "ex(밖으로 끝까지) + secut(따르다) → 계획을 끝까지 따라 해내다",
     ex: { en: "The team executed the plan without delay.", ko: "그 팀은 지체 없이 계획을 실행했다." },
     syn: ["carry out", "perform"] },
   { id: "v003-08", word: "exempt", pos: "adj./v.", ko: ["면제된", "면제하다"], freq: 2,
